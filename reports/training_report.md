@@ -1,80 +1,76 @@
-# ML training report
+# Результат исправления ML
 
-Date: 2026-10-17  
-Task: binary violation detection with weak timestamp localization
+Дата: 17 октября 2026 года. Ветка: `feature/ml-model`.
 
-## Delivered artifacts
+**Инженерные ошибки исправлены; достаточное качество распознавания пока не достигнуто.**
+Обучены исправленный baseline и один кандидат с Conv1D. Кандидат не прошёл критерии замены. Резервный v3 сохранён с SHA-256 `e44cddb9a9cb259ca7fb68b024c5be7be591fcc623116c3f1fc918583a6bac91`.
 
-- `models/best_model.onnx` — selected MobileNetV3-small temporal classifier.
-- `models/labels.json` — stable binary label mapping.
-- `models/preprocessing.json` — ONNX input contract.
-- `models/thresholds.json` — threshold selected on complete validation videos.
-- `models/checksums.sha256` — model checksum.
-- `configs/model.yaml` — data, augmentation, training, and export configuration.
-- `analysis/dataset_manifest.json` — normalized sources and saved group-aware split.
-- `analysis/clip_manifest.json` — reproducible clip inventory.
-- `reports/experiments.csv` — experiment summary.
+## Почему модель работала плохо
 
-## Annotation audit
+- Данные: 40 уникальных источников, 27 сценарных групп, 21 положительный и 19 отрицательных. У 6 источников низкая и у 8 средняя уверенность разметки. Ни у одного положительного источника нет подтверждённых интервалов события.
+- Усреднение кадров не моделирует порядок действий. Conv1D добавляет эту возможность, но небольшой набор данных пока не даёт убедительного выигрыша.
+- Старый train изменял BatchNorm при маленьких batch; режим разморозки MobileNet затрагивал весь backbone.
+- Старые команды выбирали порог на тех же видео, по которым сообщали итоговую метрику. Часть метрик таймкода считалась даже при отсутствии выданного события.
+- Различались resize, длительность окна и правила сканирования; старый экспорт мог менять общие sidecar-файлы независимо от пути весов.
 
-The original 42 rows contain 40 physical video sources. `Х-4/Х-47` is one positive SHA-256 group with both candidate events preserved at 57 and 68 seconds. `Х-5/Х-48` is one negative SHA-256 group. The split is assigned to the SHA-256 source, so no duplicate can cross train and validation. The result contains 33 training clips and 8 validation clips. No timestamp is outside its source video.
+## Что исправлено
 
-## Clip construction and augmentation
+1. Единый preprocessing: RGB, OpenCV INTER_LINEAR, ImageNet normalization, float32 NCTHW, 160×160, окно 6 секунд, шаг 2 секунды.
+2. Реальные PTS, короткое видео, начало и обязательное последнее окно. Ошибка декодирования прерывает ML-проход.
+3. Пять детерминированных folds. Source ID, SHA-256 и scenario group не пересекаются между train, calibration и outer evaluation.
+4. Для отрицательных источников выбираются до пяти окон по всей записи. Для разметки точками положительное окно получает вес уверенности 1 / 0,5 / 0,25. Неподтверждённые остальные участки положительной записи не становятся отрицательными.
+5. Подтверждённые интервалы поддерживают соседние окна с меньшим весом и удалённые отрицательные окна только при полной разметке событий.
+6. Weighted BCE; корректное накопление градиентов, включая остаток batch; AMP; BatchNorm statistics зафиксированы. У кандидата после трёх эпох размораживаются только последние два блока.
+7. Калибровка максимизирует macro F1 при recall ≥ 0,75 на отдельном fold. Это ограничение не гарантирует recall на неизвестных данных.
+8. События: один sigmoid, сглаживание [0,25; 0,5; 0,25], объединение соседних активных окон, максимум три события. Удалённые события сохраняются отдельно.
+9. Локализация оценивает выданные пики и все аннотированные события с сопоставлением один к одному. Пропущенные события входят в FN.
+10. Атомарный экспорт в новый каталог, проверка schema, checksum, preprocessing, checkpoint/calibration provenance, PyTorch/ONNX parity и решений относительно порога.
 
-Positive clips are eight-second windows centred on the supplied timestamp and clamped to the video boundary. Negative clips use the centre of an independently labelled negative source. Training augmentation includes small affine camera changes, brightness, contrast and gamma variation, and JPEG quality 35–90. Validation preprocessing is deterministic. X3D uses four frames from the central 40% of the clip to approximate its short `4x12` temporal receptive field.
+## Честное сравнение
 
-## Experiments
+Одинаковые пять folds, для каждого: три на обучение, один на калибровку, один на оценку. Каждый источник ровно один раз находится в outer evaluation. Рецепты и шесть эпох зафиксированы до оценки; checkpoint — последняя эпоха. Выполнено 10 обучений.
 
-| Model | Validation level | Precision | Recall | F1 / macro F1 | AUROC | Peak VRAM |
-|---|---|---:|---:|---:|---:|---:|
-| MobileNet temporal, no augmentation | annotated clips | 0.571 | 1.000 | 0.727 / 0.564 | 0.750 | 51 MB |
-| MobileNet temporal, augmentation | annotated clips | 0.571 | 1.000 | 0.727 / 0.564 | 0.625 | 51 MB |
-| X3D-XS, augmentation, corrected 4x12 sampling | annotated clips | 0.571 | 1.000 | 0.727 / 0.564 | 0.688 | 114 MB |
-| **Selected MobileNet temporal** | **complete videos** | **0.667** | **1.000** | **0.800 / 0.733** | **0.500** | **51 MB** |
-| X3D-XS | complete videos | 0.500 | 1.000 | 0.667 / 0.333 | 0.500 | 114 MB |
+| Метрика | Исправленный baseline, 4 кадра | Conv1D, 8 кадров | Требование |
+|---|---:|---:|---:|
+| Macro F1 | 0,5175 | 0,5396 | ≥ 0,64 |
+| Precision | 0,5417 | 0,5600 | не хуже baseline |
+| Recall | 0,6190 | 0,6667 | ≥ 0,75 |
+| Ложноположительные видео / минуту отрицательных записей | 0,8737 | 0,8737 | ≤ 0,60 |
+| Ложноположительные события / минуту отрицательных записей | 0,9531 | 1,1120 | ≤ 0,60 |
+| MAE выданных пиков, секунды | 7,13 | 9,60 | ≤ 5 |
+| Найдено событий в ±5 секунд | 8/22 = 36,36% | 8/22 = 36,36% | ≥ 70% |
 
-The complete-video threshold is 0.534097 and was selected only on the eight validation sources by F2. The selected confusion matrix is `[[2, 2], [0, 4]]`. The full-video AUROC of 0.50 shows that the score ranking is not yet reliable despite perfect recall at the chosen threshold. These numbers are prototype evidence, not a production quality claim.
+Macro F1 кандидата выше на 0,0222, recall — на 0,0476. Локализация хуже на 2,46 секунды, ложных событий больше. В одном fold macro F1 кандидата — 0,30. **Кандидат отклонён. Исправленный baseline тоже не проходит целевые показатели качества.**
 
-## Localization and speed
+Это сравнение новых рецептов. Старые числа v3 получены с другими splits и метриками, поэтому их нельзя использовать как прямое «до/после». Этот набор уже использовался при разработке; OOF не заменяет новый внешний тест. На 40 источниках разница в одно видео заметно меняет показатели.
 
-For the selected model, timestamp MAE is 8.75 seconds; 25% of positive peaks fall within ±2 seconds and 25% within ±5 seconds. Mean full-video runtime is 2.73 seconds and p95 is 6.52 seconds on the measured validation videos using CUDA for PyTorch evaluation. The exported ONNX CPU smoke test on `Х-15.mov` took 1.36 seconds, predicted `violation`, and returned 16 seconds for an event annotated near 15 seconds.
+MAE считается по сопоставленным выданным пикам, включая ошибки более пяти секунд; полностью пропущенные события отражены отдельным event recall. Два таймкода у одного дубликата остаются слабыми кандидатными аннотациями, их количество и границы требуют проверки.
 
-## Model choice
+Полные сводные числа и folds: [repair_metrics.json](ml/repair_metrics.json). Детальные результаты по видео находятся только в локальном `artifacts/ml/repair-20261017/`.
 
-MobileNet temporal was selected because it matched X3D clip F1, produced better clip AUROC (0.75 versus 0.688), had better complete-video macro F1 (0.733 versus 0.333), and used less peak VRAM. X3D was faster in the measured full-video PyTorch pass but failed to separate complete negative videos reliably.
+## Пакет для технической интеграции
 
-## Export validation
+Подготовлен `baseline-repair-v1-development`: 32 источника обучения, 8 отдельной калибровки (fold 4).
+Порог финального checkpoint: **0,45513082295656204**. Calibration macro F1 = 0,4667, AUROC = 0,375; это не оценка на тестовой выборке. Пакет пригоден для проверки интеграции, автоматическая замена v3 запрещена результатом quality gate.
 
-- Format: ONNX opset 17
-- Input: `float32` tensor `video`, layout `NCTHW`, shape `N x 3 x 4 x 160 x 160`
-- Output: one logit per video window
-- ONNX size: 3.83 MB
-- PyTorch/ONNX maximum absolute output difference: `1.0430813e-7`
-- SHA-256: `db81e57802e351248e96f265bb5beb0accfd2a47bb58d134a7c96c08ef8dcd01`
+- Canonical ONNX: batch 1, schema v1 команды; SHA-256 `00ae541eac23249dd4751093ce276bfa9c14afca2d5f15f4fec9719c009ae52d`.
+- Отдельный совместимый граф: dynamic batch, тот же checkpoint, плоский manifest для существующего OnnxPredictor.
+- Parity на 16 реальных оконных входах: максимальное абсолютное расхождение logits **5,96×10⁻⁷**, решения относительно порога совпадают.
+- С реальным OnnxPredictor из `271400f`: точное совпадение preprocessing, ошибка score **2,60×10⁻⁸**, CPU fallback проверен.
+- 31 ML-тест: разбиение, накопление градиентов, BN, temporal order, PTS/VFR/FPS, короткие/хвостовые окна, ошибки видео, контракты, повреждённые веса, атомарность экспорта, quality gate и переносимость LF/CRLF.
 
-## Exact reproduction
+## Скорость
 
-From the repository root in PowerShell:
+CPU, 4 потока ONNX, без кэша, все 40 источников: **92,24 секунды суммарно**, среднее 2,31 с, p95 4,71 с, максимум **9,09 с** на запись. Всего 1299,86 секунды исходных записей, самая длинная — 142,53 секунды. Ошибок обработки: 0.
 
-```powershell
-uv venv .venv-ml --python 3.12
-uv pip install --python .venv-ml\Scripts\python.exe torch==2.5.1 torchvision==0.20.1 --index-url https://download.pytorch.org/whl/cu121
-uv pip install --python .venv-ml\Scripts\python.exe -r requirements-ml.txt
-.\.venv-ml\Scripts\python.exe scripts\ml\audit_annotations.py
-.\.venv-ml\Scripts\python.exe scripts\ml\prepare_clips.py
-.\.venv-ml\Scripts\python.exe scripts\ml\train_video.py --model mobilenet_v3_small_temporal --run-id mobilenet_noaug --epochs 6 --no-augmentation
-.\.venv-ml\Scripts\python.exe scripts\ml\train_video.py --model mobilenet_v3_small_temporal --run-id mobilenet_aug --epochs 8
-.\.venv-ml\Scripts\python.exe scripts\ml\train_video.py --config configs\x3d_xs.yaml --model x3d_xs --run-id x3d_xs_4x12 --epochs 12
-.\.venv-ml\Scripts\python.exe scripts\ml\evaluate_full_videos.py --checkpoint models\checkpoints\mobilenet_noaug\best.pt --metrics models\checkpoints\mobilenet_noaug\metrics.json --output reports\mobilenet_noaug_full_video.json
-.\.venv-ml\Scripts\python.exe scripts\ml\export_model.py --checkpoint models\checkpoints\mobilenet_noaug\best.pt --metrics reports\mobilenet_noaug_full_video.json
-```
+В измерение входят проверка bundle, декодирование, preprocessing, ONNX и события. Загрузка процесса Python, очередь API, сохранение JPEG и ответы сервера не включены. Поэтому лимит пяти минут подтверждён для измеренного ML-прохода, а полный сервис и более длинные записи ещё требуют отдельного измерения.
 
-Run the exported model on one `.mov`:
+## Что ещё нужно для качества и принятия
 
-```powershell
-.\.venv-ml\Scripts\python.exe scripts\ml\infer_onnx.py "C:\path\to\video.mov"
-```
+- Проверить все 21 положительный источник: метку, интервалы, число событий; начать с 6 низкоуверенных и конфликта двух таймкодов в дубликате.
+- Подтвердить сценарные группы и собрать новые независимые записи для закрытого теста.
+- После исправления разметки запускать новый эксперимент с новым frozen plan; не подбирать параметры по этим же outer folds.
+- Inference должен включить хвост, использовать правила сглаживания/событий из thresholds.json и проверить JPEG; далее измерить весь API.
+- Подтверждённые интервалы и новые данные — внешние входы. Код не может достоверно восстановить их из существующих слабых меток.
 
-## Limits and next iteration
-
-The validation set has only eight unique sources and the current run is one deterministic holdout rather than five-fold cross-validation. Temporal localization is weak and false positives remain high at roughly 1.01 per negative video-minute. Before publication, run five group folds, add scenario grouping for visually matched positive/negative scenes, mine hard negatives, and calibrate the full-video threshold from out-of-fold predictions. The model is suitable as a reproducible hackathon baseline and integration artifact, not as an autonomous compliance decision system.
+Команды установки, обучения, экспорта и интеграции: [ML handoff](../docs/handoffs/ml-to-inference.md).

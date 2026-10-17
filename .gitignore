@@ -9,4 +9,12 @@ artifacts/*
 !artifacts/.gitkeep
 data/processed/
 models/checkpoints/
+.pytest_cache/
+*.onnx
+*.pt
+*.pth
+analysis/dataset_manifest.json
+analysis/clip_manifest.json
+analysis/preliminary_video_review.md
+reports/*_full_video.json
 

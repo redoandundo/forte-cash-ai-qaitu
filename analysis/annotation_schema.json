@@ -3,12 +3,13 @@
   "task": "binary_violation_detection_and_weak_temporal_localization",
   "labels": {
     "0": "no_violation",
-    "1": "violation"
+    "1": "possible_violation"
   },
   "source_group": "SHA-256 of the complete source video",
   "event": {
     "time_sec": "annotated candidate-event center in seconds",
-    "window": "8-second clip centered on time_sec and clamped to video bounds"
+    "window": "Nearest 6-second PTS window; point annotations are weak labels, not verified event intervals",
+    "confirmed_interval": "events: start_sec, end_sec, review_status=confirmed; only complete reviewed intervals enable same-video negative windows"
   },
   "notes": [
     "Violation types are hypotheses and are not trained as separate classes because the case data has no class-level ground truth.",

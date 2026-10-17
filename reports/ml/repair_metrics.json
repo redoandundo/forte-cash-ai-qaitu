@@ -1,0 +1,429 @@
+{
+  "date": "2026-10-17",
+  "evaluation": "fixed recipe; five scenario-safe outer folds, separate calibration fold",
+  "accuracy_scope": "development OOF, not a new independent external test",
+  "data": {
+    "sources": 40,
+    "labels": {
+      "1": 21,
+      "0": 19
+    },
+    "scenario_groups": 27,
+    "confidence": {
+      "low": 6,
+      "high": 26,
+      "medium": 8
+    },
+    "confirmed_interval_sources": 0,
+    "duplicate_alias_groups": 2,
+    "review_queue_count": 21,
+    "checksum_and_split_checks": "passed"
+  },
+  "baseline": {
+    "metrics": {
+      "precision": 0.5416666666666666,
+      "recall": 0.6190476190476191,
+      "macro_f1": 0.5174603174603174,
+      "confusion_matrix": [
+        [
+          8,
+          11
+        ],
+        [
+          8,
+          13
+        ]
+      ],
+      "source_count": 40,
+      "false_positive_videos_per_minute": 0.8737121846445085,
+      "false_positive_events_per_minute": 0.9531405650667365,
+      "event_tp": 8,
+      "event_fp": 18,
+      "event_fn": 14,
+      "event_recall_within_5_sec": 0.36363636363636365,
+      "timestamp_mae_sec": 7.133333333333334,
+      "timestamp_metric": "one_to_one_emitted_peaks_to_annotated_points"
+    },
+    "folds": [
+      {
+        "precision": 0.625,
+        "recall": 1.0,
+        "macro_f1": 0.5846153846153846,
+        "confusion_matrix": [
+          [
+            1,
+            3
+          ],
+          [
+            0,
+            5
+          ]
+        ],
+        "source_count": 9,
+        "false_positive_videos_per_minute": 1.1949595940456714,
+        "false_positive_events_per_minute": 1.1949595940456714,
+        "event_tp": 3,
+        "event_fp": 6,
+        "event_fn": 3,
+        "event_recall_within_5_sec": 0.5,
+        "timestamp_mae_sec": 8.8,
+        "timestamp_metric": "one_to_one_emitted_peaks_to_annotated_points"
+      },
+      {
+        "precision": 0.25,
+        "recall": 0.3333333333333333,
+        "macro_f1": 0.2857142857142857,
+        "confusion_matrix": [
+          [
+            1,
+            3
+          ],
+          [
+            2,
+            1
+          ]
+        ],
+        "source_count": 7,
+        "false_positive_videos_per_minute": 1.9007454486056252,
+        "false_positive_events_per_minute": 1.9007454486056252,
+        "event_tp": 1,
+        "event_fp": 3,
+        "event_fn": 2,
+        "event_recall_within_5_sec": 0.3333333333333333,
+        "timestamp_mae_sec": 2.0,
+        "timestamp_metric": "one_to_one_emitted_peaks_to_annotated_points"
+      },
+      {
+        "precision": 1.0,
+        "recall": 0.2,
+        "macro_f1": 0.5,
+        "confusion_matrix": [
+          [
+            4,
+            0
+          ],
+          [
+            4,
+            1
+          ]
+        ],
+        "source_count": 9,
+        "false_positive_videos_per_minute": 0.0,
+        "false_positive_events_per_minute": 0.0,
+        "event_tp": 0,
+        "event_fp": 1,
+        "event_fn": 5,
+        "event_recall_within_5_sec": 0.0,
+        "timestamp_mae_sec": 14.0,
+        "timestamp_metric": "one_to_one_emitted_peaks_to_annotated_points"
+      },
+      {
+        "precision": 0.6666666666666666,
+        "recall": 0.5,
+        "macro_f1": 0.5714285714285714,
+        "confusion_matrix": [
+          [
+            2,
+            1
+          ],
+          [
+            2,
+            2
+          ]
+        ],
+        "source_count": 7,
+        "false_positive_videos_per_minute": 0.32673862101553314,
+        "false_positive_events_per_minute": 0.32673862101553314,
+        "event_tp": 1,
+        "event_fp": 2,
+        "event_fn": 3,
+        "event_recall_within_5_sec": 0.25,
+        "timestamp_mae_sec": 5.0,
+        "timestamp_metric": "one_to_one_emitted_peaks_to_annotated_points"
+      },
+      {
+        "precision": 0.5,
+        "recall": 1.0,
+        "macro_f1": 0.3333333333333333,
+        "confusion_matrix": [
+          [
+            0,
+            4
+          ],
+          [
+            0,
+            4
+          ]
+        ],
+        "source_count": 8,
+        "false_positive_videos_per_minute": 1.2392446846676282,
+        "false_positive_events_per_minute": 1.549055855834535,
+        "event_tp": 3,
+        "event_fp": 6,
+        "event_fn": 1,
+        "event_recall_within_5_sec": 0.75,
+        "timestamp_mae_sec": 5.683333333333334,
+        "timestamp_metric": "one_to_one_emitted_peaks_to_annotated_points"
+      }
+    ]
+  },
+  "temporal_conv1d": {
+    "metrics": {
+      "precision": 0.56,
+      "recall": 0.6666666666666666,
+      "macro_f1": 0.5396419437340154,
+      "confusion_matrix": [
+        [
+          8,
+          11
+        ],
+        [
+          7,
+          14
+        ]
+      ],
+      "source_count": 40,
+      "false_positive_videos_per_minute": 0.8737121846445085,
+      "false_positive_events_per_minute": 1.1119973259111926,
+      "event_tp": 8,
+      "event_fp": 21,
+      "event_fn": 14,
+      "event_recall_within_5_sec": 0.36363636363636365,
+      "timestamp_mae_sec": 9.595238095238093,
+      "timestamp_metric": "one_to_one_emitted_peaks_to_annotated_points"
+    },
+    "folds": [
+      {
+        "precision": 0.625,
+        "recall": 1.0,
+        "macro_f1": 0.5846153846153846,
+        "confusion_matrix": [
+          [
+            1,
+            3
+          ],
+          [
+            0,
+            5
+          ]
+        ],
+        "source_count": 9,
+        "false_positive_videos_per_minute": 1.1949595940456714,
+        "false_positive_events_per_minute": 1.1949595940456714,
+        "event_tp": 3,
+        "event_fp": 5,
+        "event_fn": 3,
+        "event_recall_within_5_sec": 0.5,
+        "timestamp_mae_sec": 15.6,
+        "timestamp_metric": "one_to_one_emitted_peaks_to_annotated_points"
+      },
+      {
+        "precision": 0.5,
+        "recall": 0.3333333333333333,
+        "macro_f1": 0.5333333333333333,
+        "confusion_matrix": [
+          [
+            3,
+            1
+          ],
+          [
+            2,
+            1
+          ]
+        ],
+        "source_count": 7,
+        "false_positive_videos_per_minute": 0.633581816201875,
+        "false_positive_events_per_minute": 0.633581816201875,
+        "event_tp": 1,
+        "event_fp": 1,
+        "event_fn": 2,
+        "event_recall_within_5_sec": 0.3333333333333333,
+        "timestamp_mae_sec": 2.0,
+        "timestamp_metric": "one_to_one_emitted_peaks_to_annotated_points"
+      },
+      {
+        "precision": 1.0,
+        "recall": 0.2,
+        "macro_f1": 0.5,
+        "confusion_matrix": [
+          [
+            4,
+            0
+          ],
+          [
+            4,
+            1
+          ]
+        ],
+        "source_count": 9,
+        "false_positive_videos_per_minute": 0.0,
+        "false_positive_events_per_minute": 0.0,
+        "event_tp": 0,
+        "event_fp": 1,
+        "event_fn": 5,
+        "event_recall_within_5_sec": 0.0,
+        "timestamp_mae_sec": 14.0,
+        "timestamp_metric": "one_to_one_emitted_peaks_to_annotated_points"
+      },
+      {
+        "precision": 0.5,
+        "recall": 0.75,
+        "macro_f1": 0.3,
+        "confusion_matrix": [
+          [
+            0,
+            3
+          ],
+          [
+            1,
+            3
+          ]
+        ],
+        "source_count": 7,
+        "false_positive_videos_per_minute": 0.9802158630465994,
+        "false_positive_events_per_minute": 1.3069544840621325,
+        "event_tp": 1,
+        "event_fp": 6,
+        "event_fn": 3,
+        "event_recall_within_5_sec": 0.25,
+        "timestamp_mae_sec": 6.0,
+        "timestamp_metric": "one_to_one_emitted_peaks_to_annotated_points"
+      },
+      {
+        "precision": 0.5,
+        "recall": 1.0,
+        "macro_f1": 0.3333333333333333,
+        "confusion_matrix": [
+          [
+            0,
+            4
+          ],
+          [
+            0,
+            4
+          ]
+        ],
+        "source_count": 8,
+        "false_positive_videos_per_minute": 1.2392446846676282,
+        "false_positive_events_per_minute": 1.858867027001442,
+        "event_tp": 3,
+        "event_fp": 8,
+        "event_fn": 1,
+        "event_recall_within_5_sec": 0.75,
+        "timestamp_mae_sec": 5.583333333333334,
+        "timestamp_metric": "one_to_one_emitted_peaks_to_annotated_points"
+      }
+    ]
+  },
+  "candidate_decision": {
+    "quality_passed": false,
+    "conditions": {
+      "macro_f1": false,
+      "recall": false,
+      "precision": true,
+      "false_positive_videos_per_minute": false,
+      "false_positive_events_per_minute": false,
+      "timestamp_mae_sec": false,
+      "event_recall_within_5_sec": false,
+      "fold_stability": false
+    },
+    "deployment_ready": false,
+    "remaining": [
+      "final_checkpoint_calibration",
+      "ONNX_parity",
+      "full_API_latency"
+    ]
+  },
+  "baseline_bundle_parity": {
+    "max_absolute_logit_error": 5.960464477539062E-07,
+    "tolerance": 0.0001,
+    "decision_agreement": true,
+    "input_count": 16,
+    "batch_sizes": [
+      1,
+      16
+    ],
+    "provider": "CPUExecutionProvider"
+  },
+  "baseline_bundle_benchmark": {
+    "model_version": "baseline-repair-v1-development",
+    "sources": 40,
+    "failures": 0,
+    "total_video_sec": 1299.8632291666665,
+    "longest_video_sec": 142.53302083333332,
+    "total_wall_sec": 92.2421438999445,
+    "mean_sec": 2.3060535974986123,
+    "p95_sec": 4.705308295006396,
+    "max_sec": 9.087002100000973,
+    "device": "CPU",
+    "cache": false,
+    "scope": "bundle_validation_decode_preprocess_CPU_ONNX_events_no_API_or_JPEG",
+    "all_observed_under_300_sec": true,
+    "full_service_under_300_sec_verified": false,
+    "accuracy_evaluation": false
+  },
+  "adapter_verification": {
+    "reference_commit": "271400fdbc51f516c9dc9c3d1c10742496f63b03",
+    "model_version": "baseline-repair-v1-development",
+    "max_score_error": 2.6044072953812503E-08,
+    "preprocessing_exact": true,
+    "windows": 3,
+    "device": "CPU",
+    "fallback_device": "CPU",
+    "scope": "predictor_only; tail, smoothing, event aggregation and JPEG integration still require pipeline verification"
+  },
+  "model_weights_in_git": false,
+  "dataset_sha256": "8161b942990415e22c7410561ac445399c768d99f1b818a86310650d683abf25",
+  "frozen_configs": {
+    "baseline": {
+      "seed": 42,
+      "model": "mobilenet_v3_small_temporal",
+      "data": {
+        "num_frames": 4,
+        "image_size": 160,
+        "window_sec": 6.0,
+        "stride_sec": 2.0,
+        "include_tail": true
+      },
+      "training": {
+        "epochs": 6,
+        "batch_size": 2,
+        "accumulation_steps": 4,
+        "learning_rate": 0.0003,
+        "weight_decay": 0.0001,
+        "amp": true,
+        "augmentation": true,
+        "unfreeze_epoch": null,
+        "unfreeze_blocks": 0
+      }
+    },
+    "temporal_conv1d": {
+      "seed": 42,
+      "model": "mobilenet_v3_small_temporal_conv1d",
+      "data": {
+        "num_frames": 8,
+        "image_size": 160,
+        "window_sec": 6.0,
+        "stride_sec": 2.0,
+        "include_tail": true
+      },
+      "training": {
+        "epochs": 6,
+        "batch_size": 2,
+        "accumulation_steps": 4,
+        "learning_rate": 0.0003,
+        "finetune_learning_rate": 3E-05,
+        "weight_decay": 0.0001,
+        "amp": true,
+        "augmentation": true,
+        "unfreeze_epoch": 4,
+        "unfreeze_blocks": 2
+      }
+    }
+  },
+  "tests": {
+    "failed": 0,
+    "command": "python -m pytest tests/ml -q",
+    "passed": 31
+  }
+}

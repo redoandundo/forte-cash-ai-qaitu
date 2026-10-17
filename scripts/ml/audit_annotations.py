@@ -7,15 +7,15 @@ import sys
 from collections import defaultdict
 from pathlib import Path
 
-import cv2
+import av
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(PROJECT_ROOT / "src"))
 
 from fortebank_audit.dataset import build_index
+from fortebank_audit.ml.experiment_data import make_folds, validate_sources
 
 SCENARIO_PAIRS = [(11, 12), (15, 16), (18, 19), (20, 21), (22, 23), (24, 25), (26, 27), (28, 29), (30, 31), (34, 35), (38, 39), (44, 45), (47, 48)]
-VALIDATION_IDS = {15, 16, 22, 23, 34, 35, 44, 45}
 CONFIDENCE_BY_ID = {
     15: "high", 24: "high", 30: "high", 33: "high", 34: "high", 38: "high", 40: "high",
     4: "medium", 13: "medium", 17: "medium", 18: "medium", 26: "medium", 28: "medium", 32: "medium", 44: "medium",
@@ -40,32 +40,46 @@ def sha256(path: Path) -> str:
 
 
 def video_info(path: Path) -> tuple[float, float, int, int]:
-    capture = cv2.VideoCapture(str(path))
-    fps = float(capture.get(cv2.CAP_PROP_FPS) or 0)
-    frames = int(capture.get(cv2.CAP_PROP_FRAME_COUNT) or 0)
-    width = int(capture.get(cv2.CAP_PROP_FRAME_WIDTH) or 0)
-    height = int(capture.get(cv2.CAP_PROP_FRAME_HEIGHT) or 0)
-    capture.release()
-    return (frames / fps if fps else 0.0), fps, width, height
+    with av.open(str(path)) as container:
+        if not container.streams.video:
+            raise ValueError("No video stream")
+        stream = container.streams.video[0]
+        duration = float(stream.duration * stream.time_base) if stream.duration is not None else (container.duration or 0) / av.time_base
+        return duration, float(stream.average_rate or 0), stream.width, stream.height
 
 
 def assign_splits(groups: list[dict], validation_fraction: float, seed: int) -> None:
-    del validation_fraction, seed
-    other_scenarios = sorted({item["scenario_group"] for item in groups if not set(item["video_ids"]).intersection(VALIDATION_IDS)})
-    fold_by_scenario = {name: 1 + index % 4 for index, name in enumerate(other_scenarios)}
+    if validation_fraction != 0.2:
+        raise ValueError("This recipe uses five fixed folds; validation-fraction must be 0.2")
+    # Connected components preserve pairs even when duplicate aliases connect pairs transitively.
+    parents = {value: value for group in groups for value in group["video_ids"]}
+    def find(value):
+        while parents[value] != value:
+            value = parents[value]
+        return value
+    edges = list(SCENARIO_PAIRS) + [(group["video_ids"][0], value) for group in groups for value in group["video_ids"][1:]]
+    for left, right in edges:
+        if left in parents and right in parents:
+            a, b = find(left), find(right)
+            parents[max(a, b)] = min(a, b)
+    for group in groups:
+        component = find(group["video_ids"][0])
+        group["scenario_group"] = f"scenario-{component}"
+    folds = make_folds(groups, seed)
     for item in groups:
-        is_validation = bool(set(item["video_ids"]).intersection(VALIDATION_IDS))
-        item["fold"] = 0 if is_validation else fold_by_scenario[item["scenario_group"]]
-        item["split"] = "validation" if is_validation else "train"
+        item["fold"] = folds[item["source_id"]]
+        item["split"] = "calibration" if item["fold"] == 4 else "train"
 
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Audit labels, collapse duplicate videos, and build a leakage-free manifest.")
     parser.add_argument("--data-root", type=Path, default=PROJECT_ROOT / "data" / "raw" / "open")
-    parser.add_argument("--output", type=Path, default=PROJECT_ROOT / "analysis" / "dataset_manifest.json")
+    parser.add_argument("--output", type=Path, default=PROJECT_ROOT / "artifacts" / "ml" / "dataset_manifest.json")
     parser.add_argument("--validation-fraction", type=float, default=0.2)
     parser.add_argument("--seed", type=int, default=42)
     args = parser.parse_args()
+    if args.output.exists():
+        raise FileExistsError("Refusing to overwrite dataset evidence")
 
     records = build_index(args.data_root)
     hashed: dict[str, list] = defaultdict(list)
@@ -86,7 +100,7 @@ def main() -> None:
             conflicts.append({"sha256": digest, "video_ids": [row.video_id for row in duplicate_records], "reason": "timecode_outside_video", "values": outside})
         ids = sorted(row.video_id for row in duplicate_records)
         confidence_order = {"low": 0, "medium": 1, "high": 2}
-        annotation_confidence = max((CONFIDENCE_BY_ID.get(value, "high") for value in ids), key=confidence_order.get) if labels == {True} else "high"
+        annotation_confidence = min((CONFIDENCE_BY_ID.get(value, "high") for value in ids), key=confidence_order.get) if labels == {True} else "high"
         groups.append(
             {
                 "source_id": digest[:16],
@@ -105,7 +119,9 @@ def main() -> None:
             }
         )
 
-    assign_splits(groups, args.validation_fraction, args.seed)
+    if not conflicts:
+        validate_sources(groups)
+        assign_splits(groups, args.validation_fraction, args.seed)
     args.output.parent.mkdir(parents=True, exist_ok=True)
     payload = {
         "schema_version": 1,
@@ -128,7 +144,8 @@ def main() -> None:
     }
     args.output.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
     print(json.dumps(payload["summary"], ensure_ascii=False, indent=2))
-    print(args.output.resolve())
+    if conflicts:
+        raise SystemExit("Dataset has blocking conflicts; see local audit report")
 
 
 if __name__ == "__main__":
