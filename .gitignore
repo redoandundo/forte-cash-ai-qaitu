@@ -1,14 +1,77 @@
+# Python
 .venv/
 .venv-ml/
 .cache/
+venv/
 __pycache__/
 *.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
 .ipynb_checkpoints/
+
+# IDE and local agent state
+.idea/
+.vscode/
+.codex-tmp/
+.DS_Store
+Thumbs.db
+
+# Secrets and local configuration
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+secrets/
+
+# Runtime and temporary output
+tmp/
+outputs/
+runs/
+evidence/
+logs/
+*.log
+
+# Restricted Datathon26 data and generated media
+data/open/
 data/raw/*
 !data/raw/.gitkeep
+analysis/*
+!analysis/README.md
+FORTEBANK_VIDEO_COMPLIANCE_KNOWLEDGE_BASE.md
+*.mov
+*.mp4
+*.avi
+*.mkv
+
+# Generated artifacts. Keep reviewed documentation and manifests only.
 artifacts/*
 !artifacts/.gitkeep
+!artifacts/README.md
+!artifacts/manifests/
+!artifacts/manifests/**
 data/processed/
-models/checkpoints/
 models/pretrained/
 
+# Model artifacts and caches
+models/checkpoints/
+models/torch-cache/
+models/huggingface-cache/
+checkpoints/
+*.pt
+*.pth
+*.ckpt
+*.onnx
+*.engine
+*.plan
+
+# Downloaded legal source payloads; keep only the repository summary
+legal/sources/
+legal/text/
+
+# Local codebase indexes
+.codebase-memory/
+.mcp-cache/

@@ -1,6 +1,7 @@
 # ML training report
 
-Date: 2026-10-17  
+Date: 2026-10-17
+
 Task: binary violation detection with weak timestamp localization
 
 ## Delivered artifacts

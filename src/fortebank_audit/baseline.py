@@ -173,4 +173,3 @@ def score_video(path: str | Path, model_path: str | Path) -> tuple[list[ScoredWi
     smoothed = np.maximum.reduce([padded[:-2], padded[1:-1], padded[2:]])
     windows = [ScoredWindow(float(timestamp), float(score)) for timestamp, score in zip(timestamps, smoothed)]
     return windows, float(artifact["threshold"])
-

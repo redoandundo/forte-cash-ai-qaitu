@@ -1,0 +1,5 @@
+* @redoandundo
+
+# Replace or extend these ownership rules after teammates share GitHub usernames.
+# /src/ml/ @ml-engineer
+# /src/inference/ @inference-engineer

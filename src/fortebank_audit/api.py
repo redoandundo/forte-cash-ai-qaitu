@@ -127,4 +127,3 @@ def get_job(job_id: str) -> JobResponse:
 
 
 app.mount("/", StaticFiles(directory=WEB_ROOT, html=True), name="web")
-

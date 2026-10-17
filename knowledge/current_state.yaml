@@ -1,0 +1,52 @@
+schema_version: 1
+updated_at: 2026-10-17
+event: Datathon26
+team: Qaitu
+repository: https://github.com/redoandundo/forte-cash-ai-qaitu
+phase: prototype_validation
+
+branches:
+  stable: main
+  development: develop
+  integration: integration/ml-inference
+  teamlead: feature/teamlead-core
+  ml: feature/ml-model
+  inference: feature/video-inference
+
+components:
+  repository_foundation:
+    owner: teamlead
+    status: ready_for_review
+  ml_model:
+    owner: ml_engineer
+    status: experimental_prototype_available
+    artifact_ready: true
+  video_inference:
+    owner: inference_engineer
+    status: baseline_pipeline_available
+    mock_predictor_ready: false
+    real_model_connected: true
+  api_jobs:
+    owner: teamlead
+    status: prototype_available
+  end_to_end_integration:
+    owner: teamlead
+    status: requires_validation
+
+requirements:
+  frontend_required: true
+  public_url_required: true
+  api_key_header: X-API-Key
+  processing_limit_sec: 300
+  public_statuses: [processing, done, failed]
+  public_verdicts: [violation, no_violation]
+  face_identification_allowed: false
+  cloud_ai_allowed: false
+
+next_actions:
+  - validate the imported prototype against the jury API contract
+  - compare the current model artifact with the model manifest contract
+  - add focused tests for API, inference, and branch handoffs
+  - continue ML and inference work in their feature branches
+
+blockers: []
