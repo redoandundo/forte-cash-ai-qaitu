@@ -9,7 +9,8 @@ from typing import Any
 
 from .benchmark import PROJECT_ROOT, build_predictor, load_pipeline_config
 from .pipeline import analyze_video
-from .vlm_verifier import EventVerifier, QwenLocalBackend, load_signal_policy
+from .semantic_pipeline import apply_semantic_verification
+from .vlm_verifier import EventVerifier, get_qwen_backend, load_signal_policy
 
 
 def _resolve_video(data_root: Path, aliases: list[str]) -> Path:
@@ -29,7 +30,7 @@ def evaluate_qwen_ab(
     bundle_root: Path | None = None,
     allow_development_model: bool = False,
 ) -> dict[str, Any]:
-    """Measure Qwen overhead/contract reliability without changing detector outputs."""
+    """Measure semantic filtering quality and technical reliability on a fixed holdout."""
     reference = json.loads(reference_report.read_text(encoding="utf-8"))
     source_ids = {str(item["source_id"]) for item in reference["videos"]}
     dataset = json.loads(
@@ -49,15 +50,22 @@ def evaluate_qwen_ab(
         allow_development_model=allow_development_model,
     )
     policy = load_signal_policy(signal_policy_path)
-    verifier = EventVerifier(QwenLocalBackend(qwen_model), policy)
+    verifier = EventVerifier(
+        get_qwen_backend(
+            qwen_model,
+            PROJECT_ROOT / "configs" / "inference" / "qwen_verifier_manifest.json",
+        ),
+        policy,
+    )
 
     qwen_statuses: Counter[str] = Counter()
-    evidence_qualities: Counter[str] = Counter()
     qwen_failures: Counter[str] = Counter()
     baseline_processing_sec = 0.0
     qwen_processing_sec = 0.0
     candidate_events = 0
     public_output_changes = 0
+    false_positives_removed = 0
+    true_positives_removed = 0
 
     for source in sources:
         video_path = _resolve_video(data_root, list(source["aliases"]))
@@ -68,57 +76,63 @@ def evaluate_qwen_ab(
             config,
             evidence_root=evidence_root,
             run_id=run_id,
+            include_temporal_context=True,
         )
         baseline_processing_sec += float(result["runtime"]["processing_sec"])
+        public_events_before = [
+            {key: value for key, value in event.items() if key != "_temporal_context"}
+            for event in result["events"]
+        ]
         public_projection_before = {
             "verdict": result["verdict"],
             "score": result["score"],
             "timecode_sec": result["timecode_sec"],
-            "events": result["events"],
+            "events": public_events_before,
         }
-        for event in result["events"]:
-            candidate_events += 1
-            paths = [evidence_root / item["jpeg_path"] for item in event["evidence"]]
-            started = time.perf_counter()
-            try:
-                description = verifier.verify(
-                    paths,
-                    score=float(event["score"]),
-                    peak_time_sec=float(event["peak_time_sec"]),
-                )
-            except Exception as exc:  # Experimental arm failure is recorded, never mapped to a verdict.
-                qwen_failures[type(exc).__name__] += 1
-            else:
-                qwen_statuses[description.status] += 1
-                evidence_qualities[description.evidence_quality] += 1
-            finally:
-                qwen_processing_sec += time.perf_counter() - started
+        candidate_events += len(result["events"])
+        started = time.perf_counter()
+        try:
+            filtered = apply_semantic_verification(result, verifier, evidence_root)
+        except Exception as exc:
+            qwen_failures[type(exc).__name__] += 1
+            continue
+        finally:
+            qwen_processing_sec += time.perf_counter() - started
+        for rejection in filtered["diagnostics"]["rejection_reasons"]:
+            qwen_statuses[rejection["decision"]] += 1
+        for event in filtered["events"]:
+            qwen_statuses[event["semantic_verification"]["decision"]] += 1
         public_projection_after = {
-            "verdict": result["verdict"],
-            "score": result["score"],
-            "timecode_sec": result["timecode_sec"],
-            "events": result["events"],
+            "verdict": filtered["verdict"],
+            "score": filtered["score"],
+            "timecode_sec": filtered["timecode_sec"],
+            "events": filtered["events"],
         }
         public_output_changes += int(public_projection_before != public_projection_after)
+        removed = len(result["events"]) - len(filtered["events"])
+        if removed and source.get("label") in {0, "negative", False}:
+            false_positives_removed += removed
+        if removed and source.get("label") in {1, "positive", True}:
+            true_positives_removed += removed
 
     return {
-        "report_version": "qwen-ab-v1",
+        "report_version": "qwen-semantic-ab-v2",
         "model_version": manifest["model_version"],
         "holdout_sources": len(sources),
         "candidate_events": candidate_events,
         "baseline_processing_sec": baseline_processing_sec,
         "qwen_processing_sec": qwen_processing_sec,
         "qwen_statuses": dict(sorted(qwen_statuses.items())),
-        "evidence_qualities": dict(sorted(evidence_qualities.items())),
         "qwen_failures": dict(sorted(qwen_failures.items())),
         "public_output_changes": public_output_changes,
-        "public_verdict_influence": False,
-        "timecode_influence": False,
-        "quality_gain_measured": False,
+        "public_verdict_influence": True,
+        "timecode_influence": True,
+        "false_positives_removed": false_positives_removed,
+        "true_positives_removed": true_positives_removed,
+        "quality_gain_measured": not qwen_failures,
         "promotion_allowed": False,
         "promotion_blocker": (
-            "The holdout has detector labels/timecodes but no human labels for description quality "
-            "or review-time reduction. Qwen remains experimental until a blinded human A/B shows gain."
+            "Promotion requires zero schema/technical failures and review of every removed true positive."
         ),
     }
 
