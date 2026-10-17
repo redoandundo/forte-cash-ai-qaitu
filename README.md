@@ -40,7 +40,27 @@ curl.exe -X POST http://localhost:8000/api/v1/analyze `
 
 Open `http://localhost:8000` for the upload interface.
 
-The current classifier is an experimental baseline for exercising the full pipeline. Its cross-validated metrics are not yet strong enough for final submission, and its event type is intentionally generic.
+## Run and verify the ONNX inference pipeline
+
+The repository already contains the selected ONNX artifact. The inference code
+checks its SHA-256 and input/output contract before processing any video, uses
+container timestamps (PTS), scores in one decode pass with bounded frame
+buffering, and saves evidence frames under the ignored `data/raw/evidence/`
+directory. Evidence extraction may perform an additional bounded decode pass.
+
+```powershell
+uv run pytest tests/inference -q
+uv run python -m fortebank_audit.inference.benchmark `
+  --video data/raw/open/videos/X-1.mov `
+  --predictor onnx
+uv run python -m fortebank_audit.inference.evaluation --selection reference
+```
+
+Use `--selection reference` when reproducing the published threshold report.
+The current dataset manifest contains a different validation split; the
+evaluator reports that mismatch explicitly instead of silently mixing results.
+
+The current classifier is an experimental baseline for exercising the full pipeline. Its metrics are not yet strong enough for an autonomous decision system, and its event type is intentionally generic. Every positive result means only "possible observable violation" and requires human review.
 
 Generated data stays under `data/raw/` and `artifacts/`, which are excluded from Git.
 

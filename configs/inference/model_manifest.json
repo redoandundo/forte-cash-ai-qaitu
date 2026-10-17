@@ -1,0 +1,23 @@
+{
+  "contract_version": 1,
+  "model_name": "mobilenet_v3_small_temporal",
+  "model_version": "mobilenet-temporal-baseline-2026-10-17",
+  "artifact": "models/best_model.onnx",
+  "sha256": "db81e57802e351248e96f265bb5beb0accfd2a47bb58d134a7c96c08ef8dcd01",
+  "runtime": "onnxruntime",
+  "input_name": "video",
+  "input_layout": "NCTHW",
+  "input_shape": [null, 3, 4, 160, 160],
+  "dtype": "float32",
+  "color": "RGB",
+  "output_name": "logits",
+  "output_shape": [null],
+  "output_semantics": "logit",
+  "positive_label": "possible_violation",
+  "preprocessing_file": "models/preprocessing.json",
+  "preprocessing_sha256": "6e0034d1da3f9fa248b756d7c14871683ac395a2899163e118018e78c8903df7",
+  "threshold_file": "models/thresholds.json",
+  "threshold_sha256": "43b9b2ea1f121a4b0726bf84c40ef44c6b084374b91af75beb94e086aef29e72",
+  "sampling_implementation": "PyAV nearest sequential PTS; OpenCV INTER_LINEAR resize",
+  "compatibility_note": "The shipped threshold is reproduced at rounded metric level, but exact scores differ slightly from the original random-seek evaluation. Recalibrate before promotion."
+}
