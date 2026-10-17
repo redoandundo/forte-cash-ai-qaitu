@@ -1,0 +1,659 @@
+{
+  "evaluation": "five-fold nested scenario-group OOF",
+  "source_count": 40,
+  "oof_folds": 5,
+  "threshold_selection_leak": 0,
+  "metrics": {
+    "precision": 0.47368421052631576,
+    "recall": 0.42857142857142855,
+    "macro_f1": 0.45,
+    "confusion_matrix": [
+      [
+        9,
+        10
+      ],
+      [
+        12,
+        9
+      ]
+    ],
+    "false_positives_per_minute": 0.7942822270085081
+  },
+  "bootstrap_95_ci": {
+    "macro_f1": [
+      0.29292929292929293,
+      0.44862155388471175,
+      0.6
+    ],
+    "precision": [
+      0.3,
+      0.47368421052631576,
+      0.6428571428571429
+    ],
+    "recall": [
+      0.23809523809523808,
+      0.42857142857142855,
+      0.6666666666666666
+    ]
+  },
+  "timestamp_metrics": {
+    "mae_sec": 6.857142857142857,
+    "within_5_sec": 0.5238095238095238
+  },
+  "folds": [
+    {
+      "precision": 0.3333333333333333,
+      "recall": 0.25,
+      "macro_f1": 0.3650793650793651,
+      "confusion_matrix": [
+        [
+          2,
+          2
+        ],
+        [
+          3,
+          1
+        ]
+      ],
+      "outer_fold": 0,
+      "calibration_threshold": 0.447507843375206,
+      "source_count": 8
+    },
+    {
+      "precision": 0.5,
+      "recall": 0.5,
+      "macro_f1": 0.5,
+      "confusion_matrix": [
+        [
+          2,
+          2
+        ],
+        [
+          2,
+          2
+        ]
+      ],
+      "outer_fold": 1,
+      "calibration_threshold": 0.3895246759057045,
+      "source_count": 8
+    },
+    {
+      "precision": 0.625,
+      "recall": 1.0,
+      "macro_f1": 0.38461538461538464,
+      "confusion_matrix": [
+        [
+          0,
+          3
+        ],
+        [
+          0,
+          5
+        ]
+      ],
+      "outer_fold": 2,
+      "calibration_threshold": 0.37649501115083694,
+      "source_count": 8
+    },
+    {
+      "precision": 0.3333333333333333,
+      "recall": 0.25,
+      "macro_f1": 0.3650793650793651,
+      "confusion_matrix": [
+        [
+          2,
+          2
+        ],
+        [
+          3,
+          1
+        ]
+      ],
+      "outer_fold": 3,
+      "calibration_threshold": 0.5409173145890236,
+      "source_count": 8
+    },
+    {
+      "precision": 0.0,
+      "recall": 0.0,
+      "macro_f1": 0.2727272727272727,
+      "confusion_matrix": [
+        [
+          3,
+          1
+        ],
+        [
+          4,
+          0
+        ]
+      ],
+      "outer_fold": 4,
+      "calibration_threshold": 0.40769877657294273,
+      "source_count": 8
+    }
+  ],
+  "videos": [
+    {
+      "source_id": "6a53e10acdcf5239",
+      "video_ids": [
+        8
+      ],
+      "label": 0,
+      "score": 0.42684049904346466,
+      "prediction": 0,
+      "peak_time_sec": 23.0,
+      "timestamp_error_sec": null,
+      "runtime_sec": 3.6801763999974355,
+      "outer_fold": 0
+    },
+    {
+      "source_id": "69caf59620fcd80b",
+      "video_ids": [
+        15
+      ],
+      "label": 1,
+      "score": 0.4405451864004135,
+      "prediction": 0,
+      "peak_time_sec": 17.0,
+      "timestamp_error_sec": 2.0,
+      "runtime_sec": 1.4872144000109984,
+      "outer_fold": 0
+    },
+    {
+      "source_id": "3f516431cf37e390",
+      "video_ids": [
+        16
+      ],
+      "label": 0,
+      "score": 0.45162229239940643,
+      "prediction": 1,
+      "peak_time_sec": 3.0,
+      "timestamp_error_sec": null,
+      "runtime_sec": 1.530699500013725,
+      "outer_fold": 0
+    },
+    {
+      "source_id": "90607b0b0cb772fc",
+      "video_ids": [
+        18
+      ],
+      "label": 1,
+      "score": 0.45018407702445984,
+      "prediction": 1,
+      "peak_time_sec": 3.0,
+      "timestamp_error_sec": 17.0,
+      "runtime_sec": 1.5701595999998972,
+      "outer_fold": 0
+    },
+    {
+      "source_id": "16065504b21260bf",
+      "video_ids": [
+        19
+      ],
+      "label": 0,
+      "score": 0.4533572942018509,
+      "prediction": 1,
+      "peak_time_sec": 47.0,
+      "timestamp_error_sec": null,
+      "runtime_sec": 4.386126299999887,
+      "outer_fold": 0
+    },
+    {
+      "source_id": "d15ef04bcfae571b",
+      "video_ids": [
+        28
+      ],
+      "label": 1,
+      "score": 0.4262523949146271,
+      "prediction": 0,
+      "peak_time_sec": 13.0,
+      "timestamp_error_sec": 6.0,
+      "runtime_sec": 1.1067275000095833,
+      "outer_fold": 0
+    },
+    {
+      "source_id": "b9bfb76ac8ea47eb",
+      "video_ids": [
+        29
+      ],
+      "label": 0,
+      "score": 0.4232917055487633,
+      "prediction": 0,
+      "peak_time_sec": 13.0,
+      "timestamp_error_sec": null,
+      "runtime_sec": 1.0314556999946944,
+      "outer_fold": 0
+    },
+    {
+      "source_id": "66fc5d28c2371592",
+      "video_ids": [
+        46
+      ],
+      "label": 1,
+      "score": 0.43233925104141235,
+      "prediction": 0,
+      "peak_time_sec": 7.0,
+      "timestamp_error_sec": 4.0,
+      "runtime_sec": 1.2391689000069164,
+      "outer_fold": 0
+    },
+    {
+      "source_id": "8911a9219b943309",
+      "video_ids": [
+        1
+      ],
+      "label": 1,
+      "score": 0.3986593037843704,
+      "prediction": 1,
+      "peak_time_sec": 5.0,
+      "timestamp_error_sec": 17.0,
+      "runtime_sec": 2.415413199996692,
+      "outer_fold": 1
+    },
+    {
+      "source_id": "21468fcef4ea5f45",
+      "video_ids": [
+        3
+      ],
+      "label": 0,
+      "score": 0.40252794325351715,
+      "prediction": 1,
+      "peak_time_sec": 5.0,
+      "timestamp_error_sec": null,
+      "runtime_sec": 1.5321832999907201,
+      "outer_fold": 1
+    },
+    {
+      "source_id": "a37930cf119bb691",
+      "video_ids": [
+        13
+      ],
+      "label": 1,
+      "score": 0.3921874314546585,
+      "prediction": 1,
+      "peak_time_sec": 61.0,
+      "timestamp_error_sec": 14.0,
+      "runtime_sec": 5.698743900007685,
+      "outer_fold": 1
+    },
+    {
+      "source_id": "e3a00b6e0f38b1d9",
+      "video_ids": [
+        26
+      ],
+      "label": 1,
+      "score": 0.3817167356610298,
+      "prediction": 0,
+      "peak_time_sec": 15.0,
+      "timestamp_error_sec": 6.0,
+      "runtime_sec": 1.264283600001363,
+      "outer_fold": 1
+    },
+    {
+      "source_id": "d3d21494d74e40a7",
+      "video_ids": [
+        27
+      ],
+      "label": 0,
+      "score": 0.39191700518131256,
+      "prediction": 1,
+      "peak_time_sec": 23.0,
+      "timestamp_error_sec": null,
+      "runtime_sec": 2.025914500001818,
+      "outer_fold": 1
+    },
+    {
+      "source_id": "5a6f6a13ef88191e",
+      "video_ids": [
+        38
+      ],
+      "label": 1,
+      "score": 0.38932761549949646,
+      "prediction": 0,
+      "peak_time_sec": 53.0,
+      "timestamp_error_sec": 20.0,
+      "runtime_sec": 5.1617066000035265,
+      "outer_fold": 1
+    },
+    {
+      "source_id": "deeeee54539fb894",
+      "video_ids": [
+        39
+      ],
+      "label": 0,
+      "score": 0.3869684115052223,
+      "prediction": 0,
+      "peak_time_sec": 37.0,
+      "timestamp_error_sec": null,
+      "runtime_sec": 7.358460299990838,
+      "outer_fold": 1
+    },
+    {
+      "source_id": "39e28d7be01cdb09",
+      "video_ids": [
+        43
+      ],
+      "label": 0,
+      "score": 0.38710682839155197,
+      "prediction": 0,
+      "peak_time_sec": 15.0,
+      "timestamp_error_sec": null,
+      "runtime_sec": 1.5954711000085808,
+      "outer_fold": 1
+    },
+    {
+      "source_id": "7e585e33517f7258",
+      "video_ids": [
+        20
+      ],
+      "label": 1,
+      "score": 0.37966403365135193,
+      "prediction": 1,
+      "peak_time_sec": 3.0,
+      "timestamp_error_sec": 2.0,
+      "runtime_sec": 0.9626054000109434,
+      "outer_fold": 2
+    },
+    {
+      "source_id": "efd876a04224cac7",
+      "video_ids": [
+        21
+      ],
+      "label": 0,
+      "score": 0.381921224296093,
+      "prediction": 1,
+      "peak_time_sec": 15.0,
+      "timestamp_error_sec": null,
+      "runtime_sec": 1.407487599994056,
+      "outer_fold": 2
+    },
+    {
+      "source_id": "c9a30d44907e4a41",
+      "video_ids": [
+        22
+      ],
+      "label": 1,
+      "score": 0.37683893740177155,
+      "prediction": 1,
+      "peak_time_sec": 17.0,
+      "timestamp_error_sec": 3.0,
+      "runtime_sec": 1.5343583999929251,
+      "outer_fold": 2
+    },
+    {
+      "source_id": "b637677ef5a7f0fa",
+      "video_ids": [
+        23
+      ],
+      "label": 0,
+      "score": 0.38249027729034424,
+      "prediction": 1,
+      "peak_time_sec": 15.0,
+      "timestamp_error_sec": null,
+      "runtime_sec": 1.17904199998884,
+      "outer_fold": 2
+    },
+    {
+      "source_id": "05af66ce27b83d7c",
+      "video_ids": [
+        30
+      ],
+      "label": 1,
+      "score": 0.4092768058180809,
+      "prediction": 1,
+      "peak_time_sec": 5.0,
+      "timestamp_error_sec": 8.0,
+      "runtime_sec": 1.371458599998732,
+      "outer_fold": 2
+    },
+    {
+      "source_id": "6a9fa7dd2e6db4cb",
+      "video_ids": [
+        31
+      ],
+      "label": 0,
+      "score": 0.41191720962524414,
+      "prediction": 1,
+      "peak_time_sec": 11.0,
+      "timestamp_error_sec": null,
+      "runtime_sec": 1.746114800000214,
+      "outer_fold": 2
+    },
+    {
+      "source_id": "bcc277cbf1a36245",
+      "video_ids": [
+        32
+      ],
+      "label": 1,
+      "score": 0.4096453934907913,
+      "prediction": 1,
+      "peak_time_sec": 3.0,
+      "timestamp_error_sec": 2.0,
+      "runtime_sec": 1.285668500000611,
+      "outer_fold": 2
+    },
+    {
+      "source_id": "6a81739ced0efdcd",
+      "video_ids": [
+        40
+      ],
+      "label": 1,
+      "score": 0.39813289791345596,
+      "prediction": 1,
+      "peak_time_sec": 7.0,
+      "timestamp_error_sec": 10.0,
+      "runtime_sec": 1.6423930000019027,
+      "outer_fold": 2
+    },
+    {
+      "source_id": "57a0e46c7a45f0e8",
+      "video_ids": [
+        10
+      ],
+      "label": 0,
+      "score": 0.5222584307193756,
+      "prediction": 0,
+      "peak_time_sec": 3.0,
+      "timestamp_error_sec": null,
+      "runtime_sec": 1.3013121999974828,
+      "outer_fold": 3
+    },
+    {
+      "source_id": "b3a954a5b761ad47",
+      "video_ids": [
+        11
+      ],
+      "label": 1,
+      "score": 0.5515504330396652,
+      "prediction": 1,
+      "peak_time_sec": 17.0,
+      "timestamp_error_sec": 1.0,
+      "runtime_sec": 1.9204758999985643,
+      "outer_fold": 3
+    },
+    {
+      "source_id": "955755baf54418b4",
+      "video_ids": [
+        12
+      ],
+      "label": 0,
+      "score": 0.5435909032821655,
+      "prediction": 1,
+      "peak_time_sec": 33.0,
+      "timestamp_error_sec": null,
+      "runtime_sec": 3.3395049999962794,
+      "outer_fold": 3
+    },
+    {
+      "source_id": "0378b8026b2e6afd",
+      "video_ids": [
+        17
+      ],
+      "label": 1,
+      "score": 0.5365992933511734,
+      "prediction": 0,
+      "peak_time_sec": 7.0,
+      "timestamp_error_sec": 0.0,
+      "runtime_sec": 0.8364721999969333,
+      "outer_fold": 3
+    },
+    {
+      "source_id": "c175a683749401d5",
+      "video_ids": [
+        24
+      ],
+      "label": 1,
+      "score": 0.5305695682764053,
+      "prediction": 0,
+      "peak_time_sec": 9.0,
+      "timestamp_error_sec": 1.0,
+      "runtime_sec": 0.890937500007567,
+      "outer_fold": 3
+    },
+    {
+      "source_id": "901f61cf1a1b8754",
+      "video_ids": [
+        25
+      ],
+      "label": 0,
+      "score": 0.5294615477323532,
+      "prediction": 0,
+      "peak_time_sec": 27.0,
+      "timestamp_error_sec": null,
+      "runtime_sec": 2.4091055000026245,
+      "outer_fold": 3
+    },
+    {
+      "source_id": "f3e351bea71150f4",
+      "video_ids": [
+        34
+      ],
+      "label": 1,
+      "score": 0.53695048391819,
+      "prediction": 0,
+      "peak_time_sec": 5.0,
+      "timestamp_error_sec": 8.0,
+      "runtime_sec": 0.998186099997838,
+      "outer_fold": 3
+    },
+    {
+      "source_id": "26430119e074d6f0",
+      "video_ids": [
+        35
+      ],
+      "label": 0,
+      "score": 0.5428424030542374,
+      "prediction": 1,
+      "peak_time_sec": 5.0,
+      "timestamp_error_sec": null,
+      "runtime_sec": 4.914738899999065,
+      "outer_fold": 3
+    },
+    {
+      "source_id": "9932ae0a10d3b937",
+      "video_ids": [
+        2
+      ],
+      "label": 1,
+      "score": 0.38759539276361465,
+      "prediction": 0,
+      "peak_time_sec": 5.0,
+      "timestamp_error_sec": 5.0,
+      "runtime_sec": 2.289230399997905,
+      "outer_fold": 4
+    },
+    {
+      "source_id": "5385be9420e6a705",
+      "video_ids": [
+        4,
+        47
+      ],
+      "label": 1,
+      "score": 0.39150314033031464,
+      "prediction": 0,
+      "peak_time_sec": 55.0,
+      "timestamp_error_sec": 2.0,
+      "runtime_sec": 7.878510800001095,
+      "outer_fold": 4
+    },
+    {
+      "source_id": "1f5840bff58f298e",
+      "video_ids": [
+        5,
+        48
+      ],
+      "label": 0,
+      "score": 0.3927111253142357,
+      "prediction": 0,
+      "peak_time_sec": 3.0,
+      "timestamp_error_sec": null,
+      "runtime_sec": 7.413206199998967,
+      "outer_fold": 4
+    },
+    {
+      "source_id": "7d6890ecb4a2b28b",
+      "video_ids": [
+        14
+      ],
+      "label": 0,
+      "score": 0.41888824105262756,
+      "prediction": 1,
+      "peak_time_sec": 3.0,
+      "timestamp_error_sec": null,
+      "runtime_sec": 15.009230099996785,
+      "outer_fold": 4
+    },
+    {
+      "source_id": "209e8aaca88df590",
+      "video_ids": [
+        33
+      ],
+      "label": 1,
+      "score": 0.40341999381780624,
+      "prediction": 0,
+      "peak_time_sec": 9.0,
+      "timestamp_error_sec": 3.0,
+      "runtime_sec": 0.9950242999912007,
+      "outer_fold": 4
+    },
+    {
+      "source_id": "ac4cf04844c0aa08",
+      "video_ids": [
+        37
+      ],
+      "label": 0,
+      "score": 0.3944743424654007,
+      "prediction": 0,
+      "peak_time_sec": 5.0,
+      "timestamp_error_sec": null,
+      "runtime_sec": 1.0232617000001483,
+      "outer_fold": 4
+    },
+    {
+      "source_id": "9774ed882153af3b",
+      "video_ids": [
+        44
+      ],
+      "label": 1,
+      "score": 0.3861716464161873,
+      "prediction": 0,
+      "peak_time_sec": 3.0,
+      "timestamp_error_sec": 13.0,
+      "runtime_sec": 1.8346597000054317,
+      "outer_fold": 4
+    },
+    {
+      "source_id": "524bf9ff2d5e8121",
+      "video_ids": [
+        45
+      ],
+      "label": 0,
+      "score": 0.3973609432578087,
+      "prediction": 0,
+      "peak_time_sec": 3.0,
+      "timestamp_error_sec": null,
+      "runtime_sec": 2.878654899992398,
+      "outer_fold": 4
+    }
+  ]
+}

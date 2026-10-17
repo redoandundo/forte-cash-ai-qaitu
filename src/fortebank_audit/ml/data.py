@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import random
+from collections import defaultdict
 from pathlib import Path
 
 import cv2
@@ -111,3 +112,41 @@ class ClipDataset(Dataset):
         video = preprocess(read_clip(item["path"], self.frames, self.temporal_span, self.augment), self.image_size, self.augment, self.normalization)
         weight = float(item.get("sample_weight", 1.0))
         return video, torch.tensor(float(item["label"])), torch.tensor(weight), item["source_id"], item["clip_id"]
+
+
+class ScenarioPairDataset(Dataset):
+    """Positive/negative clip pairs from the same verified scenario group."""
+
+    def __init__(self, manifest: str | Path, split: str, frames: int, image_size: int, augment: bool = False, normalization: str = "kinetics", temporal_span: float = 1.0):
+        payload = json.loads(Path(manifest).read_text(encoding="utf-8"))
+        grouped: dict[str, dict[int, list[dict]]] = defaultdict(lambda: {0: [], 1: []})
+        for item in payload["clips"]:
+            if item["split"] == split and item.get("scenario_group"):
+                grouped[item["scenario_group"]][int(item["label"])].append(item)
+        self.pairs = [
+            (positive, negative, group)
+            for group, labels in grouped.items()
+            for positive in labels[1]
+            for negative in labels[0]
+        ]
+        self.frames = frames
+        self.image_size = image_size
+        self.augment = augment
+        self.normalization = normalization
+        self.temporal_span = temporal_span
+
+    def __len__(self) -> int:
+        return len(self.pairs)
+
+    def _video(self, item: dict) -> torch.Tensor:
+        return preprocess(
+            read_clip(item["path"], self.frames, self.temporal_span, self.augment),
+            self.image_size,
+            self.augment,
+            self.normalization,
+        )
+
+    def __getitem__(self, index: int):
+        positive, negative, group = self.pairs[index]
+        confidence_weight = {"high": 1.0, "medium": 0.75, "low": 0.5}[positive.get("annotation_confidence", "high")]
+        return self._video(positive), self._video(negative), torch.tensor(confidence_weight), group

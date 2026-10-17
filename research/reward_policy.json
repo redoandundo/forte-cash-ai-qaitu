@@ -1,0 +1,35 @@
+{
+  "version": "reward-v2",
+  "principle": "Reward reproducible out-of-source improvement, not training accuracy or model complexity.",
+  "weights": {
+    "macro_f1_delta": 40,
+    "auroc_delta": 20,
+    "recall_delta": 10,
+    "within_5_sec_delta": 10,
+    "timestamp_mae_relative_improvement": 10,
+    "fp_per_min_relative_improvement": 10,
+    "p95_runtime_relative_improvement": 5
+  },
+  "confidence": {
+    "formula": "min(1, sqrt(validation_source_count / 40)) * min(1, oof_folds / 5)",
+    "reason": "Large gains on a small holdout receive less credit, and a model gets no evidence reward until it has outer-fold predictions."
+  },
+  "hard_penalties": {
+    "scenario_leaks_above_zero": -100,
+    "onnx_parity_error_above_1e-4": -100,
+    "validation_sources_below_8": -25,
+    "oof_folds_below_5": -50,
+    "threshold_selected_on_evaluation_set": -50
+  },
+  "promotion_gates": {
+    "scenario_leaks": 0,
+    "onnx_parity_error_max": 0.0001,
+    "macro_f1_not_worse": true,
+    "fp_per_min_not_worse": true,
+    "minimum_recall": 0.75,
+    "minimum_validation_sources": 8,
+    "minimum_oof_folds": 5,
+    "threshold_selection_leak": 0,
+    "minimum_macro_f1_ci_low": 0.5
+  }
+}

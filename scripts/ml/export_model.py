@@ -63,7 +63,7 @@ def main() -> None:
                 "num_frames": frames,
                 "image_size": image_size,
                 "normalization": checkpoint["normalization"],
-                "window_sec": 8.0,
+                "window_sec": 6.0,
                 "temporal_span_fraction": checkpoint.get("temporal_span", 1.0),
                 "recommended_stride_sec": 2.0,
             },
@@ -72,7 +72,7 @@ def main() -> None:
         encoding="utf-8",
     )
     (PROJECT_ROOT / "models" / "thresholds.json").write_text(
-        json.dumps({"violation": threshold, "selected_on": "full_validation_videos", "metric": "f2"}, indent=2),
+        json.dumps({"violation": threshold, "selected_on": "full_validation_videos", "metric": "macro_f1_then_recall", "aggregation": "three_window_weighted_smoothing_then_peak"}, indent=2),
         encoding="utf-8",
     )
     (PROJECT_ROOT / "models" / "checksums.sha256").write_text(f"{digest}  best_model.onnx\n", encoding="utf-8")

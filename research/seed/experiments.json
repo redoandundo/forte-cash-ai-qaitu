@@ -1,0 +1,89 @@
+[
+  {
+    "run_id": "mobilenet-v1",
+    "model": "mobilenet_v3_small_temporal",
+    "stage": "legacy_baseline",
+    "dataset_version": "clips-v1-41",
+    "split_version": "sha-only-holdout-v1",
+    "status": "superseded",
+    "config_path": "configs/model.yaml",
+    "artifact_path": null,
+    "notes": "Single raw-maximum aggregation and F2 threshold; four known contrastive-pair leaks.",
+    "metrics": {
+      "precision": 0.6666667,
+      "recall": 1.0,
+      "macro_f1": 0.7333333,
+      "auroc": 0.5,
+      "timestamp_mae_sec": 8.75,
+      "within_5_sec": 0.25,
+      "fp_per_min": 1.0137961,
+      "p95_runtime_sec": 6.5186,
+      "peak_vram_mb": 51.28,
+      "parity_error": 0.0000001043,
+      "source_count": 8,
+      "scenario_leaks": 4,
+      "oof_folds": 0,
+      "threshold_selection_leak": 1
+    }
+  },
+  {
+    "run_id": "mobilenet-balanced-v3",
+    "model": "mobilenet_v3_small_temporal",
+    "stage": "balanced_pair_safe",
+    "dataset_version": "clips-v3-79-weighted",
+    "split_version": "scenario-pair-safe-fold0",
+    "status": "selected",
+    "config_path": "configs/model.yaml",
+    "artifact_path": "models/best_model.onnx",
+    "notes": "Three-window smoothing, macro-F1 threshold, confidence weights, three negative windows per source.",
+    "metrics": {
+      "precision": 0.75,
+      "recall": 0.75,
+      "macro_f1": 0.75,
+      "auroc": 0.6875,
+      "timestamp_mae_sec": 7.0,
+      "within_5_sec": 0.5,
+      "fp_per_min": 0.4576659,
+      "p95_runtime_sec": 3.7645,
+      "peak_vram_mb": 53.46,
+      "parity_error": 0.0000000298,
+      "source_count": 8,
+      "scenario_leaks": 0,
+      "oof_folds": 0,
+      "threshold_selection_leak": 1,
+      "macro_f1_ci_low": 0.3650794,
+      "threshold_loo_macro_f1": 0.6190476,
+      "score_span": 0.0164896,
+      "minimum_decision_margin": 0.0003029
+    },
+    "errors": [
+      {
+        "video_id": "Х-22",
+        "error_kind": "false_negative",
+        "peak_time_sec": 17.0,
+        "score": 0.3730962,
+        "annotation_confidence": "low",
+        "diagnosis": "Door/exit action is subtle and the source label itself has low semantic confidence.",
+        "proposed_action": "Review event interval and door-state evidence before using it as a strong positive."
+      },
+      {
+        "video_id": "Х-35",
+        "error_kind": "false_positive",
+        "peak_time_sec": 27.0,
+        "score": 0.3827315,
+        "annotation_confidence": "high",
+        "diagnosis": "Long normal video contains motion visually similar to the paired zone-crossing event Х-34.",
+        "proposed_action": "Mine windows around 27 seconds as explicit hard negatives and compare zone trajectories."
+      },
+      {
+        "video_id": "Х-44",
+        "error_kind": "localization_error",
+        "peak_time_sec": 3.0,
+        "score": 0.3782463,
+        "annotation_confidence": "medium",
+        "diagnosis": "Frame-average encoder responds to scene context but does not isolate the small personal-object action.",
+        "proposed_action": "Add hand/table ROI features only after object identity is reviewed."
+      }
+    ]
+  }
+]

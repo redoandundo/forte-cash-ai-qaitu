@@ -6,7 +6,7 @@ labels:
 data:
   raw_root: data/raw/open
   clip_manifest: analysis/clip_manifest.json
-  clip_seconds: 8.0
+  clip_seconds: 6.0
   frames: 4
   image_size: 160
   validation_fraction: 0.2
@@ -18,7 +18,7 @@ training:
   weight_decay: 0.0001
   num_workers: 0
   early_stopping_patience: 3
-  decision_metric: f2
+  decision_metric: macro_f1_then_auroc
   amp: true
 augmentation:
   angle:

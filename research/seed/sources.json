@@ -1,0 +1,102 @@
+[
+  {
+    "source_key": "ucf-crime-2018",
+    "title": "Real-world Anomaly Detection in Surveillance Videos",
+    "year": 2018,
+    "kind": "paper",
+    "url": "https://arxiv.org/abs/1801.04264",
+    "evidence_level": 5,
+    "relevance": "Introduces video-level multiple-instance anomaly ranking on untrimmed surveillance video.",
+    "notes": "Closest foundational formulation to binary video labels with sparse abnormal segments."
+  },
+  {
+    "source_key": "rtfm-2021",
+    "title": "Weakly-Supervised Video Anomaly Detection With Robust Temporal Feature Magnitude Learning",
+    "year": 2021,
+    "kind": "paper",
+    "url": "https://openaccess.thecvf.com/content/ICCV2021/html/Tian_Weakly-Supervised_Video_Anomaly_Detection_With_Robust_Temporal_Feature_Magnitude_Learning_ICCV_2021_paper.html",
+    "evidence_level": 5,
+    "relevance": "MIL, temporal context, and hard separation of subtle abnormal snippets from dominant normal snippets.",
+    "notes": "Primary candidate for the next model family."
+  },
+  {
+    "source_key": "uncertain-pseudolabels-2023",
+    "title": "Exploiting Completeness and Uncertainty of Pseudo Labels for Weakly Supervised Video Anomaly Detection",
+    "year": 2023,
+    "kind": "paper",
+    "url": "https://openaccess.thecvf.com/content/CVPR2023/html/Zhang_Exploiting_Completeness_and_Uncertainty_of_Pseudo_Labels_for_Weakly_Supervised_CVPR_2023_paper.html",
+    "evidence_level": 5,
+    "relevance": "Supports uncertainty-aware pseudo labels instead of treating every weak label as equally reliable.",
+    "notes": "Matches our low/medium/high annotation confidence design."
+  },
+  {
+    "source_key": "realtime-wsvad-2024",
+    "title": "Real-Time Weakly Supervised Video Anomaly Detection",
+    "year": 2024,
+    "kind": "paper",
+    "url": "https://openaccess.thecvf.com/content/WACV2024/html/Karim_Real-Time_Weakly_Supervised_Video_Anomaly_Detection_WACV_2024_paper.html",
+    "evidence_level": 5,
+    "relevance": "End-to-end trainable video anomaly detection with explicit real-time evaluation.",
+    "notes": "Useful for the 300-second service constraint and streaming inference."
+  },
+  {
+    "source_key": "metawsvad-2020",
+    "title": "Learning to Adapt to Unseen Abnormal Activities under Weak Supervision",
+    "year": 2020,
+    "kind": "paper",
+    "url": "https://openaccess.thecvf.com/content/ACCV2020/html/Park_Learning_to_Adapt_to_Unseen_Abnormal_Activities_under_Weak_Supervision_ACCV_2020_paper.html",
+    "evidence_level": 4,
+    "relevance": "Meta-learning for adapting to unseen anomaly types from video-level binary labels.",
+    "notes": "Longer-term route once multiple confirmed violation families exist."
+  },
+  {
+    "source_key": "videomaev2-2023",
+    "title": "VideoMAE V2: Scaling Video Masked Autoencoders With Dual Masking",
+    "year": 2023,
+    "kind": "paper",
+    "url": "https://openaccess.thecvf.com/content/CVPR2023/html/Wang_VideoMAE_V2_Scaling_Video_Masked_Autoencoders_With_Dual_Masking_CVPR_2023_paper.html",
+    "evidence_level": 5,
+    "relevance": "Self-supervised video pretraining that can adapt representations to unlabelled local footage.",
+    "notes": "Run only after a lightweight MIL baseline because the laptop has 4 GB VRAM."
+  },
+  {
+    "source_key": "nvidia-smart-checkout",
+    "title": "NVIDIA Few-Shot Product Recognition for Smart Self-Checkout",
+    "year": 2025,
+    "kind": "reference_system",
+    "url": "https://docs.nvidia.com/mms/text/Smart_self_checkout_Overview.html",
+    "evidence_level": 4,
+    "relevance": "Uses an embedding database and operator-provided ground truth to improve recognition of new checkout items.",
+    "notes": "Strong analogue for a local human-feedback memory bank."
+  },
+  {
+    "source_key": "nvidia-deepstream",
+    "title": "NVIDIA DeepStream Reference Application",
+    "year": 2026,
+    "kind": "reference_system",
+    "url": "https://docs.nvidia.com/metropolis/deepstream/dev-guide/text/DS_Overview.html",
+    "evidence_level": 4,
+    "relevance": "Modular local pipeline with decode, primary inference, secondary inference, tracking, evidence rendering, and output metadata.",
+    "notes": "Architectural reference, not a model to copy directly."
+  },
+  {
+    "source_key": "nvidia-retail-active-learning",
+    "title": "NVIDIA Retail Loss Prevention AI Workflow",
+    "year": 2026,
+    "kind": "reference_system",
+    "url": "https://www.nvidia.com/en-us/ai-data-science/ai-workflows/retail-loss-prevention/",
+    "evidence_level": 3,
+    "relevance": "Combines few-shot learning, self-supervised representations, active learning, and actionable alerts.",
+    "notes": "Commercial workflow description; use only as system-design evidence."
+  },
+  {
+    "source_key": "mlflow-tracking",
+    "title": "MLflow Experiment Tracking",
+    "year": 2026,
+    "kind": "official_documentation",
+    "url": "https://www.mlflow.org/docs/latest/tracking/",
+    "evidence_level": 4,
+    "relevance": "Defines experiments, runs, metrics, parameters, artifacts, and model registry concepts.",
+    "notes": "Our SQLite lab is a dependency-free local subset with an upgrade path to MLflow."
+  }
+]

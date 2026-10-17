@@ -10,3 +10,14 @@ artifacts/*
 data/processed/
 models/checkpoints/
 
+# Generated local experiment state and distribution bundles
+analysis/oof/
+deliverables/
+research/dashboard.html
+research/learning_lab.sqlite3
+reports/ml/oof/
+reports/ml/nested_oof/
+reports/ml/pair_rank_w05_m01/
+reports/ml/hardneg_pair_w025_m005/
+reports/ml/temporal_stats_pair_w025_m005/
+

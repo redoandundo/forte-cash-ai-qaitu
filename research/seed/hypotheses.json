@@ -1,0 +1,86 @@
+[
+  {
+    "hypothesis_key": "H1-oof-calibration",
+    "title": "Five-fold scenario-group out-of-fold calibration",
+    "mechanism": "Train the same lightweight model on five scenario-safe folds and select one threshold from pooled out-of-fold predictions.",
+    "expected_effect": "Reduce threshold overfitting and produce confidence intervals for all reported metrics.",
+    "priority": 100,
+    "estimated_gpu_hours": 0.5,
+    "risk": "Some folds may contain too few examples of a scene family.",
+    "status": "evaluated_no_gain",
+    "success_criteria": "No scenario leakage; pooled macro F1 >= 0.70; 95% bootstrap interval reported; all folds contain both labels.",
+    "sources": ["mlflow-tracking"]
+  },
+  {
+    "hypothesis_key": "H7-pair-ranking",
+    "title": "Contrastive scenario-pair ranking and hard-negative curriculum",
+    "mechanism": "For each matched scenario, require the positive video peak to exceed the negative peak by a margin and repeatedly sample verified false-positive windows.",
+    "expected_effect": "Reduce the dominant error cluster: normal videos in matched pairs ranked above violations.",
+    "priority": 110,
+    "estimated_gpu_hours": 1.0,
+    "risk": "Incorrect positive labels can invert the ranking objective; medium and low confidence pairs need review or reduced weight.",
+    "status": "evaluated_no_gain",
+    "success_criteria": "Nested OOF macro F1 +0.10, paired false positives below 5, and recall does not fall below 0.67.",
+    "sources": ["rtfm-2021"]
+  },
+  {
+    "hypothesis_key": "H2-mil-ranking",
+    "title": "Weakly supervised temporal MIL ranking",
+    "mechanism": "Represent every complete video as a bag of snippets, rank anomalous snippets above normal snippets, and add temporal smoothness and sparsity losses.",
+    "expected_effect": "Improve full-video ranking and temporal localization without assuming every positive-video frame is abnormal.",
+    "priority": 95,
+    "estimated_gpu_hours": 2.0,
+    "risk": "Small data can make MIL select background shortcuts; scenario-safe folds remain mandatory.",
+    "status": "next",
+    "success_criteria": "OOF AUROC +0.05 or timestamp MAE -20% without macro F1 regression; stable top snippets on contrastive pairs.",
+    "sources": ["ucf-crime-2018", "rtfm-2021", "realtime-wsvad-2024"]
+  },
+  {
+    "hypothesis_key": "H3-domain-ssl",
+    "title": "Self-supervised pretraining on local unlabelled windows",
+    "mechanism": "Pretrain a compact video encoder with masked reconstruction or contrastive objectives on all local footage, then fine-tune the anomaly head.",
+    "expected_effect": "Learn this camera angle, furniture, hands, doors, and cash-desk motion without needing more labels.",
+    "priority": 75,
+    "estimated_gpu_hours": 8.0,
+    "risk": "Full VideoMAE is too heavy for 4 GB VRAM; start with frozen features or a small encoder.",
+    "status": "proposed",
+    "success_criteria": "OOF AUROC +0.03 with <=2x inference latency and no external video upload.",
+    "sources": ["videomaev2-2023"]
+  },
+  {
+    "hypothesis_key": "H4-active-learning",
+    "title": "Human-review active learning and embedding memory",
+    "mechanism": "Store reviewed hard negatives, false negatives, embeddings, observable actions, and reviewer decisions; sample low-margin and novel clips for review.",
+    "expected_effect": "Spend annotation time on clips that most reduce uncertainty and repeated errors.",
+    "priority": 90,
+    "estimated_gpu_hours": 0.2,
+    "risk": "Reviewer inconsistency can amplify label noise; require dual fields for observation and interpretation.",
+    "status": "proposed",
+    "success_criteria": "Every cycle adds >=10 reviewed high-value clips and reduces repeated error clusters on the next OOF run.",
+    "sources": ["nvidia-smart-checkout", "nvidia-retail-active-learning", "uncertain-pseudolabels-2023"]
+  },
+  {
+    "hypothesis_key": "H5-structured-fusion",
+    "title": "Fuse video score with people, zone, door, and table-state signals",
+    "mechanism": "Add interpretable trajectories and state changes as a small late-fusion feature vector rather than asking one classifier to infer every rule.",
+    "expected_effect": "Reduce shortcuts and produce evidence aligned with observable rules such as zone crossing or unattended values.",
+    "priority": 80,
+    "estimated_gpu_hours": 3.0,
+    "risk": "Object labels and zone polygons require verified annotation; object identity must not be guessed.",
+    "status": "proposed",
+    "success_criteria": "At least one rule-specific detector improves its contrastive-pair F1 by 0.10 and produces reviewable evidence.",
+    "sources": ["nvidia-deepstream"]
+  },
+  {
+    "hypothesis_key": "H6-meta-adaptation",
+    "title": "Meta-learning across confirmed violation families",
+    "mechanism": "Treat each confirmed rule family as a task and learn an initialization that adapts from few reviewed examples.",
+    "expected_effect": "Faster adaptation when ForteBank adds a new confirmed rule or camera layout.",
+    "priority": 40,
+    "estimated_gpu_hours": 12.0,
+    "risk": "Premature until at least three confirmed classes have enough reviewed examples.",
+    "status": "blocked_on_labels",
+    "success_criteria": "At least three confirmed tasks; leave-one-family-out improvement over ordinary fine-tuning.",
+    "sources": ["metawsvad-2020"]
+  }
+]

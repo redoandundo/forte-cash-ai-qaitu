@@ -1,0 +1,47 @@
+[
+  {
+    "cycle_key": "C0-trust",
+    "title": "Data and evaluation trust",
+    "objective": "Remove duplicate and scenario leakage, preserve label uncertainty, and make every result reproducible.",
+    "entry_criteria": "Raw videos and source labels available locally.",
+    "exit_criteria": "Hash audit, pair-safe folds, deterministic manifests, ONNX parity, and baseline scorecard exist.",
+    "status": "complete",
+    "order_index": 0
+  },
+  {
+    "cycle_key": "C1-oof",
+    "title": "Out-of-fold truth layer",
+    "objective": "Estimate model quality and threshold without relying on one eight-video holdout.",
+    "entry_criteria": "C0 complete and all scenario groups have fold IDs.",
+    "exit_criteria": "Five nested OOF runs with inner-fold threshold calibration, bootstrap intervals, and error clusters recorded.",
+    "status": "complete",
+    "order_index": 1
+  },
+  {
+    "cycle_key": "C2-temporal-mil",
+    "title": "Temporal anomaly learning",
+    "objective": "Learn from complete-video snippet bags and localize sparse abnormal events.",
+    "entry_criteria": "OOF evaluator stable.",
+    "exit_criteria": "MIL beats v3 on OOF AUROC or timestamp MAE without violating latency and false-positive gates.",
+    "status": "next",
+    "order_index": 2
+  },
+  {
+    "cycle_key": "C3-human-loop",
+    "title": "Active human feedback",
+    "objective": "Turn reviewer decisions and recurring errors into the highest-value new training examples.",
+    "entry_criteria": "Review UI stores objective observation separately from rule interpretation.",
+    "exit_criteria": "At least two review/retrain cycles show positive confidence-adjusted reward.",
+    "status": "planned",
+    "order_index": 3
+  },
+  {
+    "cycle_key": "C4-structured-rules",
+    "title": "Interpretable detector fusion",
+    "objective": "Add people, zones, doors, and table-state detectors only where error analysis supports them.",
+    "entry_criteria": "Confirmed rule families and annotated zones or objects exist.",
+    "exit_criteria": "Rule-level evidence is measurable on contrastive pairs and improves the global reward.",
+    "status": "planned",
+    "order_index": 4
+  }
+]

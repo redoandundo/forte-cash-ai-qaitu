@@ -18,6 +18,14 @@ from fortebank_audit.ml.data import preprocess
 from fortebank_audit.ml.models import build_model
 
 
+def smooth(values: list[float]) -> np.ndarray:
+    scores = np.asarray(values, dtype=float)
+    if len(scores) < 3:
+        return scores
+    padded = np.pad(scores, (1, 1), mode="edge")
+    return np.convolve(padded, np.array([0.25, 0.5, 0.25]), mode="valid")
+
+
 def sample_window(path: Path, center: float, seconds: float, frame_count: int) -> np.ndarray:
     capture = cv2.VideoCapture(str(path))
     fps = float(capture.get(cv2.CAP_PROP_FPS) or 25)
@@ -44,10 +52,12 @@ def main() -> None:
     parser.add_argument("--manifest", type=Path, default=PROJECT_ROOT / "analysis" / "dataset_manifest.json")
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--stride", type=float, default=2.0)
-    parser.add_argument("--window", type=float, default=8.0)
+    parser.add_argument("--window", type=float, help="Defaults to the checkpoint window, or 6 seconds for older checkpoints.")
+    parser.add_argument("--threshold-from", type=Path, help="Use a threshold selected on a separate calibration set.")
     args = parser.parse_args()
 
     checkpoint = torch.load(args.checkpoint, map_location="cpu", weights_only=True)
+    window = float(args.window or checkpoint.get("window_sec", 6.0))
     clip_threshold = json.loads(args.metrics.read_text(encoding="utf-8"))["source_metrics"]["threshold"]
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model = build_model(checkpoint["model"], pretrained=False, train_backbone=False)
@@ -59,20 +69,21 @@ def main() -> None:
     durations = []
     for source in sources:
         started = time.perf_counter()
-        centers = np.arange(args.window / 2, max(args.window / 2 + 0.01, source["duration_sec"] - args.window / 2 + 0.01), args.stride)
+        centers = np.arange(window / 2, max(window / 2 + 0.01, source["duration_sec"] - window / 2 + 0.01), args.stride)
         if len(centers) == 0:
             centers = np.array([source["duration_sec"] / 2])
         scores = []
         for offset in range(0, len(centers), 8):
             batch = torch.stack([
-                preprocess(sample_window(Path(source["path"]), float(center), args.window * checkpoint.get("temporal_span", 1.0), checkpoint["frames"]), checkpoint["image_size"], False, checkpoint["normalization"])
+                preprocess(sample_window(Path(source["path"]), float(center), window * checkpoint.get("temporal_span", 1.0), checkpoint["frames"]), checkpoint["image_size"], False, checkpoint["normalization"])
                 for center in centers[offset : offset + 8]
             ]).to(device)
             with torch.inference_mode():
                 scores.extend(torch.sigmoid(model(batch)).cpu().tolist())
-        best_index = int(np.argmax(scores))
+        smoothed_scores = smooth(scores)
+        best_index = int(np.argmax(smoothed_scores))
         peak = float(centers[best_index])
-        maximum = float(scores[best_index])
+        maximum = float(smoothed_scores[best_index])
         error = min((abs(peak - event) for event in source["events_sec"]), default=None)
         duration = time.perf_counter() - started
         durations.append(duration)
@@ -81,17 +92,26 @@ def main() -> None:
 
     labels = np.array([row["label"] for row in rows])
     scores = np.array([row["score"] for row in rows])
-    ordered = np.sort(np.unique(scores))
-    candidates = np.concatenate(([0.0], (ordered[:-1] + ordered[1:]) / 2, [1.0]))
-    threshold, best_f2 = 0.5, -1.0
-    for candidate in candidates:
-        candidate_predictions = scores >= candidate
-        candidate_precision = precision_score(labels, candidate_predictions, zero_division=0)
-        candidate_recall = recall_score(labels, candidate_predictions, zero_division=0)
-        candidate_f2 = 5 * candidate_precision * candidate_recall / (4 * candidate_precision + candidate_recall) if candidate_precision + candidate_recall else 0.0
-        if candidate_f2 > best_f2:
-            threshold, best_f2 = float(candidate), float(candidate_f2)
+    if args.threshold_from:
+        threshold = float(json.loads(args.threshold_from.read_text(encoding="utf-8"))["threshold"])
+        threshold_selected_on = f"external_calibration:{args.threshold_from.name}"
+    else:
+        ordered = np.sort(np.unique(scores))
+        candidates = np.concatenate(([0.0], (ordered[:-1] + ordered[1:]) / 2, [1.0]))
+        threshold, best_key = 0.5, (-1.0, -1.0, -1.0)
+        for candidate in candidates:
+            candidate_predictions = scores >= candidate
+            candidate_precision = precision_score(labels, candidate_predictions, zero_division=0)
+            candidate_recall = recall_score(labels, candidate_predictions, zero_division=0)
+            candidate_macro_f1 = f1_score(labels, candidate_predictions, average="macro", zero_division=0)
+            candidate_key = (float(candidate_macro_f1), float(candidate_recall), float(candidate_precision))
+            if candidate_key > best_key:
+                threshold, best_key = float(candidate), candidate_key
+        threshold_selected_on = "full_validation_videos"
     predictions = scores >= threshold
+    selected_precision = precision_score(labels, predictions, zero_division=0)
+    selected_recall = recall_score(labels, predictions, zero_division=0)
+    best_f2 = 5 * selected_precision * selected_recall / (4 * selected_precision + selected_recall) if selected_precision + selected_recall else 0.0
     for row, prediction in zip(rows, predictions):
         row["prediction"] = int(prediction)
     errors = np.array([row["timestamp_error_sec"] for row in rows if row["timestamp_error_sec"] is not None])
@@ -101,7 +121,9 @@ def main() -> None:
         "model": checkpoint["model"],
         "threshold": threshold,
         "clip_threshold": clip_threshold,
-        "threshold_selected_on": "full_validation_videos",
+        "threshold_selected_on": threshold_selected_on,
+        "aggregation": "three_window_weighted_smoothing_then_peak",
+        "window_sec": window,
         "video_metrics": {
             "precision": float(precision_score(labels, predictions, zero_division=0)),
             "recall": float(recall_score(labels, predictions, zero_division=0)),

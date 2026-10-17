@@ -6,7 +6,7 @@ labels:
 data:
   raw_root: data/raw/open
   clip_manifest: analysis/clip_manifest.json
-  clip_seconds: 8.0
+  clip_seconds: 6.0
   frames: 4
   image_size: 160
   validation_fraction: 0.2

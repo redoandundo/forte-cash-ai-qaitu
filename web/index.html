@@ -40,6 +40,21 @@
         </form>
       </section>
 
+      <section class="panel preview-panel" id="preview-panel" hidden aria-labelledby="preview-title">
+        <div class="section-heading">
+          <div>
+            <p class="step">Запись</p>
+            <h2 id="preview-title">Видео и найденные моменты</h2>
+          </div>
+          <span class="local-badge">Файл открыт локально</span>
+        </div>
+        <video id="video-preview" controls preload="metadata"></video>
+        <div class="timeline" id="timeline" aria-label="Шкала найденных событий">
+          <div class="timeline-track" id="timeline-track"></div>
+        </div>
+        <p class="preview-note" id="preview-note">После анализа красные метки перенесут видео к найденным моментам.</p>
+      </section>
+
       <section class="panel status-panel" id="status-panel" hidden aria-live="polite">
         <div class="status-line">
           <span class="spinner" id="spinner"></span>

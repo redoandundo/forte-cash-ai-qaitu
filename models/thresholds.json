@@ -1,5 +1,6 @@
 {
-  "violation": 0.5340971350669861,
+  "violation": 0.37794335186481476,
   "selected_on": "full_validation_videos",
-  "metric": "f2"
+  "metric": "macro_f1_then_recall",
+  "aggregation": "three_window_weighted_smoothing_then_peak"
 }

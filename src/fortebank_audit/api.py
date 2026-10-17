@@ -15,7 +15,7 @@ from .analyzer import analyze
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
-MODEL_PATH = Path(os.environ.get("FORTEBANK_MODEL_PATH", PROJECT_ROOT / "artifacts" / "baseline.joblib"))
+MODEL_PATH = Path(os.environ.get("FORTEBANK_MODEL_PATH", PROJECT_ROOT / "models" / "best_model.onnx"))
 UPLOAD_ROOT = Path(os.environ.get("FORTEBANK_UPLOAD_ROOT", PROJECT_ROOT / "artifacts" / "uploads"))
 WEB_ROOT = PROJECT_ROOT / "web"
 MAX_UPLOAD_BYTES = 100 * 1024 * 1024
@@ -34,8 +34,12 @@ class Violation(BaseModel):
     type: str
     timecode_sec: float
     description: str
-    confidence: float = Field(ge=0, le=1)
-    evidence_frames: list[EvidenceFrame]
+    confidence: float = Field(
+        ge=0,
+        le=1,
+        description="Model ranking score; it is not a calibrated probability of a violation.",
+    )
+    evidence_frames: list[EvidenceFrame] = Field(min_length=1, max_length=3)
 
 
 class JobResponse(BaseModel):
@@ -46,7 +50,7 @@ class JobResponse(BaseModel):
     error: str | None = None
 
 
-app = FastAPI(title="ForteBank Video Audit API", version="0.1.0")
+app = FastAPI(title="ForteBank Video Audit API", version="0.2.0")
 _jobs: dict[str, dict[str, object]] = {}
 _jobs_lock = threading.Lock()
 

@@ -1,0 +1,5 @@
+run_id,model,frames,pair_safe,hard_negatives,selection,precision,recall,macro_f1,auroc,timestamp_mae_sec,fp_per_min,p95_sec,peak_vram_mb,status
+mobilenet_balanced_v3,mobilenet_v3_small_temporal,4,true,true,macro_f1_then_auroc,0.75,0.75,0.75,0.6875,7.0,0.4577,3.7645,53.46,selected
+r3d18_finetune_v2,r3d_18,16,true,true,f2_legacy,0.5714,1.0,0.5636,0.4375,6.5,1.3730,12.1929,702.17,rejected
+r3d18_frozen_v2,r3d_18,16,true,true,f2_legacy,0.5,1.0,0.3333,0.3125,,,,404.95,rejected
+x3d_xs_pair_safe_v2,x3d_xs,4,true,true,f2_legacy,0.5714,1.0,0.5636,0.375,,,,115.52,rejected
