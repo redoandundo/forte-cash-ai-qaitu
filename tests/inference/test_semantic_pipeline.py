@@ -71,3 +71,13 @@ def test_qwen_failure_propagates_instead_of_no_violation() -> None:
 def test_diagnostics_name_both_models() -> None:
     output = apply_semantic_verification(first_layer(), Verifier([result("possible_violation")]), Path("root"))
     assert output["diagnostics"]["models"] == ["onnx-v4", "qwen"]
+
+
+@pytest.mark.parametrize("candidate_count", [1, 2, 3])
+def test_candidate_count_is_not_padded_or_duplicated(candidate_count: int) -> None:
+    output = apply_semantic_verification(
+        first_layer(candidate_count),
+        Verifier([result("possible_violation") for _ in range(candidate_count)]),
+        Path("root"),
+    )
+    assert len(output["events"]) == candidate_count

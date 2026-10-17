@@ -137,3 +137,45 @@ def test_corrupted_jpeg_is_a_technical_failure(tmp_path: Path, monkeypatch) -> N
     damaged.write_bytes(b"not jpeg")
     with pytest.raises(VerificationRuntimeError, match="Invalid JPEG"):
         backend.generate([damaged], "prompt", max_new_tokens=10)
+
+
+def _manifest(tmp_path: Path, checksum: str = "expected") -> Path:
+    path = tmp_path / "manifest.json"
+    path.write_text(json.dumps({
+        "model_id": "qwen-test", "weights_files": ["model.safetensors"],
+        "weights_sha256": checksum, "max_image_side": 448, "max_new_tokens": 10,
+        "transformers_min_version": "5.20.0", "transformers_max_exclusive": "5.21.0",
+    }), encoding="utf-8")
+    return path
+
+
+def test_missing_weights_and_bad_checksum_fail_startup(tmp_path: Path, monkeypatch) -> None:
+    from fortebank_audit.inference.vlm_verifier import QwenLocalBackend
+
+    model = tmp_path / "model"
+    model.mkdir()
+    with pytest.raises(VerificationRuntimeError, match="snapshot"):
+        QwenLocalBackend(model, _manifest(tmp_path))
+    (model / "model.safetensors").write_bytes(b"wrong")
+    monkeypatch.setattr("fortebank_audit.inference.vlm_verifier._sha256", lambda _: "wrong")
+    with pytest.raises(VerificationRuntimeError, match="checksum"):
+        QwenLocalBackend(model, _manifest(tmp_path))
+
+
+def test_cuda_and_transformers_are_startup_requirements(monkeypatch) -> None:
+    import torch
+    from fortebank_audit.inference.vlm_verifier import QwenLocalBackend
+
+    backend = object.__new__(QwenLocalBackend)
+    backend.manifest = {
+        "transformers_min_version": "5.20.0", "transformers_max_exclusive": "5.21.0"
+    }
+    monkeypatch.setattr(torch.cuda, "is_available", lambda: False)
+    with pytest.raises(VerificationRuntimeError, match="requires CUDA"):
+        backend._validate_runtime()
+    monkeypatch.setattr(torch.cuda, "is_available", lambda: True)
+    backend.manifest = {
+        "transformers_min_version": "999.0", "transformers_max_exclusive": "1000.0"
+    }
+    with pytest.raises(VerificationRuntimeError, match="Transformers"):
+        backend._validate_runtime()

@@ -44,3 +44,10 @@ def test_strict_pts_sampling_validates_complete_decode(synthetic_video: Path) ->
 def test_missing_video_is_technical_error() -> None:
     with pytest.raises(VideoOpenError):
         VideoReader(ROOT / "data" / "raw" / "missing.mov")
+
+
+def test_corrupted_video_is_technical_error(tmp_path: Path) -> None:
+    damaged = tmp_path / "поврежденное.mov"
+    damaged.write_bytes(b"not a media container")
+    with pytest.raises(VideoOpenError):
+        VideoReader(damaged).metadata()
