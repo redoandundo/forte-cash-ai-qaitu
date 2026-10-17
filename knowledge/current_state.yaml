@@ -1,0 +1,51 @@
+schema_version: 1
+updated_at: 2026-10-17
+event: Datathon26
+team: Qaitu
+repository: https://github.com/redoandundo/forte-cash-ai-qaitu
+phase: repository_foundation
+
+branches:
+  stable: main
+  development: develop
+  integration: integration/ml-inference
+  teamlead: feature/teamlead-core
+  ml: feature/ml-model
+  inference: feature/video-inference
+
+components:
+  repository_foundation:
+    owner: teamlead
+    status: in_progress
+  ml_model:
+    owner: ml_engineer
+    status: not_started
+    artifact_ready: false
+  video_inference:
+    owner: inference_engineer
+    status: not_started
+    mock_predictor_ready: false
+    real_model_connected: false
+  api_jobs:
+    owner: teamlead
+    status: not_started
+  end_to_end_integration:
+    owner: teamlead
+    status: blocked_by_components
+
+requirements:
+  frontend_required: true
+  public_url_required: true
+  api_key_header: X-API-Key
+  processing_limit_sec: 300
+  public_statuses: [processing, done, failed]
+  public_verdicts: [violation, no_violation]
+  face_identification_allowed: false
+  cloud_ai_allowed: false
+
+next_actions:
+  - publish repository context from feature/teamlead-core
+  - start ML and inference work in parallel
+  - freeze model inference contract
+
+blockers: []

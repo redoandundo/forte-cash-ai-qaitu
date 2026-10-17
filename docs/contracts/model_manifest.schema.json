@@ -1,0 +1,88 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/redoandundo/forte-cash-ai-qaitu/blob/main/docs/contracts/model_manifest.schema.json",
+  "title": "Qaitu model manifest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "contract_version",
+    "model_name",
+    "model_version",
+    "artifact",
+    "sha256",
+    "runtime",
+    "input",
+    "output",
+    "preprocessing_file",
+    "thresholds_file"
+  ],
+  "properties": {
+    "contract_version": {
+      "type": "integer",
+      "const": 1
+    },
+    "model_name": {
+      "type": "string",
+      "minLength": 1
+    },
+    "model_version": {
+      "type": "string",
+      "minLength": 1
+    },
+    "artifact": {
+      "type": "string",
+      "minLength": 1
+    },
+    "sha256": {
+      "type": "string",
+      "pattern": "^[a-fA-F0-9]{64}$"
+    },
+    "runtime": {
+      "enum": ["onnxruntime", "torchscript"]
+    },
+    "input": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "layout", "shape", "dtype", "color"],
+      "properties": {
+        "name": {"type": "string", "minLength": 1},
+        "layout": {"enum": ["NCTHW", "NTCHW"]},
+        "shape": {
+          "type": "array",
+          "minItems": 5,
+          "maxItems": 5,
+          "items": {"type": "integer", "minimum": 1}
+        },
+        "dtype": {"enum": ["float32", "float16"]},
+        "color": {"enum": ["RGB", "BGR"]}
+      }
+    },
+    "output": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "semantics", "activation", "positive_label"],
+      "properties": {
+        "name": {"type": "string", "minLength": 1},
+        "semantics": {"const": "possible_violation_score"},
+        "activation": {"enum": ["probability", "logit"]},
+        "positive_label": {"const": "possible_violation"}
+      }
+    },
+    "preprocessing_file": {
+      "type": "string",
+      "minLength": 1
+    },
+    "thresholds_file": {
+      "type": "string",
+      "minLength": 1
+    },
+    "labels_file": {
+      "type": "string",
+      "minLength": 1
+    },
+    "metrics_file": {
+      "type": "string",
+      "minLength": 1
+    }
+  }
+}
