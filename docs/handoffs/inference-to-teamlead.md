@@ -8,8 +8,9 @@
 - Team-contract sync: `3978ae9`
 - Accepted-model integration: `db5198e`
 - DINO/VideoMAE production revert: `212d2f2`
-- ML source commit: `4a33bff`
+- ML source commit reviewed: `5e6d383` (runtime fix `5c9f095`, repair `744f5e8`)
 - Model version: `mobilenet-temporal-pairsafe-v3`
+- Optional development bundle: `baseline-repair-v2-development`
 - Runtime/provider: ONNX Runtime, verified on CPU
 
 ## Реализовано
@@ -19,8 +20,16 @@
 - Windowing: 6-second windows, 2-second stride, four RGB frames.
 - Predictor: validates artifact checksum, nested manifest, input/output contract,
   preprocessing, threshold, aggregation, sampling, and ONNX session shape.
+- New ML bundle adapter: validates the complete canonical schema-v1 package and
+  its checksum inventory. Development-only bundles require the explicit
+  `--allow-development-model` flag and cannot replace the fallback silently.
+- New ML sampling: real nearest PTS from stream start, tail window enabled,
+  strict missing-PTS/truncated-decode failure, fixed ONNX batch size 1.
 - Aggregation: `[0.25, 0.5, 0.25]` edge-padded smoothing before peak selection
   and thresholding.
+- New ML postprocessing: fewer than three windows remain unsmoothed; active
+  centers merge only within one stride; retain the three strongest events and
+  return them chronologically.
 - Evidence: 1-3 local JPEG frames per candidate event.
 - Failure semantics: exceptions propagate as technical failures; no inference or
   Qwen exception is converted into `no_violation` or a positive result.
@@ -38,7 +47,7 @@
 .\.venv\Scripts\python.exe -m pytest -q
 ```
 
-Observed: `28 passed`.
+Observed: `33 passed`.
 
 ```powershell
 $env:PYTHONPATH = "src"
@@ -58,6 +67,34 @@ The first PTS-nearest run produced F1 0.667 because one negative crossed the
 threshold. Root cause was sampling mismatch with the accepted ML reference.
 After declaring/reproducing `opencv_frame_index_round`, the accepted metrics and
 class decisions are reproduced.
+
+The current v3 fallback was rerun after the bundle adapter changes and still
+reproduces the same eight-source result above.
+
+## Новый ML bundle
+
+Expected archive outside Git:
+`artifacts/ml/bundles/baseline-repair-v2.zip`, archive SHA-256
+`b9a8b2c809f7a6dc72e0bf655707fb9d2e430c906e573aa2f10ed4750d0ae90b`.
+Canonical model SHA-256:
+`00ae541eac23249dd4751093ce276bfa9c14afca2d5f15f4fec9719c009ae52d`.
+
+The archive is not present in Git or in this checkout, so its real weights could
+not be executed here. Once the ML engineer transfers and extracts it, the
+integration smoke is:
+
+```powershell
+$env:PYTHONPATH = "src"
+.\.venv\Scripts\python.exe -m fortebank_audit.inference.benchmark `
+  --video "data\raw\open\videos\Х-15.mov" `
+  --predictor onnx `
+  --bundle artifacts\ml\bundles\baseline-repair-v2 `
+  --allow-development-model
+```
+
+The opt-in is required because `metrics.json` marks the bundle
+`development_only_not_promoted`. ML reports that its quality gate failed, so it
+is available for technical A/B only. The checked-in v3 remains the default.
 
 ## Qwen A/B
 
@@ -94,13 +131,16 @@ labels exist. `promotion_allowed=false` remains mandatory.
 - Qwen had one invalid-schema response out of six event descriptions.
 - The public API currently remains teamlead-owned and is not wired to this
   accepted inference adapter in this feature branch.
-- PR #1 currently targets `main`; per team architecture the team lead should
-  retarget or selectively integrate it into `integration/ml-inference`.
+- The repaired ML archive is intentionally outside Git and still must be handed
+  to inference/integration before a real-weight end-to-end smoke can run.
 
 ## Следующий шаг тимлида
 
-1. Review commits `db5198e` and `212d2f2`.
+1. Review the bundle adapter commit together with `db5198e` and `212d2f2`.
 2. Connect `analyze_video` through an API adapter that maps exceptions only to
    `failed`, sanitizes error text, and never fabricates a verdict.
 3. Keep Qwen disabled in the public path.
-4. Run the API integration test and one full demo smoke test before promotion.
+4. Transfer the ML archive, verify its stated archive SHA-256, extract it, and
+   run the command above. Do not promote it unless a future identical holdout
+   demonstrates a measured quality gain.
+5. Run the API integration test and one full demo smoke test before promotion.

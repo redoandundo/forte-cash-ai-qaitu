@@ -18,8 +18,15 @@ from .vlm_verifier import EventVerifier, QwenLocalBackend, load_signal_policy
 DEFAULT_DB = PROJECT_ROOT / "data" / "raw" / "meta" / "experience.sqlite3"
 
 
-def build_config() -> tuple[PipelineConfig, str]:
-    _, config, manifest = load_pipeline_config()
+def build_config(
+    bundle_root: Path | None = None,
+    *,
+    allow_development_model: bool = False,
+) -> tuple[PipelineConfig, str]:
+    _, config, manifest = load_pipeline_config(
+        bundle_root,
+        allow_development_model=allow_development_model,
+    )
     return config, str(manifest["sha256"])
 
 
@@ -33,8 +40,15 @@ def validate_qwen_options(enabled: bool, model_path: Path | None) -> None:
 def analyze(args: argparse.Namespace) -> None:
     validate_qwen_options(args.enable_experimental_qwen, args.vlm_model)
     store = ExperienceStore(args.db)
-    config, model_sha256 = build_config()
-    predictor = build_predictor("onnx")
+    config, model_sha256 = build_config(
+        args.bundle,
+        allow_development_model=args.allow_development_model,
+    )
+    predictor = build_predictor(
+        "onnx",
+        args.bundle,
+        allow_development_model=args.allow_development_model,
+    )
     run_id = args.run_id or uuid.uuid4().hex
     result = analyze_video(
         args.video,
@@ -134,6 +148,12 @@ def main() -> None:
         "--evidence-root", type=Path, default=PROJECT_ROOT / "data" / "raw" / "evidence" / "meta"
     )
     analyze_parser.add_argument("--run-id")
+    analyze_parser.add_argument("--bundle", type=Path, help="Canonical versioned ML bundle directory")
+    analyze_parser.add_argument(
+        "--allow-development-model",
+        action="store_true",
+        help="Allow a bundle whose metrics mark it development-only",
+    )
     analyze_parser.add_argument(
         "--enable-experimental-qwen",
         action="store_true",

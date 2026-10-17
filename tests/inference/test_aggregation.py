@@ -2,7 +2,11 @@ from __future__ import annotations
 
 import pytest
 
-from fortebank_audit.inference.aggregation import aggregate_predictions, smooth_predictions
+from fortebank_audit.inference.aggregation import (
+    aggregate_predictions,
+    postprocess_predictions,
+    smooth_predictions,
+)
 from fortebank_audit.inference.contracts import WindowPrediction
 
 
@@ -39,3 +43,25 @@ def test_accepted_three_window_smoothing_uses_edge_padding() -> None:
     )
     assert [item.score for item in smoothed] == pytest.approx([0.35, 0.55, 0.5])
     assert [item.center_sec for item in smoothed] == [4, 6, 8]
+
+
+def test_new_ml_bundle_keeps_short_sequences_unsmoothed() -> None:
+    values = [prediction(0, 0, 0.2), prediction(1, 2, 0.8)]
+    scored = postprocess_predictions(
+        values,
+        aggregation="three_window_weighted_smoothing_then_peak",
+        short_sequence_rule="identity_if_fewer_than_three",
+    )
+    assert [item.score for item in scored] == [0.2, 0.8]
+
+
+def test_new_ml_bundle_merges_only_adjacent_centers() -> None:
+    events = aggregate_predictions(
+        [prediction(0, 0, 0.8), prediction(1, 4, 0.9)],
+        threshold=0.5,
+        merge_gap_sec=99,
+        max_events=3,
+        event_merge="adjacent_centers_within_stride",
+        stride_sec=2,
+    )
+    assert len(events) == 2

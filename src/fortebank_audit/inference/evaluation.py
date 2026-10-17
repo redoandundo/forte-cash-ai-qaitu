@@ -7,9 +7,8 @@ from pathlib import Path
 import numpy as np
 
 from .aggregation import postprocess_predictions
-from .benchmark import PROJECT_ROOT, load_pipeline_config
+from .benchmark import PROJECT_ROOT, build_predictor, load_pipeline_config
 from .pipeline import score_video
-from .predictor import OnnxPredictor
 
 
 def confusion(labels: np.ndarray, scores: np.ndarray, threshold: float) -> dict[str, int]:
@@ -50,16 +49,25 @@ def main() -> None:
         default=PROJECT_ROOT / "reports" / "mobilenet_pair_safe_v2_full_video.json",
     )
     parser.add_argument("--data-root", type=Path, default=PROJECT_ROOT / "data" / "raw" / "open" / "videos")
+    parser.add_argument("--bundle", type=Path, help="Canonical versioned ML bundle directory")
+    parser.add_argument(
+        "--allow-development-model",
+        action="store_true",
+        help="Allow a bundle whose metrics mark it development-only",
+    )
     args = parser.parse_args()
     if args.selection == "reference" and args.split != "validation":
         raise ValueError("The reference report contains the historical validation set only")
 
-    preprocessing, config, _ = load_pipeline_config()
+    _, config, bundle_manifest = load_pipeline_config(
+        args.bundle,
+        allow_development_model=args.allow_development_model,
+    )
     artifact_threshold = config.threshold
-    predictor = OnnxPredictor(
-        PROJECT_ROOT / "models" / "best_model.onnx",
-        preprocessing,
-        PROJECT_ROOT / "models" / "model_manifest.json",
+    predictor = build_predictor(
+        "onnx",
+        args.bundle,
+        allow_development_model=args.allow_development_model,
         prefer_cuda=False,
     )
     manifest = json.loads((PROJECT_ROOT / "analysis" / "dataset_manifest.json").read_text(encoding="utf-8"))
@@ -75,7 +83,11 @@ def main() -> None:
         if path is None:
             raise FileNotFoundError(f"No local alias for source {source['source_id']}")
         metadata, predictions, processing_sec, _ = score_video(path, predictor, config)
-        scored_predictions = postprocess_predictions(predictions, aggregation=config.aggregation)
+        scored_predictions = postprocess_predictions(
+            predictions,
+            aggregation=config.aggregation,
+            short_sequence_rule=config.short_sequence_rule,
+        )
         peak = min(scored_predictions, key=lambda item: (-item.score, item.center_sec))
         records.append(
             {
@@ -119,6 +131,8 @@ def main() -> None:
         "reference_source_ids": sorted(reference_ids),
         "split_mismatch": manifest_ids != reference_ids,
         "provider": predictor.device,
+        "model_version": bundle_manifest["model_version"],
+        "model_sha256": bundle_manifest["sha256"],
         "aggregation": config.aggregation,
         "artifact_threshold": artifact_threshold,
         "artifact_confusion": artifact_matrix,

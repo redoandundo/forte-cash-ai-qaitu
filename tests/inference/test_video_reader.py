@@ -27,6 +27,20 @@ def test_nearest_sampling_can_be_consumed_as_a_stream(synthetic_video: Path) -> 
     assert len(list(frames)) == 2
 
 
+def test_strict_pts_sampling_validates_complete_decode(synthetic_video: Path) -> None:
+    reader = VideoReader(synthetic_video)
+    metadata = reader.metadata()
+    frames = list(
+        reader.iter_sample_nearest(
+            [0.0, 0.3, 0.8],
+            strict_pts=True,
+            advertised_duration_sec=metadata.duration_sec,
+            nominal_fps=metadata.nominal_fps,
+        )
+    )
+    assert len(frames) == 3
+
+
 def test_missing_video_is_technical_error() -> None:
     with pytest.raises(VideoOpenError):
         VideoReader(ROOT / "data" / "raw" / "missing.mov")

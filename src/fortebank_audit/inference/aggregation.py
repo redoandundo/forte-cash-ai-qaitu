@@ -42,9 +42,16 @@ def smooth_predictions(
 
 
 def postprocess_predictions(
-    predictions: Sequence[WindowPrediction], *, aggregation: str
+    predictions: Sequence[WindowPrediction],
+    *,
+    aggregation: str,
+    short_sequence_rule: str = "edge_pad",
 ) -> list[WindowPrediction]:
     if aggregation == ACCEPTED_AGGREGATION:
+        if short_sequence_rule == "identity_if_fewer_than_three" and len(predictions) < 3:
+            return list(predictions)
+        if short_sequence_rule not in {"edge_pad", "identity_if_fewer_than_three"}:
+            raise ValueError(f"Unsupported short-sequence rule: {short_sequence_rule}")
         return smooth_predictions(predictions)
     if aggregation == "none":
         return list(predictions)
@@ -57,6 +64,8 @@ def aggregate_predictions(
     threshold: float,
     merge_gap_sec: float,
     max_events: int,
+    event_merge: str = "overlapping_windows",
+    stride_sec: float | None = None,
 ) -> list[DetectedEvent]:
     if not 0 <= threshold <= 1:
         raise ValueError("threshold must be in [0, 1]")
@@ -69,9 +78,20 @@ def aggregate_predictions(
         (prediction for prediction in predictions if prediction.score >= threshold),
         key=lambda item: (item.start_sec, item.window_index),
     )
+    if event_merge == "adjacent_centers_within_stride" and (stride_sec is None or stride_sec <= 0):
+        raise ValueError("Positive stride is required for adjacent-center merging")
+    if event_merge not in {"overlapping_windows", "adjacent_centers_within_stride"}:
+        raise ValueError(f"Unsupported event merge rule: {event_merge}")
     groups: list[list[WindowPrediction]] = []
     for prediction in positives:
-        if not groups or prediction.start_sec > max(item.end_sec for item in groups[-1]) + merge_gap_sec:
+        if not groups:
+            groups.append([prediction])
+            continue
+        if event_merge == "adjacent_centers_within_stride":
+            separated = prediction.center_sec - groups[-1][-1].center_sec > float(stride_sec) + 1e-6
+        else:
+            separated = prediction.start_sec > max(item.end_sec for item in groups[-1]) + merge_gap_sec
+        if separated:
             groups.append([prediction])
         else:
             groups[-1].append(prediction)
@@ -88,5 +108,7 @@ def aggregate_predictions(
                 supporting_windows=len(group),
             )
         )
-    events.sort(key=lambda item: (-item.peak_score, item.peak_time_sec))
-    return events[:max_events]
+    selected = sorted(events, key=lambda item: (-item.peak_score, item.peak_time_sec))[:max_events]
+    if event_merge == "adjacent_centers_within_stride":
+        selected.sort(key=lambda item: item.peak_time_sec)
+    return selected

@@ -103,6 +103,8 @@ class PipelineConfig:
     threshold: float
     aggregation: str = "none"
     sampling: str = "pts_nearest"
+    short_sequence_rule: str = "edge_pad"
+    event_merge: str = "overlapping_windows"
     batch_size: int = 8
     merge_gap_sec: float = 1.5
     max_events: int = 5
@@ -123,6 +125,10 @@ class PipelineConfig:
             raise ValueError("Unsupported aggregation strategy")
         if self.sampling not in {"pts_nearest", "opencv_frame_index_round"}:
             raise ValueError("Unsupported video sampling strategy")
+        if self.short_sequence_rule not in {"edge_pad", "identity_if_fewer_than_three"}:
+            raise ValueError("Unsupported short-sequence smoothing rule")
+        if self.event_merge not in {"overlapping_windows", "adjacent_centers_within_stride"}:
+            raise ValueError("Unsupported event merge rule")
         if self.merge_gap_sec < 0 or self.max_events <= 0:
             raise ValueError("merge_gap_sec must be non-negative and max_events positive")
         if self.evidence_count not in {1, 2, 3}:

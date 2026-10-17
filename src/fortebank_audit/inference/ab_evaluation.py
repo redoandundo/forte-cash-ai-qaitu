@@ -26,6 +26,8 @@ def evaluate_qwen_ab(
     qwen_model: Path,
     evidence_root: Path,
     signal_policy_path: Path,
+    bundle_root: Path | None = None,
+    allow_development_model: bool = False,
 ) -> dict[str, Any]:
     """Measure Qwen overhead/contract reliability without changing detector outputs."""
     reference = json.loads(reference_report.read_text(encoding="utf-8"))
@@ -37,8 +39,15 @@ def evaluate_qwen_ab(
     if {str(item["source_id"]) for item in sources} != source_ids:
         raise RuntimeError("Dataset manifest does not contain the complete accepted holdout")
 
-    _, config, manifest = load_pipeline_config()
-    predictor = build_predictor("onnx")
+    _, config, manifest = load_pipeline_config(
+        bundle_root,
+        allow_development_model=allow_development_model,
+    )
+    predictor = build_predictor(
+        "onnx",
+        bundle_root,
+        allow_development_model=allow_development_model,
+    )
     policy = load_signal_policy(signal_policy_path)
     verifier = EventVerifier(QwenLocalBackend(qwen_model), policy)
 
@@ -125,6 +134,12 @@ def main() -> None:
         default=PROJECT_ROOT / "reports" / "mobilenet_pair_safe_v2_full_video.json",
     )
     parser.add_argument("--qwen-model", type=Path, required=True)
+    parser.add_argument("--bundle", type=Path, help="Canonical versioned ML bundle directory")
+    parser.add_argument(
+        "--allow-development-model",
+        action="store_true",
+        help="Allow a bundle whose metrics mark it development-only",
+    )
     parser.add_argument(
         "--evidence-root",
         type=Path,
@@ -143,6 +158,8 @@ def main() -> None:
         qwen_model=args.qwen_model,
         evidence_root=args.evidence_root,
         signal_policy_path=args.signals,
+        bundle_root=args.bundle,
+        allow_development_model=args.allow_development_model,
     )
     rendered = json.dumps(payload, ensure_ascii=False, indent=2)
     if args.output is not None:

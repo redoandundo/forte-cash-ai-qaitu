@@ -55,7 +55,7 @@ class VideoReader:
                 has_audio=bool(container.streams.audio),
             )
 
-    def iter_frames(self) -> Iterator[VideoFrame]:
+    def iter_frames(self, *, require_pts: bool = False) -> Iterator[VideoFrame]:
         with self._open() as container:
             if not container.streams.video:
                 raise VideoOpenError(f"No video stream found: {self.path.name}")
@@ -66,6 +66,10 @@ class VideoReader:
             decoded = 0
             try:
                 for frame in container.decode(stream):
+                    if require_pts and (frame.pts is None or frame.time_base is None):
+                        raise VideoOpenError(
+                            f"Missing frame PTS required by the model contract: {self.path.name}"
+                        )
                     if frame.pts is not None and frame.time_base is not None:
                         timestamp = float(frame.pts * frame.time_base) - origin
                     elif frame.time is not None:
@@ -85,7 +89,14 @@ class VideoReader:
             if decoded == 0:
                 raise VideoOpenError(f"Video contains no decodable frames: {self.path.name}")
 
-    def iter_sample_nearest(self, timestamps_sec: Iterable[float]) -> Iterator[VideoFrame]:
+    def iter_sample_nearest(
+        self,
+        timestamps_sec: Iterable[float],
+        *,
+        strict_pts: bool = False,
+        advertised_duration_sec: float | None = None,
+        nominal_fps: float = 0.0,
+    ) -> Iterator[VideoFrame]:
         targets = [float(value) for value in timestamps_sec]
         if any(not math.isfinite(value) or value < 0 for value in targets):
             raise ValueError("Sample timestamps must be finite and non-negative")
@@ -97,7 +108,7 @@ class VideoReader:
         target_index = 0
         previous: VideoFrame | None = None
         last: VideoFrame | None = None
-        for current in self.iter_frames():
+        for current in self.iter_frames(require_pts=strict_pts):
             last = current
             while target_index < len(targets) and targets[target_index] <= current.timestamp_sec:
                 target = targets[target_index]
@@ -107,13 +118,22 @@ class VideoReader:
                     chosen = previous
                 yield chosen
                 target_index += 1
-            if target_index >= len(targets):
+            if target_index >= len(targets) and not strict_pts:
                 break
             previous = current
 
         if last is None:
             raise VideoOpenError(f"Video contains no decodable frames: {self.path.name}")
+        tolerance = max(0.25, 2 / nominal_fps) if nominal_fps > 0 else 0.25
+        if (
+            strict_pts
+            and advertised_duration_sec is not None
+            and advertised_duration_sec - last.timestamp_sec > tolerance
+        ):
+            raise VideoOpenError(f"Decode ended before advertised duration: {self.path.name}")
         while target_index < len(targets):
+            if strict_pts and targets[target_index] - last.timestamp_sec > tolerance:
+                raise VideoOpenError(f"Requested frame is unavailable: {self.path.name}")
             yield last
             target_index += 1
 

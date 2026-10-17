@@ -80,6 +80,26 @@ uv run python -m fortebank_audit.inference.benchmark `
 uv run python -m fortebank_audit.inference.evaluation --selection reference
 ```
 
+The repaired ML branch exports an immutable directory bundle. Extract it as a
+directory and pass the directory itself, not an individual ONNX file. The
+current `baseline-repair-v2-development` bundle is intentionally blocked unless
+the development opt-in is present because it did not pass the release quality
+gate:
+
+```powershell
+uv run python -m fortebank_audit.inference.benchmark `
+  --video "data/raw/open/videos/Х-15.mov" `
+  --predictor onnx `
+  --bundle artifacts/ml/bundles/baseline-repair-v2 `
+  --allow-development-model
+```
+
+The loader verifies every file in `SHA256SUMS.txt`, the ONNX hash and shape,
+preprocessing, threshold, labels, PTS/tail sampling, smoothing, and event merge
+rules before inference. Without `--bundle`, the checked-in v3 fallback remains
+active. A technical error is raised to the caller and is never converted to a
+verdict.
+
 Use `--selection reference` when reproducing the published threshold report.
 The current dataset manifest contains a different validation split; the
 evaluator reports that mismatch explicitly instead of silently mixing results.

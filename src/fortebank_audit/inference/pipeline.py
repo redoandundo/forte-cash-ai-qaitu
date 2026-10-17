@@ -69,7 +69,14 @@ def score_video(
     if config.sampling == "opencv_frame_index_round":
         sampled_frames = iter(reader.iter_sample_frame_indices(unique_times))
     else:
-        sampled_frames = iter(reader.iter_sample_nearest(unique_times))
+        sampled_frames = iter(
+            reader.iter_sample_nearest(
+                unique_times,
+                strict_pts=True,
+                advertised_duration_sec=metadata.duration_sec,
+                nominal_fps=metadata.nominal_fps,
+            )
+        )
     target_index = 0
     frame_cache: dict[float, np.ndarray] = {}
     last_use: dict[float, int] = {}
@@ -115,6 +122,13 @@ def score_video(
         for timestamp in tuple(frame_cache):
             if last_use[timestamp] <= last_batch_index:
                 del frame_cache[timestamp]
+    if config.sampling == "pts_nearest":
+        try:
+            next(sampled_frames)
+        except StopIteration:
+            pass
+        else:
+            raise PredictionError("Video sampler returned unexpected extra frames")
     processing_sec = time.perf_counter() - started
     rss_delta_mb = max(0.0, (process.memory_info().rss - initial_rss) / (1024 * 1024))
     return metadata, predictions, processing_sec, rss_delta_mb
@@ -132,12 +146,18 @@ def analyze_video(
     reader = VideoReader(video_path)
     metadata, predictions, scoring_sec, rss_delta_mb = score_video(video_path, predictor, config)
 
-    scored_predictions = postprocess_predictions(predictions, aggregation=config.aggregation)
+    scored_predictions = postprocess_predictions(
+        predictions,
+        aggregation=config.aggregation,
+        short_sequence_rule=config.short_sequence_rule,
+    )
     events = aggregate_predictions(
         scored_predictions,
         threshold=config.threshold,
         merge_gap_sec=config.merge_gap_sec,
         max_events=config.max_events,
+        event_merge=config.event_merge,
+        stride_sec=config.stride_sec,
     )
     actual_run_id = run_id or uuid.uuid4().hex
     extractor = EvidenceExtractor(evidence_root)
@@ -203,6 +223,8 @@ def analyze_video(
             "model_version": predictor.model_version,
             "aggregation": config.aggregation,
             "sampling": config.sampling,
+            "short_sequence_rule": config.short_sequence_rule,
+            "event_merge": config.event_merge,
             "windows": len(predictions),
             "scoring_sec": scoring_sec,
             "rss_delta_mb": rss_delta_mb,
