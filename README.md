@@ -38,18 +38,36 @@
 
 ## Установка и запуск прототипа
 
-### Сквозное локальное демо
+### Сквозное локальное демо с ONNX
 
-По умолчанию API запускает реальный video pipeline с детерминированным demo-predictor: декодирование `.mov`, временные окна, агрегация, таймкоды и JPEG настоящие, а scores пока тестовые.
+Финальное демо запускается только с явно выбранным ONNX bundle. Если режим,
+bundle, development opt-in или checksum заданы неверно, API завершается при
+старте и не переключается на mock.
 
 ```powershell
 $env:PYTHONPATH = "src"
 $env:FORTEBANK_API_KEY = "demo-secret"
-$env:QAITU_INFERENCE_MODE = "mock"
+$env:QAITU_INFERENCE_MODE = "onnx"
+$env:QAITU_MODEL_BUNDLE = "artifacts\ml\bundles\baseline-audited-v4"
+$env:QAITU_ALLOW_DEVELOPMENT_MODEL = "true"
+$env:QAITU_EXPECTED_MODEL_SHA256 = "00ae541eac23249dd4751093ce276bfa9c14afca2d5f15f4fec9719c009ae52d"
+$env:QAITU_PREFER_CUDA = "true"
+$env:QAITU_MAX_CONCURRENT_JOBS = "1"
 uv run uvicorn fortebank_audit.api:app --host 127.0.0.1 --port 8123
 ```
 
 Откройте `http://127.0.0.1:8123`, выберите локальный `.mov` и нажмите «Начать проверку». Интерфейс покажет этапы pipeline, резюме, таймкоды и 1–3 JPEG для каждого эпизода. Загруженный файл и временные evidence-файлы удаляются после анализа.
+
+Перед распаковкой приватно переданного архива проверьте его отдельно:
+
+```powershell
+(Get-FileHash .\baseline-audited-v4.zip -Algorithm SHA256).Hash.ToLower()
+# c387bdea9bd80a124c5587fccfcec3243d2550658ee09ca6834acaa9e54a1241
+```
+
+`baseline-audited-v4-development` не прошёл quality gate и разрешается только
+для технического hackathon-demo. Mock остаётся доступен исключительно при явном
+`QAITU_INFERENCE_MODE=mock` для тестов интерфейса.
 
 ### Полный прототип
 
@@ -65,8 +83,9 @@ uv run python scripts/train_baseline.py
 ```powershell
 $env:FORTEBANK_API_KEY = "replace-with-a-random-key"
 $env:QAITU_INFERENCE_MODE = "onnx"
-$env:QAITU_MODEL_BUNDLE = "artifacts\ml\bundles\baseline-repair-v2"
+$env:QAITU_MODEL_BUNDLE = "artifacts\ml\bundles\baseline-audited-v4"
 $env:QAITU_ALLOW_DEVELOPMENT_MODEL = "true"
+$env:QAITU_EXPECTED_MODEL_SHA256 = "00ae541eac23249dd4751093ce276bfa9c14afca2d5f15f4fec9719c009ae52d"
 uv run uvicorn fortebank_audit.api:app --host 0.0.0.0 --port 8000
 ```
 

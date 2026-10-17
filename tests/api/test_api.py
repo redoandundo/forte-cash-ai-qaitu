@@ -35,6 +35,24 @@ def _video(path: Path) -> Path:
     return path
 
 
+def _unsupported_codec_video(path: Path) -> Path:
+    with av.open(str(path), mode="w") as container:
+        stream = container.add_stream("mpeg4", rate=10)
+        stream.width = 32
+        stream.height = 32
+        stream.pix_fmt = "yuv420p"
+        frame = av.VideoFrame.from_ndarray(
+            np.zeros((32, 32, 3), dtype=np.uint8), format="rgb24"
+        )
+        for packet in stream.encode(frame):
+            container.mux(packet)
+        for packet in stream.encode():
+            container.mux(packet)
+    encoded = path.read_bytes()
+    path.write_bytes(encoded.replace(b"mp4v", b"zzzz", 1).replace(b"esds", b"zzds", 1))
+    return path
+
+
 @pytest.fixture()
 def client(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> TestClient:
     monkeypatch.setenv("FORTEBANK_API_KEY", "demo-secret")
@@ -56,6 +74,25 @@ def _headers() -> dict[str, str]:
 def test_api_rejects_invalid_key(client: TestClient) -> None:
     response = client.get("/api/v1/jobs/missing", headers={"X-API-Key": "wrong"})
     assert response.status_code == 401
+
+
+def test_health_exposes_active_predictor_without_sensitive_paths(client: TestClient) -> None:
+    response = client.get("/health")
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload == {
+        "status": "ok",
+        "model_ready": True,
+        "inference_mode": "mock",
+        "runtime_mode": "Demo predictor",
+        "predictor_class": "MockPredictor",
+        "model_version": "mock-v1",
+        "model_sha256": None,
+        "runtime_providers": ["MockExecutionProvider"],
+        "release_status": "test_only",
+    }
+    assert str(api.UPLOAD_ROOT) not in response.text
 
 
 def test_api_rejects_non_mov_upload(client: TestClient) -> None:
@@ -130,3 +167,44 @@ def test_technical_failure_is_not_negative_verdict(
     assert job["verdict"] is None
     assert job["violations"] == []
     assert str(tmp_path) not in job["error"]
+
+
+@pytest.mark.parametrize(
+    ("filename", "payload", "expected_error"),
+    [
+        ("broken.mov", b"not-a-video", "повреждено"),
+    ],
+)
+def test_corrupt_upload_is_failed_not_no_violation(
+    client: TestClient, filename: str, payload: bytes, expected_error: str
+) -> None:
+    accepted = client.post(
+        "/api/v1/analyze",
+        headers=_headers(),
+        files={"file": (filename, payload, "video/quicktime")},
+    )
+    job_id = accepted.json()["job_id"]
+
+    job = client.get(f"/api/v1/jobs/{job_id}", headers=_headers()).json()
+    assert job["status"] == "failed"
+    assert job["verdict"] is None
+    assert job["violations"] == []
+    assert expected_error in job["error"]
+
+
+def test_unsupported_codec_is_failed_not_no_violation(
+    client: TestClient, tmp_path: Path
+) -> None:
+    video = _unsupported_codec_video(tmp_path / "unsupported.mov")
+    accepted = client.post(
+        "/api/v1/analyze",
+        headers=_headers(),
+        files={"file": (video.name, video.read_bytes(), "video/quicktime")},
+    )
+    job_id = accepted.json()["job_id"]
+
+    job = client.get(f"/api/v1/jobs/{job_id}", headers=_headers()).json()
+    assert job["status"] == "failed"
+    assert job["verdict"] is None
+    assert job["violations"] == []
+    assert "кодек" in job["error"].lower()

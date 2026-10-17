@@ -88,6 +88,7 @@ let selectedFile = null;
 let objectUrl = null;
 let activeController = null;
 let currentViolations = [];
+let runtimeIdentity = { badge: "Local", caption: "проверяем runtime" };
 
 apiKeyInput.value = sessionStorage.getItem("fortebank-api-key") || "demo-secret";
 apiKeyInput.addEventListener("change", () => {
@@ -103,12 +104,18 @@ function formatBytes(bytes) {
   return `${value.toFixed(precision)} ${units[exponent]}`;
 }
 
-function formatClock(seconds, includeHours = false) {
-  const safeSeconds = Number.isFinite(seconds) && seconds > 0 ? Math.floor(seconds) : 0;
-  const hours = Math.floor(safeSeconds / 3600);
-  const minutes = Math.floor((safeSeconds % 3600) / 60);
-  const secs = safeSeconds % 60;
-  const parts = [minutes.toString().padStart(2, "0"), secs.toString().padStart(2, "0")];
+function formatClock(seconds, includeHours = false, fractionDigits = 0) {
+  const safeSeconds = Number.isFinite(seconds) && seconds > 0 ? seconds : 0;
+  const factor = 10 ** fractionDigits;
+  const roundedSeconds = Math.round(safeSeconds * factor) / factor;
+  const wholeSeconds = Math.floor(roundedSeconds);
+  const hours = Math.floor(wholeSeconds / 3600);
+  const minutes = Math.floor((wholeSeconds % 3600) / 60);
+  const secs = wholeSeconds % 60;
+  const fraction = fractionDigits > 0
+    ? `.${Math.round((roundedSeconds - wholeSeconds) * factor).toString().padStart(fractionDigits, "0")}`
+    : "";
+  const parts = [minutes.toString().padStart(2, "0"), `${secs.toString().padStart(2, "0")}${fraction}`];
   if (includeHours) parts.unshift(hours.toString().padStart(2, "0"));
   return parts.join(":");
 }
@@ -180,8 +187,39 @@ function updateProgress(progress) {
   }
 
   const label = progress.runtime_mode || "Локальный runtime";
-  runtimeBadge.textContent = label.toLowerCase().includes("demo") ? "Demo model" : "ONNX";
+  const normalized = label.toLowerCase();
+  runtimeBadge.textContent = normalized.includes("demo")
+    ? "Demo model"
+    : normalized.includes("onnx")
+      ? "ONNX"
+      : "Local";
   jobCaption.textContent = label;
+}
+
+function applyRuntimeIdentity() {
+  runtimeBadge.textContent = runtimeIdentity.badge;
+  jobCaption.textContent = runtimeIdentity.caption;
+}
+
+async function refreshRuntimeIdentity() {
+  try {
+    const response = await fetch("/health", { cache: "no-store" });
+    const health = await responseJson(response);
+    if (!response.ok || health.status !== "ok" || !health.model_ready) {
+      runtimeIdentity = { badge: "Offline", caption: "модель не готова" };
+    } else {
+      const providers = Array.isArray(health.runtime_providers)
+        ? health.runtime_providers.join(", ")
+        : "runtime provider неизвестен";
+      runtimeIdentity = {
+        badge: health.inference_mode === "onnx" ? "ONNX" : "Demo model",
+        caption: `${health.model_version || health.runtime_mode} · ${providers}`,
+      };
+    }
+  } catch {
+    runtimeIdentity = { badge: "Offline", caption: "локальный API недоступен" };
+  }
+  applyRuntimeIdentity();
 }
 
 function seekVideo(seconds) {
@@ -201,10 +239,10 @@ function makeEvidenceGallery(frames, eventIndex) {
     button.setAttribute("aria-label", `Перейти к кадру ${frameIndex + 1} эпизода ${eventIndex + 1}`);
     const image = document.createElement("img");
     image.src = `data:image/jpeg;base64,${frame.image_base64}`;
-    image.alt = `JPEG-доказательство ${frameIndex + 1}, таймкод ${formatClock(frame.timestamp_sec)}`;
+    image.alt = `JPEG-доказательство ${frameIndex + 1}, таймкод ${formatClock(frame.timestamp_sec, false, 1)}`;
     const label = document.createElement("span");
     label.className = "evidence-label";
-    label.textContent = `JPEG ${String(frameIndex + 1).padStart(2, "0")} · ${formatClock(frame.timestamp_sec)}`;
+    label.textContent = `JPEG ${String(frameIndex + 1).padStart(2, "0")} · ${formatClock(frame.timestamp_sec, false, 1)}`;
     button.append(image, label);
     button.addEventListener("click", () => seekVideo(frame.timestamp_sec));
     gallery.append(button);
@@ -241,7 +279,7 @@ function makeEvidenceChain(detail, violation) {
   const fallback = {
     thesis: `Вероятно, обнаружено событие: ${violation.type}.`,
     observations: [
-      `Модельный сигнал выше порога локализован на ${formatClock(violation.timecode_sec)}.`,
+      `Модельный сигнал выше порога локализован на ${formatClock(violation.timecode_sec, false, 1)}.`,
       `Система сформировала JPEG-кадров: ${(violation.evidence_frames || []).length}.`,
     ],
     reasoning: "Временная локализация и согласованные кадры подкрепляют автоматический вывод о подозрительном эпизоде.",
@@ -290,7 +328,7 @@ function renderMarkers(violations) {
     marker.type = "button";
     marker.className = "event-marker";
     marker.style.left = `${Math.max(1, Math.min(99, (violation.timecode_sec / videoPreview.duration) * 100))}%`;
-    marker.title = `Эпизод ${index + 1}: ${formatClock(violation.timecode_sec)}`;
+    marker.title = `Эпизод ${index + 1}: ${formatClock(violation.timecode_sec, false, 1)}`;
     marker.setAttribute("aria-label", marker.title);
     marker.addEventListener("click", () => seekVideo(violation.timecode_sec));
     eventMarkers.append(marker);
@@ -314,7 +352,7 @@ function renderViolationResult(job, progress) {
     const timeButton = document.createElement("button");
     timeButton.type = "button";
     timeButton.className = "timecode-button";
-    timeButton.textContent = `▶  ${formatClock(violation.timecode_sec)}`;
+    timeButton.textContent = `▶  ${formatClock(violation.timecode_sec, false, 1)}`;
     timeButton.addEventListener("click", () => seekVideo(violation.timecode_sec));
     const heading = document.createElement("h3");
     heading.textContent = violation.type;
@@ -438,8 +476,7 @@ function openWorkspace(file) {
   videoTimeDisplay.textContent = "00:00:00";
   eventList.replaceChildren();
   eventMarkers.replaceChildren();
-  jobCaption.textContent = "ожидает запуска";
-  runtimeBadge.textContent = "Local";
+  applyRuntimeIdentity();
   videoPreview.src = objectUrl;
   videoPreview.load();
   uploadView.hidden = true;
@@ -536,3 +573,5 @@ window.addEventListener("beforeunload", () => {
   cancelActiveRequest();
   revokePreviewUrl();
 });
+
+refreshRuntimeIdentity();

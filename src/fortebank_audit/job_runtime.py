@@ -2,21 +2,36 @@ from __future__ import annotations
 
 import base64
 import hashlib
+import logging
 import os
 import re
 import shutil
+import threading
 from dataclasses import dataclass
 from functools import lru_cache
 from pathlib import Path
 from typing import Literal
 
-from .inference.benchmark import build_predictor, load_pipeline_config
+from .inference.bundle import load_bundle_contract
 from .inference.contracts import InferenceError, PipelineConfig
 from .inference.pipeline import ProgressCallback, analyze_video
-from .inference.predictor import MockPredictor, Predictor
+from .inference.predictor import MockPredictor, OnnxPredictor, Predictor
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
+LOGGER = logging.getLogger(__name__)
+
+
+def _environment_bool(name: str, *, default: bool) -> bool:
+    value = os.environ.get(name)
+    if value is None:
+        return default
+    normalized = value.strip().lower()
+    if normalized in {"1", "true", "yes", "on"}:
+        return True
+    if normalized in {"0", "false", "no", "off"}:
+        return False
+    raise RuntimeConfigurationError(f"{name} must be a boolean value")
 
 
 class RuntimeConfigurationError(RuntimeError):
@@ -29,19 +44,48 @@ class RuntimeSettings:
     bundle_root: Path | None
     allow_development_model: bool
     evidence_root: Path
+    expected_model_sha256: str | None = None
+    prefer_cuda: bool = True
+    max_concurrent_jobs: int = 1
 
     @classmethod
     def from_environment(cls) -> "RuntimeSettings":
-        raw_mode = os.environ.get("QAITU_INFERENCE_MODE", "mock").strip().lower()
+        mode_value = os.environ.get("QAITU_INFERENCE_MODE")
+        if mode_value is None or not mode_value.strip():
+            raise RuntimeConfigurationError(
+                "QAITU_INFERENCE_MODE must be explicitly set to mock or onnx"
+            )
+        raw_mode = mode_value.strip().lower()
         if raw_mode not in {"mock", "onnx"}:
             raise RuntimeConfigurationError("QAITU_INFERENCE_MODE must be mock or onnx")
         bundle_value = os.environ.get("QAITU_MODEL_BUNDLE", "").strip()
         bundle_root = Path(bundle_value).resolve() if bundle_value else None
         if raw_mode == "onnx" and bundle_root is None:
             raise RuntimeConfigurationError("ONNX mode requires QAITU_MODEL_BUNDLE")
-        allow_development = os.environ.get(
-            "QAITU_ALLOW_DEVELOPMENT_MODEL", "false"
-        ).strip().lower() in {"1", "true", "yes", "on"}
+        allow_development = _environment_bool(
+            "QAITU_ALLOW_DEVELOPMENT_MODEL", default=False
+        )
+        expected_model_sha256 = (
+            os.environ.get("QAITU_EXPECTED_MODEL_SHA256", "").strip().lower() or None
+        )
+        if expected_model_sha256 is not None and (
+            len(expected_model_sha256) != 64
+            or any(char not in "0123456789abcdef" for char in expected_model_sha256)
+        ):
+            raise RuntimeConfigurationError(
+                "QAITU_EXPECTED_MODEL_SHA256 must be a lowercase SHA-256 digest"
+            )
+        prefer_cuda = _environment_bool("QAITU_PREFER_CUDA", default=True)
+        try:
+            max_concurrent_jobs = int(os.environ.get("QAITU_MAX_CONCURRENT_JOBS", "1"))
+        except ValueError as exc:
+            raise RuntimeConfigurationError(
+                "QAITU_MAX_CONCURRENT_JOBS must be an integer"
+            ) from exc
+        if not 1 <= max_concurrent_jobs <= 8:
+            raise RuntimeConfigurationError(
+                "QAITU_MAX_CONCURRENT_JOBS must be between 1 and 8"
+            )
         evidence_value = os.environ.get("QAITU_EVIDENCE_ROOT", "").strip()
         evidence_root = (
             Path(evidence_value).resolve()
@@ -53,6 +97,9 @@ class RuntimeSettings:
             bundle_root=bundle_root,
             allow_development_model=allow_development,
             evidence_root=evidence_root,
+            expected_model_sha256=expected_model_sha256,
+            prefer_cuda=prefer_cuda,
+            max_concurrent_jobs=max_concurrent_jobs,
         )
 
 
@@ -74,6 +121,9 @@ class InferenceRuntime:
         config: PipelineConfig | None = None,
     ) -> None:
         self.settings = settings
+        self._analysis_slots = threading.BoundedSemaphore(settings.max_concurrent_jobs)
+        self.model_sha256: str | None = None
+        self.release_status = "injected"
         if predictor is not None or config is not None:
             if predictor is None or config is None:
                 raise RuntimeConfigurationError(
@@ -81,9 +131,9 @@ class InferenceRuntime:
                 )
             self.predictor = predictor
             self.config = config
-            return
-
-        if settings.mode == "mock":
+            if settings.mode == "mock":
+                self.release_status = "test_only"
+        elif settings.mode == "mock":
             self.predictor = MockPredictor([0.1, 0.2, 0.8, 0.9, 0.3])
             self.config = PipelineConfig(
                 window_sec=8.0,
@@ -92,25 +142,58 @@ class InferenceRuntime:
                 threshold=0.5,
                 batch_size=8,
             )
-            return
-
-        if settings.bundle_root is None:
-            raise RuntimeConfigurationError("ONNX mode requires a bundle")
-        _, self.config, _ = load_pipeline_config(
-            settings.bundle_root,
-            allow_development_model=settings.allow_development_model,
-        )
-        self.predictor = build_predictor(
-            "onnx",
-            settings.bundle_root,
-            allow_development_model=settings.allow_development_model,
+            self.release_status = "test_only"
+        else:
+            if settings.bundle_root is None:
+                raise RuntimeConfigurationError("ONNX mode requires a bundle")
+            bundle = load_bundle_contract(
+                settings.bundle_root,
+                allow_development_model=settings.allow_development_model,
+            )
+            self.model_sha256 = str(bundle.manifest["sha256"]).lower()
+            if (
+                settings.expected_model_sha256 is not None
+                and settings.expected_model_sha256 != self.model_sha256
+            ):
+                raise RuntimeConfigurationError(
+                    "Loaded model checksum does not match QAITU_EXPECTED_MODEL_SHA256"
+                )
+            self.config = bundle.pipeline_config
+            self.release_status = bundle.release_status
+            self.predictor = OnnxPredictor(
+                bundle.model_path,
+                bundle.preprocessing,
+                bundle.manifest_path,
+                allow_development_model=settings.allow_development_model,
+                prefer_cuda=settings.prefer_cuda,
+            )
+        LOGGER.info(
+            "inference_runtime_ready mode=%s predictor_class=%s model_version=%s "
+            "model_sha256=%s providers=%s release_status=%s",
+            self.settings.mode,
+            type(self.predictor).__name__,
+            self.predictor.model_version,
+            self.model_sha256 or "none",
+            ",".join(self.predictor.runtime_providers),
+            self.release_status,
         )
 
     @property
     def mode_label(self) -> str:
         if self.settings.mode == "mock":
             return "Demo predictor"
-        return self.predictor.model_version
+        return f"ONNX · {self.predictor.model_version} · {self.predictor.device}"
+
+    @property
+    def model_diagnostics(self) -> dict[str, object]:
+        return {
+            "inference_mode": self.settings.mode,
+            "predictor_class": type(self.predictor).__name__,
+            "model_version": self.predictor.model_version,
+            "model_sha256": self.model_sha256,
+            "runtime_providers": list(self.predictor.runtime_providers),
+            "release_status": self.release_status,
+        }
 
     def analyze(
         self,
@@ -119,35 +202,62 @@ class InferenceRuntime:
         job_id: str,
         progress: ProgressCallback | None = None,
     ) -> RuntimeResult:
-        self.settings.evidence_root.mkdir(parents=True, exist_ok=True)
-        result = analyze_video(
-            video_path,
-            self.predictor,
-            self.config,
-            evidence_root=self.settings.evidence_root,
-            run_id=job_id,
-            progress=progress,
-        )
-        if progress is not None:
-            progress("summary")
         try:
+            with self._analysis_slots:
+                self.settings.evidence_root.mkdir(parents=True, exist_ok=True)
+                result = analyze_video(
+                    video_path,
+                    self.predictor,
+                    self.config,
+                    evidence_root=self.settings.evidence_root,
+                    run_id=job_id,
+                    progress=progress,
+                )
+            if progress is not None:
+                progress("summary")
             violations, analysis_details = self._map_violations(result)
+            verdict: Literal["no_violation", "violation"] = (
+                "violation" if violations else "no_violation"
+            )
+            return RuntimeResult(
+                verdict=verdict,
+                violations=violations,
+                analysis_details=analysis_details,
+                summary=_build_summary(verdict, violations),
+                runtime={
+                    **dict(result.get("runtime", {})),
+                    "mode": self.settings.mode,
+                    "mode_label": self.mode_label,
+                    **self.model_diagnostics,
+                    "diagnostics": self._internal_diagnostics(result),
+                },
+            )
         finally:
             self._remove_job_evidence(job_id)
-        verdict: Literal["no_violation", "violation"] = (
-            "violation" if violations else "no_violation"
-        )
-        return RuntimeResult(
-            verdict=verdict,
-            violations=violations,
-            analysis_details=analysis_details,
-            summary=_build_summary(verdict, violations),
-            runtime={
-                **dict(result.get("runtime", {})),
-                "mode": self.settings.mode,
-                "mode_label": self.mode_label,
-            },
-        )
+
+    @staticmethod
+    def _internal_diagnostics(result: dict[str, object]) -> dict[str, object]:
+        raw_scores = result.get("window_scores")
+        window_scores = list(raw_scores) if isinstance(raw_scores, list) else []
+        raw_events = result.get("events")
+        events: list[dict[str, object]] = []
+        if isinstance(raw_events, list):
+            for event in raw_events:
+                if not isinstance(event, dict):
+                    continue
+                events.append(
+                    {
+                        "start_sec": event.get("start_sec"),
+                        "end_sec": event.get("end_sec"),
+                        "peak_time_sec": event.get("peak_time_sec"),
+                        "peak_score": event.get("score"),
+                        "supporting_windows": event.get("supporting_windows"),
+                        "supporting_window_indices": event.get(
+                            "supporting_window_indices", []
+                        ),
+                    }
+                )
+        return {"window_scores": window_scores, "events": events}
 
     def _map_violations(
         self, result: dict[str, object]

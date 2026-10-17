@@ -4,6 +4,7 @@ import os
 import secrets
 import threading
 import uuid
+from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Annotated, Literal
 
@@ -11,7 +12,14 @@ from fastapi import BackgroundTasks, Depends, FastAPI, File, Header, HTTPExcepti
 from pydantic import BaseModel, Field
 from fastapi.staticfiles import StaticFiles
 
-from .inference.contracts import InferenceError
+from .inference.contracts import (
+    EvidenceExtractionError,
+    InferenceError,
+    PredictionError,
+    PredictorLoadError,
+    UnsupportedVideoError,
+    VideoOpenError,
+)
 from .job_runtime import RuntimeConfigurationError, get_runtime
 
 
@@ -87,7 +95,15 @@ class ProgressResponse(BaseModel):
     error: str | None = None
 
 
-app = FastAPI(title="ForteBank Video Audit API", version="0.1.0")
+
+@asynccontextmanager
+async def lifespan(_: FastAPI):
+    # Fail before serving traffic when the explicitly selected runtime or model is invalid.
+    get_runtime()
+    yield
+
+
+app = FastAPI(title="ForteBank Video Audit API", version="0.1.0", lifespan=lifespan)
 _jobs: dict[str, dict[str, object]] = {}
 _jobs_lock = threading.Lock()
 
@@ -113,9 +129,19 @@ def _set_stage(job_id: str, stage: str) -> None:
 
 def _public_error(exc: Exception) -> str:
     if isinstance(exc, RuntimeConfigurationError):
-        return "Inference runtime is not configured"
+        return "Локальный ONNX runtime не настроен"
+    if isinstance(exc, UnsupportedVideoError):
+        return "Видеокодек не поддерживается локальным декодером"
+    if isinstance(exc, VideoOpenError):
+        return "Видео повреждено или не может быть декодировано"
+    if isinstance(exc, PredictorLoadError):
+        return "Не удалось загрузить или проверить ONNX-модель"
+    if isinstance(exc, PredictionError):
+        return "Локальная ONNX-модель завершилась технической ошибкой"
+    if isinstance(exc, EvidenceExtractionError):
+        return "Не удалось сформировать обязательные JPEG-кадры"
     if isinstance(exc, InferenceError):
-        return "Video analysis failed"
+        return "Локальный анализ видео завершился технической ошибкой"
     return "Unexpected analysis error"
 
 
@@ -159,7 +185,12 @@ def health() -> dict[str, object]:
         runtime = get_runtime()
     except Exception:
         return {"status": "degraded", "model_ready": False, "runtime_mode": "unavailable"}
-    return {"status": "ok", "model_ready": True, "runtime_mode": runtime.mode_label}
+    return {
+        "status": "ok",
+        "model_ready": True,
+        "runtime_mode": runtime.mode_label,
+        **runtime.model_diagnostics,
+    }
 
 
 @app.post(

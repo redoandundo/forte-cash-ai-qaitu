@@ -20,6 +20,7 @@ from fortebank_audit.job_runtime import (
     InferenceRuntime,
     RuntimeConfigurationError,
     RuntimeSettings,
+    get_runtime,
 )
 
 
@@ -64,6 +65,12 @@ def test_mock_runtime_maps_real_evidence_and_summary(tmp_path: Path) -> None:
     assert "автоматический анализ" in result.summary.lower()
     assert "ручн" not in result.summary.lower()
     assert result.runtime["mode_label"] == "Demo predictor"
+    assert result.runtime["predictor_class"] == "MockPredictor"
+    assert result.runtime["model_version"] == "mock-v1"
+    assert result.runtime["runtime_providers"] == ["MockExecutionProvider"]
+    assert result.runtime["model_sha256"] is None
+    assert result.runtime["diagnostics"]["window_scores"]
+    assert result.runtime["diagnostics"]["events"][0]["supporting_window_indices"]
     assert stages[-1] == "summary"
     detail = result.analysis_details[0]
     assert detail["event_index"] == 1
@@ -89,6 +96,26 @@ def test_onnx_environment_without_bundle_fails_closed(
 
     with pytest.raises(RuntimeConfigurationError, match="requires QAITU_MODEL_BUNDLE"):
         RuntimeSettings.from_environment()
+
+
+def test_inference_mode_must_be_explicit(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("QAITU_INFERENCE_MODE", raising=False)
+    monkeypatch.delenv("QAITU_MODEL_BUNDLE", raising=False)
+
+    with pytest.raises(RuntimeConfigurationError, match="explicitly set"):
+        RuntimeSettings.from_environment()
+
+
+def test_runtime_is_loaded_once_per_process(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("QAITU_INFERENCE_MODE", "mock")
+    monkeypatch.setenv("QAITU_EVIDENCE_ROOT", str(tmp_path / "evidence"))
+    get_runtime.cache_clear()
+    try:
+        assert get_runtime() is get_runtime()
+    finally:
+        get_runtime.cache_clear()
 
 
 def test_injected_predictor_and_config_must_be_provided_together(tmp_path: Path) -> None:
