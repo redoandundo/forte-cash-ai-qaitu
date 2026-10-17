@@ -1,12 +1,14 @@
 # Inference -> Teamlead handoff
 
-Статус: implementation ready; quality promotion blocked by measured detector/VLM errors.
+Статус: полный локальный прогон 42/42 завершён; recall-защита прошла, но Qwen
+остаётся за feature flag из-за слабой семантической дискриминации positive-кандидатов.
 
 ## Версия и изменения
 
 - Branch: `feature/video-inference`.
 - Implementation: `93a1c0c` (`feat(inference): add Qwen semantic event verification`).
 - Contract tests: `1a9d02d`; startup/count tests: `0320c78`.
+- Full-dataset recall guard and evaluator: `f1b7769`.
 - ONNX: `mobilenet-temporal-pairsafe-v3`; его threshold, smoothing, sampling и
   `max_events` не менялись.
 - Qwen backend создаётся один раз через `get_qwen_backend()` в
@@ -14,13 +16,14 @@
 - Вызов после ONNX находится в
   `src/fortebank_audit/inference/semantic_pipeline.py`:
   `analyze_video_with_semantic_verification()` -> `apply_semantic_verification()`.
-- `normal_activity` удаляет один исходный кандидат; `possible_violation` и
-  `insufficient_evidence` сохраняют тот же объект события. Evidence JPEG не
-  превращаются в отдельные события.
+- Только recall-safe `normal_activity/high` удаляет исходный кандидат;
+  `possible_violation`, `insufficient_evidence` и небезопасный normal сохраняют
+  тот же объект события. Evidence JPEG не превращаются в отдельные события.
 
 Изменены manifest/requirements, `vlm_verifier.py`, `semantic_pipeline.py`,
-`pipeline.py`, `evidence.py`, `meta_cli.py`, `reporting.py`, `ab_evaluation.py`
-и inference tests. Веса, видео, evidence, labels и приватные отчёты не добавлены.
+`pipeline.py`, `evidence.py`, `meta_cli.py`, `reporting.py`, `ab_evaluation.py`,
+`scripts/inference/qwen_full_evaluation.py` и inference tests. Веса, видео,
+evidence, labels и приватные отчёты не добавлены.
 
 ## Контракт и failure semantics
 
@@ -63,44 +66,63 @@ checksum/device/load/inference/peak VRAM без кадров и чувствит
 
 ## Проверки
 
-`python -m pytest tests/inference -q` -> `54 passed`. Покрыты фильтрация всех
+`python -m pytest tests/inference -q` -> `59 passed`. Покрыты фильтрация всех
 трёх decisions, 0/1/2/3 кандидата, один event с тремя JPEG, отсутствие вызова
 без events, singleton backend, malformed JSON after retry, ordinary entry,
 inactivity temporal rule, unknown signals/rules, Unicode evidence, обе модели в
 diagnostics, missing/bad weights, CUDA/version checks, damaged JPEG/video и
 decoder failure. `git diff --check` чист.
 
-Реальные smoke на RTX 5050 (локальные details не коммитились):
+### Финальный полный прогон 42 файлов
 
-- Unicode `Х-15.mov`, обычный вход: ONNX 1 -> Qwen `normal_activity` -> final 0;
-  Qwen 29.11 s, total warm-job 31.58 s, peak 4.99 GiB, status done.
-- `Х-35.mov`, known FP, long 56.77 s, two candidates: Qwen удалил один как
-  normal, второй сохранил как possible; final 1; Qwen 42.40 s, total 106.48 s,
-  peak 5.06 GiB, status done. Known FP удалён не полностью.
-- `Х-20.mov`, short 11.63 s: ONNX 0, `qwen_called=false`, final 0, warm-job
-  0.45 s, status done.
-- `Х-22.mov`, known ONNX FN: ONNX 0, `qwen_called=false`, final 0, warm-job
-  0.82 s. Второй слой не может искать пропущенное событие по архитектуре.
-- Изолированный positive control на размеченном temporal context `Х-26.mov`:
-  Qwen `possible_violation/hand_or_object_transfer`, valid strict JSON, 23.16 s,
-  5.00 GiB. Но ONNX локализует этот ролик позже размеченного момента, поэтому
-  end-to-end positive-control gate пока не доказан.
-- Повреждённые video/JPEG дают controlled technical failure. Schema-failure
-  smoke также подтвердил `failed`, не `no_violation`.
+Локальный набор содержит 42 файла и 40 уникальных источников: `Х-4/Х-47` и
+`Х-5/Х-48` являются byte-identical парами. Детальные локальные результаты,
+видео и evidence не коммитились.
 
-Все измеренные video jobs меньше 300 s. Модель в одном holdout-процессе была
-загружена один раз и переиспользована для последующих событий/jobs.
+| Уровень подсчёта | Этап | TP | TN | FP | FN |
+|---|---|---:|---:|---:|---:|
+| 42 файла | ONNX до Qwen | 14 | 10 | 10 | 8 |
+| 42 файла | ONNX + Qwen recall guard | 14 | 13 | 7 | 8 |
+| 40 уникальных источников | ONNX до Qwen | 14 | 10 | 9 | 7 |
+| 40 уникальных источников | ONNX + Qwen recall guard | 14 | 12 | 7 | 7 |
+
+- ONNX candidates: 29; retained: 24; removed: 5.
+- Удалённых событий на positive-видео: 0; positive-видео, превращённых в
+  negative: 0. Recall относительно ONNX не ухудшился.
+- Unrecovered schema failures: 0; technical failures: 0; пять ответов потребовали
+  разрешённый один repair retry и после него прошли строгую schema.
+- Максимальное время одного видео: 127.05 s; весь batch: 1372.54 s; лимит
+  300 s на видео соблюдён.
+- Peak allocated VRAM: 5.13 GiB; load time: 7.71 s. Модель загрузилась один раз
+  и переиспользовалась для всех 42 файлов.
+- Обычные negative-примеры `Х-5/Х-48` и `Х-27` стали `normal_activity/high`
+  и были отфильтрованы.
+- Positive end-to-end примеры `X-1`, `Х-11`, `Х-15`, `Х-26`, `Х-28`, `Х-30`
+  сохранили события. Для них небезопасный `normal_activity` был понижен до
+  `insufficient_evidence`, потому что не выполнен полный recall-safe gate.
+- Несколько кандидатов проверены на `Х-12`, `Х-30`, `Х-34`, `Х-35`, `Х-39`;
+  количество событий не дополнялось и не превращалось в число JPEG.
+
+Recall-safe удаление требует одновременно: `normal_activity`, `high`, минимум
+четыре supporting windows, все пять ролей, отдельные кадры строго до и после
+интервала, наблюдения по всем ролям и отсутствие material limitations. Любое
+сомнение превращается во внутренний `insufficient_evidence`, кандидат остаётся.
+
+Ограничение: на финальном прогоне raw Qwen назвал все 29 кандидатов
+`normal_activity/high`. Positive-кандидаты сохранены защитным правилом, а не
+надёжным распознаванием possible violation. Поэтому нельзя утверждать, что Qwen
+научился распознавать нарушения; измерено только уменьшение FP без потери recall
+на этом локальном наборе.
 
 ## Quality gate и ограничения
 
-Не утверждать улучшение системы и не включать Qwen публично по умолчанию:
+Измеренный file-level результат улучшился с FP 10 до 7 без изменения TP/FN,
+но не включать Qwen публично по умолчанию без review тимлида:
 
-- known FP удалён лишь частично;
-- несколько размеченных TP имеют неверный ONNX timecode и выглядят для Qwen как
-  обычный вход, поэтому могут быть удалены;
-- full holdout до финальной prompt/repair настройки имел schema failures;
-- финальный выбранный smoke не имел schema failures, но это недостаточно для
-  promotion;
+- три FP-видео удалены, остальные семь FP остались;
+- raw Qwen не распознал ни один финальный кандидат как possible violation;
+- recall сохранился только благодаря жёсткому deterministic guard;
+- пять первых ответов потребовали repair, хотя unrecovered failures равны нулю;
 - Qwen не исправляет ONNX false negatives и не ищет события самостоятельно;
 - юридический вывод и вина не устанавливаются.
 
@@ -110,11 +132,11 @@ decoder failure. `git diff --check` чист.
 $env:PYTHONPATH = "src"
 $env:QAITU_VLM_MODE = "qwen"
 $env:QAITU_VLM_MODEL_PATH = "models/pretrained/qwen3-vl-2b-instruct"
-.\.venv-ml\Scripts\python.exe -m fortebank_audit.inference.meta_cli analyze `
-  --video "data/raw/open/videos/Х-15.mov" `
-  --enable-qwen `
-  --vlm-model "models/pretrained/qwen3-vl-2b-instruct" `
-  --run-id "teamlead-qwen-smoke"
+.\.venv-ml\Scripts\python.exe scripts\inference\qwen_full_evaluation.py `
+  --qwen-model "models/pretrained/qwen3-vl-2b-instruct" `
+  --output "tmp/qwen-full-evaluation.json" `
+  --evidence-root "data/raw/evidence/qwen-full-evaluation" `
+  --run-tag "teamlead-full-evaluation"
 ```
 
 ## Что должен сделать тимлид в API
