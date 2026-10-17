@@ -35,8 +35,8 @@
         </div>
 
         <form class="upload-card" id="upload-form">
-          <label class="dropzone" id="dropzone" for="video-file">
-            <input id="video-file" type="file" accept=".mov,video/quicktime" />
+          <div class="dropzone" id="dropzone">
+            <input id="video-file" type="file" accept=".mov,video/quicktime" tabindex="-1" aria-hidden="true" />
             <span class="frame-corner top-left" aria-hidden="true"></span>
             <span class="frame-corner top-right" aria-hidden="true"></span>
             <span class="frame-corner bottom-left" aria-hidden="true"></span>
@@ -50,15 +50,15 @@
             </span>
             <span class="drop-copy">
               <strong>Перетащите видео сюда</strong>
-              <span>или нажмите, чтобы выбрать файл</span>
+              <span>или выберите файл с этого компьютера</span>
             </span>
-            <span class="choose-button">Выбрать видео</span>
+            <button class="choose-button" id="choose-file" type="button">Выбрать файл</button>
             <span class="file-rules">
               <span>MOV</span>
               <span>до 100 МБ</span>
               <span>без облака</span>
             </span>
-          </label>
+          </div>
 
           <p class="upload-error" id="upload-error" role="alert" hidden></p>
 
@@ -188,7 +188,7 @@
               </div>
               <p class="status-kicker">Результат проверки</p>
               <h2>Признаки не обнаружены</h2>
-              <p id="clear-summary">В этой записи не найдено эпизодов для дополнительной ручной проверки.</p>
+              <p id="clear-summary">Автоматический анализ не обнаружил в этой записи признаков возможного нарушения.</p>
             </section>
 
             <section class="result-panel error-panel state-panel" id="error-panel" hidden>

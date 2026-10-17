@@ -383,12 +383,20 @@ h1 {
   z-index: 1;
   margin-top: 26px;
   padding: 13px 22px;
+  border: 0;
   border-radius: 999px;
   color: white;
   background: var(--forte-plum);
   font-size: 14px;
   font-weight: 700;
   box-shadow: 0 9px 22px rgba(52, 16, 31, 0.17);
+  cursor: pointer;
+  transition: transform 160ms ease, box-shadow 160ms ease;
+}
+
+.choose-button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 12px 26px rgba(52, 16, 31, 0.22);
 }
 
 .file-rules {
@@ -1088,6 +1096,83 @@ body[data-demo-state="failed"] .status-icon span {
 
 .event-copy {
   padding: 17px;
+}
+
+.evidence-chain {
+  display: grid;
+  gap: 10px;
+  margin-top: 18px;
+  padding-top: 16px;
+  border-top: 1px solid var(--line);
+}
+
+.chain-section {
+  padding: 12px 13px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface-soft);
+}
+
+.chain-label {
+  margin: 0 !important;
+  color: var(--forte-berry) !important;
+  font-family: var(--utility);
+  font-size: 9px !important;
+  font-weight: 750;
+  letter-spacing: 0.08em;
+  line-height: 1.35 !important;
+  text-transform: uppercase;
+}
+
+.chain-text {
+  margin: 7px 0 0 !important;
+  color: var(--ink) !important;
+  font-size: 12px !important;
+  line-height: 1.55 !important;
+}
+
+.chain-list {
+  display: grid;
+  gap: 7px;
+  margin: 9px 0 0;
+  padding-left: 19px;
+  color: var(--ink);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.chain-list li::marker {
+  color: var(--forte-magenta);
+  font-family: var(--utility);
+  font-weight: 750;
+}
+
+.chain-thesis {
+  border-color: rgba(181, 31, 93, 0.22);
+  background: var(--blush);
+}
+
+.chain-risk {
+  border-left: 3px solid var(--forte-coral);
+}
+
+.chain-rule.unmatched {
+  border-style: dashed;
+  background: white;
+}
+
+.chain-rule.matched {
+  border-color: rgba(32, 116, 81, 0.24);
+  background: var(--success-soft);
+}
+
+.chain-rule a {
+  display: inline-flex;
+  margin-top: 10px;
+  color: var(--forte-berry);
+  font-size: 11px;
+  font-weight: 700;
+  text-underline-offset: 3px;
 }
 
 .timecode-button {

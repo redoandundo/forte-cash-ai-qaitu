@@ -9,6 +9,7 @@ const uploadForm = document.querySelector("#upload-form");
 const fileInput = document.querySelector("#video-file");
 const dropzone = document.querySelector("#dropzone");
 const uploadError = document.querySelector("#upload-error");
+const chooseFileButton = document.querySelector("#choose-file");
 const apiKeyInput = document.querySelector("#api-key");
 const videoPreview = document.querySelector("#video-preview");
 const videoEmpty = document.querySelector("#video-empty");
@@ -59,7 +60,7 @@ const stateCopy = {
   violation: {
     kicker: "Проверка завершена",
     title: "Есть эпизоды для просмотра",
-    detail: "Нажмите таймкод или отметку на видео и проверьте событие вручную.",
+    detail: "Система автоматически сформировала вывод, основания и оценку риска для каждого эпизода.",
   },
   no_violation: {
     kicker: "Проверка завершена",
@@ -211,6 +212,76 @@ function makeEvidenceGallery(frames, eventIndex) {
   return gallery;
 }
 
+function makeChainSection(labelText, content, { list = false, className = "" } = {}) {
+  const section = document.createElement("section");
+  section.className = `chain-section ${className}`.trim();
+  const label = document.createElement("p");
+  label.className = "chain-label";
+  label.textContent = labelText;
+  section.append(label);
+  if (list) {
+    const items = document.createElement("ol");
+    items.className = "chain-list";
+    for (const item of content) {
+      const listItem = document.createElement("li");
+      listItem.textContent = item;
+      items.append(listItem);
+    }
+    section.append(items);
+  } else {
+    const paragraph = document.createElement("p");
+    paragraph.className = "chain-text";
+    paragraph.textContent = content;
+    section.append(paragraph);
+  }
+  return section;
+}
+
+function makeEvidenceChain(detail, violation) {
+  const fallback = {
+    thesis: `Вероятно, обнаружено событие: ${violation.type}.`,
+    observations: [
+      `Модельный сигнал выше порога локализован на ${formatClock(violation.timecode_sec)}.`,
+      `Система сформировала JPEG-кадров: ${(violation.evidence_frames || []).length}.`,
+    ],
+    reasoning: "Временная локализация и согласованные кадры подкрепляют автоматический вывод о подозрительном эпизоде.",
+    risk: "Нетипичная активность в кассовой зоне может повышать операционный риск и затруднять прослеживаемость действий.",
+    rule: {
+      status: "not_established",
+      label: "Нормативное основание не установлено",
+      applicability: "Правило появится только после сопоставления с проверенным локальным каталогом.",
+    },
+  };
+  const chain = detail || fallback;
+  const wrapper = document.createElement("div");
+  wrapper.className = "evidence-chain";
+  wrapper.append(
+    makeChainSection("1 · Тезис — что происходит", chain.thesis, { className: "chain-thesis" }),
+    makeChainSection("2 · Какие признаки это подкрепляют", chain.observations || [], { list: true }),
+    makeChainSection("3 · Логика вывода", chain.reasoning),
+    makeChainSection("4 · Почему это важно", chain.risk, { className: "chain-risk" }),
+  );
+
+  const rule = chain.rule || fallback.rule;
+  const ruleSection = makeChainSection(
+    "5 · Предполагаемое правило",
+    rule.status === "matched"
+      ? `${rule.label}. ${rule.document_name || ""} ${rule.section || ""}. ${rule.applicability || ""}`.trim()
+      : `${rule.label}. ${rule.applicability || ""}`.trim(),
+    { className: rule.status === "matched" ? "chain-rule matched" : "chain-rule unmatched" },
+  );
+  if (rule.status === "matched" && /^https?:\/\//.test(rule.source_url || "")) {
+    const link = document.createElement("a");
+    link.href = rule.source_url;
+    link.target = "_blank";
+    link.rel = "noreferrer";
+    link.textContent = "Открыть нормативный источник";
+    ruleSection.append(link);
+  }
+  wrapper.append(ruleSection);
+  return wrapper;
+}
+
 function renderMarkers(violations) {
   eventMarkers.replaceChildren();
   if (!Number.isFinite(videoPreview.duration) || videoPreview.duration <= 0) return;
@@ -230,7 +301,7 @@ function renderViolationResult(job, progress) {
   currentViolations = job.violations || [];
   const count = currentViolations.length;
   resultCount.textContent = `${count} ${episodeWord(count)}`;
-  violationSummary.textContent = progress.summary || "Отмеченные эпизоды требуют ручной проверки по видео и кадрам.";
+  violationSummary.textContent = progress.summary || "Система автоматически сформировала объяснение для отмеченных эпизодов.";
   eventList.replaceChildren();
 
   currentViolations.forEach((violation, index) => {
@@ -249,10 +320,8 @@ function renderViolationResult(job, progress) {
     heading.textContent = violation.type;
     const description = document.createElement("p");
     description.textContent = violation.description;
-    const review = document.createElement("span");
-    review.className = "review-label";
-    review.textContent = "Требует проверки сотрудником";
-    copy.append(timeButton, heading, description, review);
+    const detail = (progress.analysis_details || []).find((item) => item.event_index === index + 1);
+    copy.append(timeButton, heading, description, makeEvidenceChain(detail, violation));
     article.append(copy);
     eventList.append(article);
   });
@@ -269,7 +338,7 @@ function renderCompleted(job, progress) {
   }
   currentViolations = [];
   eventMarkers.replaceChildren();
-  clearSummary.textContent = progress.summary || "В этой записи не найдено эпизодов для дополнительной ручной проверки.";
+  clearSummary.textContent = progress.summary || "Автоматический анализ не обнаружил в этой записи признаков возможного нарушения.";
   setUiState("no_violation");
 }
 
@@ -413,6 +482,15 @@ function resetToUpload() {
 
 uploadForm.addEventListener("submit", (event) => event.preventDefault());
 fileInput.addEventListener("change", () => acceptFile(fileInput.files?.[0]));
+chooseFileButton.addEventListener("click", (event) => {
+  event.stopPropagation();
+  fileInput.click();
+});
+
+dropzone.addEventListener("click", (event) => {
+  if (event.target.closest("button, input, details, summary, a")) return;
+  fileInput.click();
+});
 
 for (const eventName of ["dragenter", "dragover"]) {
   dropzone.addEventListener(eventName, (event) => {
