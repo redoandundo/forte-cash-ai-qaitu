@@ -224,11 +224,23 @@ def analyze_video(
         current_positive_run = current_positive_run + 1 if is_positive else 0
         longest_positive_run = max(longest_positive_run, current_positive_run)
     event_coverage_sec = sum(event.end_sec - event.start_sec for event in events)
+    window_scores = [
+        {
+            "window_index": raw.window_index,
+            "start_sec": raw.start_sec,
+            "end_sec": raw.end_sec,
+            "center_sec": raw.center_sec,
+            "raw_score": raw.score,
+            "score": scored.score,
+        }
+        for raw, scored in zip(predictions, scored_predictions, strict=True)
+    ]
     return {
         "verdict": "possible_violation" if events else "no_violation",
         "score": peak_score,
         "timecode_sec": peak_time if events else None,
         "events": event_payload,
+        "window_scores": window_scores,
         "window_summary": {
             "minimum_score": float(scores.min()),
             "mean_score": float(scores.mean()),

@@ -31,7 +31,7 @@ def test_three_evidence_frames_are_spread_around_peak(tmp_path: Path) -> None:
         def sample_nearest(self, timestamps_sec) -> list[VideoFrame]:
             self.requested = list(timestamps_sec)
             return [
-                VideoFrame(timestamp, np.full((16, 16, 3), index * 80, dtype=np.uint8))
+                VideoFrame(timestamp, np.full((16, 16, 3), index * 20, dtype=np.uint8))
                 for index, timestamp in enumerate(self.requested)
             ]
 
@@ -44,6 +44,41 @@ def test_three_evidence_frames_are_spread_around_peak(tmp_path: Path) -> None:
         run_id="spread",
         count=3,
     )
-    assert reader.requested == [14.0, 16.0, 18.0]
-    assert [item.timecode_sec for item in evidence] == reader.requested
+    assert min(reader.requested) == 10.0
+    assert max(reader.requested) == 20.0
+    assert 16.0 in reader.requested
+    assert [item.timecode_sec for item in evidence] == [10.0, 16.0, 20.0]
     assert len({item.jpeg_path.read_bytes() for item in evidence}) == 3
+
+
+def test_visually_duplicate_frames_are_returned_once(tmp_path: Path) -> None:
+    class Reader:
+        def metadata(self) -> VideoMetadata:
+            return VideoMetadata(
+                path=Path("video.mov"),
+                duration_sec=20.0,
+                width=16,
+                height=16,
+                nominal_fps=10.0,
+                frame_count=200,
+                codec="mpeg4",
+                has_audio=False,
+            )
+
+        def sample_nearest(self, timestamps_sec) -> list[VideoFrame]:
+            return [
+                VideoFrame(float(timestamp), np.full((16, 16, 3), 80, dtype=np.uint8))
+                for timestamp in timestamps_sec
+            ]
+
+    event = DetectedEvent(4.0, 12.0, 8.0, 0.9, 3)
+    evidence = EvidenceExtractor(tmp_path).extract(
+        Reader(),
+        event,
+        event_index=0,
+        run_id="duplicates",
+        count=3,
+    )
+
+    assert len(evidence) == 1
+    assert evidence[0].timecode_sec == 8.0

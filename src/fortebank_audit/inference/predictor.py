@@ -21,6 +21,9 @@ class Predictor(Protocol):
     @property
     def device(self) -> str: ...
 
+    @property
+    def runtime_providers(self) -> tuple[str, ...]: ...
+
     def predict_batch(self, windows: Sequence[ClipWindow]) -> list[WindowPrediction]: ...
 
 
@@ -35,6 +38,10 @@ class MockPredictor:
     @property
     def device(self) -> str:
         return "CPU"
+
+    @property
+    def runtime_providers(self) -> tuple[str, ...]:
+        return ("MockExecutionProvider",)
 
     def predict_batch(self, windows: Sequence[ClipWindow]) -> list[WindowPrediction]:
         predictions = []
@@ -244,6 +251,10 @@ class OnnxPredictor:
     def device(self) -> str:
         providers = self.session.get_providers()
         return "CUDA" if "CUDAExecutionProvider" in providers else "CPU"
+
+    @property
+    def runtime_providers(self) -> tuple[str, ...]:
+        return tuple(str(provider) for provider in self.session.get_providers())
 
     def predict_batch(self, windows: Sequence[ClipWindow]) -> list[WindowPrediction]:
         if not windows:

@@ -5,18 +5,104 @@ import re
 from pathlib import Path
 
 import cv2
+import numpy as np
 
-from .contracts import DetectedEvent, EvidenceExtractionError, EvidenceFrame
+from .contracts import DetectedEvent, EvidenceExtractionError, EvidenceFrame, VideoFrame
 from .video_reader import VideoReader
 
 
 class EvidenceExtractor:
-    def __init__(self, output_root: str | Path, *, jpeg_quality: int = 90) -> None:
+    def __init__(
+        self,
+        output_root: str | Path,
+        *,
+        jpeg_quality: int = 90,
+        min_visual_difference: float = 2.0,
+    ) -> None:
         self.output_root = Path(output_root)
         self.jpeg_quality = int(jpeg_quality)
+        self.min_visual_difference = float(min_visual_difference)
         if not 1 <= self.jpeg_quality <= 100:
             raise ValueError("jpeg_quality must be in [1, 100]")
+        if not 0 <= self.min_visual_difference <= 255:
+            raise ValueError("min_visual_difference must be in [0, 255]")
         self._run_dirs: dict[str, Path] = {}
+
+    @staticmethod
+    def _candidate_times(
+        event: DetectedEvent, duration_sec: float, count: int
+    ) -> list[float]:
+        peak = min(duration_sec, max(0.0, event.peak_time_sec))
+        if count == 1:
+            return [peak]
+        start = min(duration_sec, max(0.0, min(event.start_sec, event.end_sec)))
+        end = min(duration_sec, max(start, max(event.start_sec, event.end_sec)))
+        if end <= start:
+            return [peak]
+        candidate_count = max(7, count * 3)
+        step = (end - start) / (candidate_count - 1)
+        requested = {start + step * index for index in range(candidate_count)}
+        requested.add(peak)
+        return sorted(requested)
+
+    @staticmethod
+    def _visual_fingerprint(frame: VideoFrame) -> np.ndarray:
+        gray = cv2.cvtColor(frame.image_rgb, cv2.COLOR_RGB2GRAY)
+        return cv2.resize(gray, (32, 32), interpolation=cv2.INTER_AREA).astype(
+            np.float32
+        )
+
+    def _visually_distinct(
+        self,
+        frame: VideoFrame,
+        selected: list[tuple[VideoFrame, np.ndarray]],
+    ) -> bool:
+        candidate = self._visual_fingerprint(frame)
+        return all(
+            float(np.mean(np.abs(candidate - fingerprint)))
+            >= self.min_visual_difference
+            for _, fingerprint in selected
+        )
+
+    def _select_unique_frames(
+        self,
+        frames: list[VideoFrame],
+        *,
+        peak_time_sec: float,
+        count: int,
+    ) -> list[VideoFrame]:
+        by_timestamp: dict[float, VideoFrame] = {}
+        for frame in frames:
+            by_timestamp.setdefault(round(frame.timestamp_sec, 6), frame)
+        candidates = list(by_timestamp.values())
+        if not candidates:
+            return []
+
+        first = min(candidates, key=lambda item: abs(item.timestamp_sec - peak_time_sec))
+        selected: list[tuple[VideoFrame, np.ndarray]] = [
+            (first, self._visual_fingerprint(first))
+        ]
+        remaining = [frame for frame in candidates if frame is not first]
+        while remaining and len(selected) < count:
+            distinct = [
+                frame for frame in remaining if self._visually_distinct(frame, selected)
+            ]
+            if not distinct:
+                break
+            next_frame = max(
+                distinct,
+                key=lambda item: (
+                    min(
+                        abs(item.timestamp_sec - chosen.timestamp_sec)
+                        for chosen, _ in selected
+                    ),
+                    abs(item.timestamp_sec - peak_time_sec),
+                    -item.timestamp_sec,
+                ),
+            )
+            selected.append((next_frame, self._visual_fingerprint(next_frame)))
+            remaining.remove(next_frame)
+        return sorted((frame for frame, _ in selected), key=lambda item: item.timestamp_sec)
 
     def _prepare_run_dir(self, run_id: str) -> Path:
         if run_id in self._run_dirs:
@@ -45,29 +131,19 @@ class EvidenceExtractor:
     ) -> list[EvidenceFrame]:
         run_dir = self._prepare_run_dir(run_id)
 
-        if count == 1:
-            requested = [event.peak_time_sec]
-        else:
-            before = event.peak_time_sec - min(
-                2.0, max(0.0, event.peak_time_sec - event.start_sec)
-            )
-            after = event.peak_time_sec + min(
-                2.0, max(0.0, event.end_sec - event.peak_time_sec)
-            )
-            requested = [before, after]
-            if count == 3:
-                requested.append(event.peak_time_sec)
         duration = reader.metadata().duration_sec
-        requested = sorted({min(duration, max(0.0, value)) for value in requested})
-        frames = reader.sample_nearest(requested)
+        requested = self._candidate_times(event, duration, count)
+        sampled_frames = reader.sample_nearest(requested)
+        frames = self._select_unique_frames(
+            sampled_frames,
+            peak_time_sec=event.peak_time_sec,
+            count=count,
+        )
+        if not frames:
+            raise EvidenceExtractionError("Could not extract JPEG evidence")
 
         evidence: list[EvidenceFrame] = []
-        seen_actual: set[float] = set()
         for evidence_index, frame in enumerate(frames, start=1):
-            rounded = round(frame.timestamp_sec, 6)
-            if rounded in seen_actual:
-                continue
-            seen_actual.add(rounded)
             path = run_dir / f"event_{event_index:03d}_{evidence_index:02d}.jpg"
             bgr = cv2.cvtColor(frame.image_rgb, cv2.COLOR_RGB2BGR)
             try:

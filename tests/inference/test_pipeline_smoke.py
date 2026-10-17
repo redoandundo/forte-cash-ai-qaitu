@@ -31,6 +31,15 @@ def test_mock_pipeline_is_deterministic_on_generated_video(
         "supporting_windows"
     ]
     assert result["window_summary"]["positive_fraction"] == 1.0
+    assert len(result["window_scores"]) == result["runtime"]["windows"]
+    assert {
+        "window_index",
+        "start_sec",
+        "end_sec",
+        "center_sec",
+        "raw_score",
+        "score",
+    } <= result["window_scores"][0].keys()
     assert result["runtime"]["windows"] > 0
     for evidence in result["events"][0]["evidence"]:
         assert (tmp_path / evidence["jpeg_path"]).is_file()
