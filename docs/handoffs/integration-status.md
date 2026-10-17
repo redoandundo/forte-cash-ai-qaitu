@@ -1,83 +1,147 @@
 # ML/Inference integration status
 
-Статус: API/frontend/mock end-to-end verified; real ML artifact acceptance blocked
+Дата: 2026-10-18.
+
+Статус: код полного API/UI пути с каноническим ONNX проверен; приём точного
+`baseline-audited-v4.zip` и end-to-end на реальных видео заблокированы отсутствием
+архива на интеграционной машине.
 
 ## Входные версии
 
-- Integration branch: `feature/teamlead-ml-inference-integration`
-- ML source: `origin/feature/ml-model@5e6d383`
-- ML integration commit: `f549302`
-- Inference source: `origin/feature/video-inference@2f53ce1`
-- Inference integration commit: `63cb5ba`
-- Cross-component test commit: `9185e26`
-- Inference progress callback commit: `5abf369`
-- API/runtime integration commit: `88e49dc`
-- Live frontend integration commit: `e5bf43e`
-- Structured evidence-chain API commit: `b170a2f`
-- Explicit file picker and evidence-chain UI commit: `9d9c9e9`
-- Expected ML bundle: `baseline-repair-v2.zip`
-- Expected archive SHA-256: `b9a8b2c809f7a6dc72e0bf655707fb9d2e430c906e573aa2f10ed4750d0ae90b`
-- The expected archive is intentionally not stored in Git and was not available locally during integration.
+- Integration branch: `feature/teamlead-ml-inference-integration`.
+- ML handoff: `origin/feature/ml-model@f891b213b8de5f923c136e4f228db08122553fe6`.
+- ML code/artifact source: `aba56d31030aa9830fe2770e4aa9d54d2879ef24`.
+- Inference source fix: `origin/feature/video-inference@405f06e`.
+- Integrated decoder/Unicode fix: `875c09b`.
+- Evidence/diagnostics integration: `da658c9`.
+- API/runtime/UI integration: `806d10d`.
+- Expected bundle: `baseline-audited-v4-development`.
+- Expected archive: `baseline-audited-v4.zip`, 7,425,647 bytes.
+- Expected archive SHA-256:
+  `c387bdea9bd80a124c5587fccfcec3243d2550658ee09ca6834acaa9e54a1241`.
+- Expected canonical `model.onnx` SHA-256:
+  `00ae541eac23249dd4751093ce276bfa9c14afca2d5f15f4fec9719c009ae52d`.
+- Release status: `development_only_not_promoted`; `quality_passed=false`.
 
-## Выполненные команды
+Архив и модель не найдены в рабочих каталогах, Downloads, Temp или других
+проверенных каталогах профиля. Случайные веса не скачивались и фиктивный
+`baseline-audited-v4` не создавался.
+
+## Подключение
+
+- `QAITU_INFERENCE_MODE` теперь обязателен: неявного default mock нет.
+- ONNX mode требует `QAITU_MODEL_BUNDLE`; development bundle требует отдельный
+  `QAITU_ALLOW_DEVELOPMENT_MODEL=true`.
+- `QAITU_EXPECTED_MODEL_SHA256` позволяет зафиксировать именно согласованные
+  веса поверх внутренней проверки полного `SHA256SUMS.txt`.
+- FastAPI создаёт и проверяет runtime при startup. Ошибка bundle/model завершает
+  startup и не переключает сервис на mock.
+- `get_runtime()` кэширует predictor один раз на процесс.
+- `QAITU_MAX_CONCURRENT_JOBS` ограничивает параллельный доступ к одной session;
+  значение для demo — `1`.
+- `/health` показывает mode, predictor class, model version, model SHA-256,
+  release status и ONNX Runtime providers без локальных путей.
+- Внутренний progress endpoint сохраняет полный window timeline и для событий
+  `start_sec`, `end_sec`, `peak_time_sec`, `peak_score`, supporting count/indices.
+  Публичная схема API не расширена этими данными.
+- Технические decode/model/evidence ошибки дают `failed`, `verdict=null` и пустой
+  список violations.
+
+## Исправленные дефекты
+
+- Unicode JPEG output: `cv2.imencode` и `Path.write_bytes`; JPEG повторно
+  декодируется в регрессионном тесте.
+- Unknown codec: отсутствие `stream.codec_context` проверяется до чтения
+  metadata/decode и даёт `UnsupportedVideoError`.
+- Evidence: до девяти кандидатов выбираются внутри границ события, сначала
+  сохраняется ближайший к peak кадр, затем временно удалённые и визуально
+  отличимые кадры. При одном уникальном кадре возвращается один.
+- UI показывает десятые доли секунды для события и JPEG, поэтому разные
+  timestamp больше не превращаются в подписи `09/10/10`.
+- UI получает identity из `/health` до запуска и явно показывает `ONNX` либо
+  `Demo model`.
+
+## Выполненные проверки
 
 ```powershell
 python -m compileall -q src scripts
 python -m pytest tests/ml -q
 python -m pytest tests/inference -q
-python -m pytest tests/integration/test_ml_inference_bundle.py -q
+python -m pytest tests/api tests/integration -q
 python -m pytest -q
 python -m pip check
 node --check web/app.js
 git diff --check
 ```
 
-Observed results:
+Фактический результат:
 
-- ML: `32 passed`.
-- Inference: `32 passed`.
-- Synthetic cross-component ONNX smoke: `1 passed`.
-- API/runtime: `7 passed`.
-- Full available suite: `73 passed`.
+- ML tests: `32 passed`.
+- Inference tests: `37 passed`.
+- API + integration tests: `15 passed`, одно предупреждение о будущем изменении
+  compatibility shim в `fastapi.testclient`.
+- Полный доступный набор: `84 passed`, то же одно предупреждение.
 - Dependency check: `No broken requirements found`.
-- JavaScript syntax check: passed.
-- Diff whitespace check: passed.
+- Python compile, JavaScript syntax и whitespace checks: passed.
 
-## Проверки
+## End-to-end matrix
 
-- Contract validation: passed on a synthetic canonical fixed-batch bundle; a development bundle is rejected unless explicit opt-in is set.
-- ONNX smoke test: passed with a real ONNX Runtime CPU session and fixed input `[1, 3, 4, 160, 160]`.
-- PTS/tail behaviour: passed; a nine-second synthetic video produced three deterministic windows.
-- Short positive video: passed on the synthetic nine-second fixture; result was `possible_violation` with one merged event.
-- Long negative video: not run with the missing real ML bundle.
-- Unicode filename: passed with `касса-тест.mov`.
-- CPU fallback: passed with `CPUExecutionProvider` forced by `prefer_cuda=False`.
-- Evidence validation: passed; three JPEG files were produced and verified on disk.
-- Real `baseline-repair-v2` quality/latency: not verified because the archive was unavailable.
-- Source-branch v3 ONNX weight: deliberately not imported; repository policy requires model weights to be transferred outside Git. ONNX execution fails closed unless an explicit canonical bundle is supplied.
-- Browser smoke on local `Х-10.mov`: passed at `http://127.0.0.1:8123`; upload returned `202`, public/progress polling returned `200`, one event at 10 seconds and three JPEG frames rendered, timecode navigation worked, browser console had zero errors.
-- Explicit picker smoke: the visible `Выбрать файл` button opened the native chooser by mouse and by keyboard (`Tab`, `Enter`); the selected MOV reached the same workspace as drag-and-drop.
-- Explanation smoke: every event rendered separate thesis, observations, reasoning, operational risk and rule-status sections. Unmatched events displayed `Нормативное основание не установлено` instead of a fabricated citation.
-- Cleanup after browser smoke: zero uploaded MOV files and zero generated evidence files remained in the configured temporary roots.
-- Mock-mode boundary: decode, temporal windows, aggregation, evidence and API/UI are real; only predictor scores are deterministic demo values and the UI labels them `Demo model`.
+| Сценарий | Ожидание | Фактический результат |
+|---|---|---|
+| Canonical synthetic ONNX, 9 s, Unicode input/output | `done`, ONNX identity, event, valid JPEG | passed через реальный HTTP API и UI; 1 event at 3.0 s, 1 уникальный JPEG |
+| Видимый runtime до загрузки | ONNX/model/provider видимы | passed: `ONNX`, `integration-development`, `CPUExecutionProvider` |
+| File picker | выбор по кнопке, не только drag/drop | passed в headed Chromium через native file chooser |
+| Повторная загрузка | две независимые задачи | passed; обе `done` |
+| Два одновременных запроса при limit=1 | без падения/смешения evidence | passed; обе задачи `done`, общий wall time 0.879 s на synthetic fixture |
+| Unicode evidence directory | JPEG существует и декодируется | passed |
+| Визуально одинаковые кадры | не создавать три дубликата | passed; возвращён один уникальный JPEG |
+| Повреждённый MOV | `failed`, не `no_violation` | passed через API |
+| Неизвестный codec | typed failure, не native crash | passed через API и отдельный subprocess regression test |
+| Неверный expected model SHA | runtime startup/load rejected | passed |
+| Повреждённый/отсутствующий model file | bundle/model load rejected | passed в bundle tests |
+| CPU fallback | `CPUExecutionProvider` | passed |
+| Browser console | no errors | passed: 0 errors, 0 warnings |
+| Real positive/negative/known FP/known FN/short/long/early/late | exact v4 через API/UI | blocked: exact archive absent |
+| Integrated temporal shift `0/+4/-4` | `19/23/15 s` | blocked: exact archive and diagnostic source video absent |
+
+Synthetic fixture проверяет wiring, а не качество распознавания. Он не является
+`baseline-audited-v4` и не используется в demo после проверки.
 
 ## Производительность
 
-- Provider in integration smoke: CPU.
-- Processing time/realtime factor/RAM: not treated as a benchmark because the test uses a synthetic `ReduceMean` ONNX graph rather than the real ML artifact.
-- GPU compatibility: code supports provider selection, but no CUDA benchmark was run in this integration environment.
+Машина текущей интеграции: Windows 11, Intel Core 5 120U, 12 logical CPUs,
+ONNX Runtime 1.23.2. Доступен `CPUExecutionProvider`; `nvidia-smi` и CUDA provider
+в этом окружении недоступны.
 
-## Решение
+- Synthetic ONNX cold import + runtime creation: 1.1461 s.
+- Повторный cached runtime lookup: 0.000002 s; тот же объект.
+- Первый полный HTTP upload-to-result, 9 s fixture: 0.271 s; pipeline 0.178 s.
+- Повторный запрос: 0.140 s; pipeline 0.081 s.
+- Две ограниченно-параллельные задачи: обе `done`, общий wall 0.879 s.
 
-- Code compatibility between the current ML contract and inference adapter: yes.
-- Ready for code review: yes.
-- Ready for a local technical demo in explicit mock mode: yes.
-- Ready for `develop`: no, pending exact real-bundle acceptance and team review.
-- Blockers:
-  1. The exact `baseline-repair-v2.zip` artifact is missing locally.
-  2. The ML release record remains development-only/not promoted; reported quality gates are not sufficient for production approval.
-  3. Representative long-negative and positive acceptance videos have not been run through the exact bundle.
-- Required fixes and owners:
-  1. ML engineer: transfer the exact archive outside Git without repacking it, preserving the expected SHA-256; if rebuilt, publish the new archive SHA, model SHA, manifest, preprocessing, thresholds, labels, metrics, handoff and checksum inventory together.
-  2. Teamlead: verify the received archive checksum, run the integration test plus representative acceptance videos, and record measured CPU/GPU latency.
-  3. ML engineer and teamlead: treat the current threshold/model as development-only until agreed quality gates pass; technical failures must remain errors, never `no_violation`.
+Эти времена не доказывают SLA для реальной модели. Upstream ML release record
+отдельно сообщает CPU model/decode max 10.300 s на 40 видео и adapter+JPEG max
+21.874 s на 11 видео, но без API. Полный 300-second limit для exact v4 через
+этот API остаётся непроверенным.
+
+## Temporal shift
+
+Upstream ML release record для exact v4 сообщает `19 -> 23 s` после добавления
+4 s и `19 -> 15 s` после удаления 4 s, с нулевой ошибкой соответствующих logits.
+Это source-branch evidence, не результат текущего интегрированного API. Повторять
+его как пройденный интеграционный тест до получения архива нельзя.
+
+## Решение и блокеры
+
+- Code compatibility: verified.
+- Synthetic real-ONNX API/UI path: verified.
+- Exact `baseline-audited-v4` API/UI path: not verified.
+- Ready to show as final real-model demo: **no**, пока отсутствует exact archive.
+- Quality promotion: **no**; baseline metrics остаются precision 0.500,
+  recall 0.619, positive F1 0.553, macro F1 0.458, FP events/min 1.033,
+  event recall ±5 s 0.364, peak MAE 7.133 s на reused development dataset.
+
+Нужный следующий файл: приватно переданный `baseline-audited-v4.zip` с точным
+archive SHA-256 из этого handoff. После передачи тимлид должен проверить hash,
+распаковать bundle без изменения файлов, запустить real-video matrix и только
+затем поднимать финальный backend на `127.0.0.1:8123`.
