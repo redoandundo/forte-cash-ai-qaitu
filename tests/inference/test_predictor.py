@@ -17,11 +17,11 @@ def test_current_onnx_bundle_loads_and_checksum_matches() -> None:
     predictor = OnnxPredictor(
         ROOT / "models" / "best_model.onnx",
         preprocessing,
-        ROOT / "configs" / "inference" / "model_manifest.json",
+        ROOT / "models" / "model_manifest.json",
         prefer_cuda=False,
     )
     assert predictor.device == "CPU"
-    assert predictor.model_version.startswith("mobilenet-temporal")
+    assert predictor.model_version == "mobilenet-temporal-pairsafe-v3"
 
 
 def test_fixed_batch_model_is_rejected_by_dynamic_batch_manifest() -> None:
@@ -43,7 +43,7 @@ def test_fixed_batch_model_is_rejected_by_dynamic_batch_manifest() -> None:
         OnnxPredictor(
             ROOT / "models" / "best_model.onnx",
             preprocessing,
-            ROOT / "configs" / "inference" / "model_manifest.json",
+            ROOT / "models" / "model_manifest.json",
             prefer_cuda=False,
             session=FixedBatchSession(),
         )

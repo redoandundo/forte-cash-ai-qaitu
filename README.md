@@ -108,11 +108,10 @@ so replaying a file cannot manufacture experience.
 
 ## Run the local visual verifier and report
 
-Qwen3-VL is an optional second-stage verifier. It sees only the evidence frames
-from candidate events, returns a validated JSON observation, and never changes
-the first-layer score. The final JSON and Markdown reports are assembled by
-deterministic code. They are decision-support artifacts, not findings of guilt,
-fraud, intent, or a legal violation.
+Qwen3-VL is an experimental, feature-flagged evidence-description tool. It sees
+only the JPEG frames from existing candidate events and can describe visible
+actions, blur, or occlusion for a human reviewer. It never changes the public
+verdict, detector score, or timecode, and it does not emit a confidence value.
 
 Weights, videos, evidence JPEGs, reports, and the review database stay outside
 Git. Install the ML environment and download the pinned public model locally:
@@ -130,6 +129,7 @@ verification, and deterministic report):
 ```powershell
 .\.venv-ml\Scripts\python.exe -m fortebank_audit.inference.meta_cli analyze `
   --video data\raw\open\videos\X-1.mov `
+  --enable-experimental-qwen `
   --vlm-model models\pretrained\qwen3-vl-2b-instruct
 ```
 
@@ -141,6 +141,17 @@ generated 48 tokens in 4.2 seconds, and peaked at 4.08 GiB VRAM.
 The signal catalogue in `configs/inference/observable_signals.json` contains
 only visible review cues. The team lead must map those cues to an approved
 business policy before any output can be called a policy violation.
+
+The same accepted holdout can be run with the isolated Qwen arm using:
+
+```powershell
+.\.venv-ml\Scripts\python.exe -m fortebank_audit.inference.ab_evaluation `
+  --qwen-model models\pretrained\qwen3-vl-2b-instruct
+```
+
+This A/B measures runtime, schema reliability, and verifies that detector
+outputs remain identical. It cannot establish a quality gain until a blinded
+human review provides labels for description usefulness or review-time savings.
 
 The current classifier is an experimental baseline for exercising the full pipeline. Its metrics are not yet strong enough for an autonomous decision system, and its event type is intentionally generic. Every positive result means only "possible observable violation" and requires human review.
 

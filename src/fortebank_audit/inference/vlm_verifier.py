@@ -1,14 +1,14 @@
 from __future__ import annotations
 
 import json
-import math
 import time
 from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any, Protocol, Sequence
 
 
-ALLOWED_STATUSES = {"visible_support", "no_visible_support", "insufficient_evidence"}
+ALLOWED_STATUSES = {"description_available", "insufficient_evidence"}
+ALLOWED_EVIDENCE_QUALITIES = {"sufficient", "limited", "unusable"}
 
 
 class VerificationOutputError(RuntimeError):
@@ -39,7 +39,7 @@ class VisionLanguageBackend(Protocol):
 @dataclass(frozen=True)
 class VerificationResult:
     status: str
-    confidence: float
+    evidence_quality: str
     summary: str
     visible_actions: tuple[str, ...]
     matched_signal_ids: tuple[str, ...]
@@ -84,21 +84,21 @@ def build_prompt(
     signals = "\n".join(
         f"- {item['id']}: {item['description']}" for item in signal_policy["signals"]
     )
-    return f"""You are a local evidence verifier for cashier video review.
+    return f"""You are a local evidence description assistant for cashier video review.
 The images are ordered before, during, and after a candidate moment.
-Candidate time: {peak_time_sec:.3f} seconds. First-layer score: {score:.6f}.
+Candidate time: {peak_time_sec:.3f} seconds.
 
-Evaluate only directly visible facts. Do not infer identity, intent, guilt, fraud, or a legal
-violation. If the images are ambiguous, use insufficient_evidence. A first-layer score is only
-a routing signal and must not be treated as visual proof.
+Describe only directly visible facts. Do not validate or reject the detector result.
+Do not infer identity, intent, guilt, fraud, or a legal violation. If the images are ambiguous, use
+insufficient_evidence. Your output must not change the detector verdict or timecode.
 
 Observable signal catalogue ({signal_policy['signals_version']}):
 {signals}
 
 Return one JSON object and no markdown with exactly these fields:
 {{
-  "status": "visible_support|no_visible_support|insufficient_evidence",
-  "confidence": 0.0,
+  "status": "description_available|insufficient_evidence",
+  "evidence_quality": "sufficient|limited|unusable",
   "summary": "short Russian description of visible evidence",
   "visible_actions": ["directly visible action"],
   "matched_signal_ids": ["id from the catalogue"],
@@ -125,11 +125,9 @@ def parse_verification_output(
     status = payload.get("status")
     if status not in ALLOWED_STATUSES:
         raise VerificationOutputError(f"Unsupported verification status: {status}")
-    confidence = payload.get("confidence")
-    if not isinstance(confidence, (int, float)) or not math.isfinite(confidence):
-        raise VerificationOutputError("Verifier confidence must be finite")
-    if not 0 <= float(confidence) <= 1:
-        raise VerificationOutputError("Verifier confidence must be in [0, 1]")
+    evidence_quality = payload.get("evidence_quality")
+    if evidence_quality not in ALLOWED_EVIDENCE_QUALITIES:
+        raise VerificationOutputError(f"Unsupported evidence quality: {evidence_quality}")
     summary = payload.get("summary")
     if not isinstance(summary, str) or not summary.strip():
         raise VerificationOutputError("Verifier summary must be non-empty")
@@ -145,7 +143,7 @@ def parse_verification_output(
         raise VerificationOutputError(f"Verifier returned unknown signal ids: {sorted(unknown)}")
     return VerificationResult(
         status=status,
-        confidence=float(confidence),
+        evidence_quality=str(evidence_quality),
         summary=summary.strip(),
         visible_actions=list_fields["visible_actions"],
         matched_signal_ids=list_fields["matched_signal_ids"],

@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Iterable, Iterator
 
 import av
+import numpy as np
 
 from .contracts import UnsupportedVideoError, VideoFrame, VideoMetadata, VideoOpenError
 
@@ -118,3 +119,33 @@ class VideoReader:
 
     def sample_nearest(self, timestamps_sec: Iterable[float]) -> list[VideoFrame]:
         return list(self.iter_sample_nearest(timestamps_sec))
+
+    def iter_sample_frame_indices(self, timestamps_sec: Iterable[float]) -> Iterator[VideoFrame]:
+        """Reproduce the accepted ML artifact's OpenCV frame-index sampling contract."""
+        metadata = self.metadata()
+        if metadata.nominal_fps <= 0 or metadata.frame_count is None:
+            raise VideoOpenError(f"Frame-index sampling metadata is unavailable: {self.path.name}")
+        targets = [float(value) for value in timestamps_sec]
+        if targets != sorted(targets):
+            raise ValueError("Sample timestamps must be sorted")
+        indices = [
+            min(
+                metadata.frame_count - 1,
+                max(0, int(np.rint(timestamp * metadata.nominal_fps))),
+            )
+            for timestamp in targets
+        ]
+        target_index = 0
+        last: VideoFrame | None = None
+        for frame_index, frame in enumerate(self.iter_frames()):
+            last = frame
+            while target_index < len(indices) and indices[target_index] == frame_index:
+                yield VideoFrame(targets[target_index], frame.image_rgb)
+                target_index += 1
+            if target_index >= len(indices):
+                return
+        if last is None:
+            raise VideoOpenError(f"Video contains no decodable frames: {self.path.name}")
+        while target_index < len(indices):
+            yield VideoFrame(targets[target_index], last.image_rgb)
+            target_index += 1

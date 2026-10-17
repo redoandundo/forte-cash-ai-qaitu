@@ -1,0 +1,43 @@
+{
+  "model_version": "mobilenet-temporal-pairsafe-v3",
+  "artifact": "best_model.onnx",
+  "sha256": "e44cddb9a9cb259ca7fb68b024c5be7be591fcc623116c3f1fc918583a6bac91",
+  "task": "binary_violation_screening",
+  "input": {
+    "name": "video",
+    "layout": "NCTHW",
+    "dtype": "float32",
+    "shape": [null, 3, 4, 160, 160],
+    "color": "RGB"
+  },
+  "output": {
+    "name": "logits",
+    "activation": "sigmoid",
+    "classes": ["no_violation", "violation"]
+  },
+  "window_sec": 6.0,
+  "stride_sec": 2.0,
+  "sampling": "opencv_frame_index_round",
+  "threshold": 0.37794335186481476,
+  "aggregation": "three_window_weighted_smoothing_then_peak",
+  "production_benchmark": {
+    "provider": "CPUExecutionProvider",
+    "sources": 40,
+    "total_video_minutes": 21.6644,
+    "total_wall_sec": 46.668,
+    "mean_runtime_sec": 1.167,
+    "p95_runtime_sec": 2.738,
+    "max_runtime_sec": 5.715,
+    "five_minute_margin": 52.5,
+    "reference_prediction_changes": 0
+  },
+  "validation": {
+    "split": "scenario-pair-safe holdout",
+    "source_count": 8,
+    "macro_f1": 0.75,
+    "precision": 0.75,
+    "recall": 0.75,
+    "auroc": 0.6875,
+    "timestamp_mae_sec": 7.0
+  }
+}

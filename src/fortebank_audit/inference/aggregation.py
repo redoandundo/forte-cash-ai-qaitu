@@ -6,6 +6,51 @@ from collections.abc import Sequence
 from .contracts import DetectedEvent, WindowPrediction
 
 
+ACCEPTED_AGGREGATION = "three_window_weighted_smoothing_then_peak"
+
+
+def smooth_predictions(
+    predictions: Sequence[WindowPrediction],
+    *,
+    weights: tuple[float, float, float] = (0.25, 0.5, 0.25),
+) -> list[WindowPrediction]:
+    """Apply the accepted three-window smoother with edge padding."""
+    if len(weights) != 3 or any(not math.isfinite(value) or value < 0 for value in weights):
+        raise ValueError("Smoothing weights must be three finite non-negative values")
+    if not math.isclose(sum(weights), 1.0, abs_tol=1e-12):
+        raise ValueError("Smoothing weights must sum to one")
+    if not predictions:
+        return []
+    ordered = sorted(predictions, key=lambda item: item.window_index)
+    for prediction in ordered:
+        if not math.isfinite(prediction.score) or not 0 <= prediction.score <= 1:
+            raise ValueError("Prediction score must be finite and in [0, 1]")
+    scores = [item.score for item in ordered]
+    padded = [scores[0], *scores, scores[-1]]
+    return [
+        WindowPrediction(
+            item.window_index,
+            item.start_sec,
+            item.end_sec,
+            item.center_sec,
+            weights[0] * padded[index]
+            + weights[1] * padded[index + 1]
+            + weights[2] * padded[index + 2],
+        )
+        for index, item in enumerate(ordered)
+    ]
+
+
+def postprocess_predictions(
+    predictions: Sequence[WindowPrediction], *, aggregation: str
+) -> list[WindowPrediction]:
+    if aggregation == ACCEPTED_AGGREGATION:
+        return smooth_predictions(predictions)
+    if aggregation == "none":
+        return list(predictions)
+    raise ValueError(f"Unsupported aggregation strategy: {aggregation}")
+
+
 def aggregate_predictions(
     predictions: Sequence[WindowPrediction],
     *,

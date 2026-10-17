@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pytest
 
-from fortebank_audit.inference.aggregation import aggregate_predictions
+from fortebank_audit.inference.aggregation import aggregate_predictions, smooth_predictions
 from fortebank_audit.inference.contracts import WindowPrediction
 
 
@@ -31,3 +31,11 @@ def test_overlapping_windows_merge_and_earliest_peak_wins_tie() -> None:
 def test_invalid_score_is_rejected() -> None:
     with pytest.raises(ValueError):
         aggregate_predictions([prediction(0, 0, 1.1)], threshold=0.5, merge_gap_sec=1, max_events=5)
+
+
+def test_accepted_three_window_smoothing_uses_edge_padding() -> None:
+    smoothed = smooth_predictions(
+        [prediction(0, 0, 0.2), prediction(1, 2, 0.8), prediction(2, 4, 0.4)]
+    )
+    assert [item.score for item in smoothed] == pytest.approx([0.35, 0.55, 0.5])
+    assert [item.center_sec for item in smoothed] == [4, 6, 8]

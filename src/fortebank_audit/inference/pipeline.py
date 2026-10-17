@@ -8,7 +8,7 @@ from pathlib import Path
 import numpy as np
 import psutil
 
-from .aggregation import aggregate_predictions
+from .aggregation import aggregate_predictions, postprocess_predictions
 from .contracts import (
     ClipWindow,
     InferenceResult,
@@ -34,6 +34,11 @@ def score_video(
     initial_rss = process.memory_info().rss
     reader = VideoReader(video_path)
     metadata = reader.metadata()
+    planning_duration = metadata.duration_sec
+    if config.sampling == "opencv_frame_index_round":
+        if metadata.frame_count is None or metadata.nominal_fps <= 0:
+            raise PredictionError("Accepted model requires frame count and nominal FPS")
+        planning_duration = metadata.frame_count / metadata.nominal_fps
     preprocessing = getattr(predictor, "preprocessing", None)
     if preprocessing is not None and (
         config.num_frames != preprocessing.num_frames
@@ -43,13 +48,13 @@ def score_video(
         raise PredictionError("Pipeline window configuration does not match the model contract")
     estimated_windows = (
         1
-        if metadata.duration_sec <= config.window_sec
-        else int(math.floor((metadata.duration_sec - config.window_sec) / config.stride_sec + 1e-9)) + 1
+        if planning_duration <= config.window_sec
+        else int(math.floor((planning_duration - config.window_sec) / config.stride_sec + 1e-9)) + 1
     )
     if estimated_windows > config.max_windows:
         raise PredictionError("Video would exceed the configured inference window limit")
     plans = plan_windows(
-        metadata.duration_sec,
+        planning_duration,
         config.window_sec,
         config.stride_sec,
         config.num_frames,
@@ -61,7 +66,10 @@ def score_video(
         raise PredictionError("Video exceeds the configured inference window limit")
 
     unique_times = sorted({timestamp for plan in plans for timestamp in plan.sample_times_sec})
-    sampled_frames = iter(reader.iter_sample_nearest(unique_times))
+    if config.sampling == "opencv_frame_index_round":
+        sampled_frames = iter(reader.iter_sample_frame_indices(unique_times))
+    else:
+        sampled_frames = iter(reader.iter_sample_nearest(unique_times))
     target_index = 0
     frame_cache: dict[float, np.ndarray] = {}
     last_use: dict[float, int] = {}
@@ -124,8 +132,9 @@ def analyze_video(
     reader = VideoReader(video_path)
     metadata, predictions, scoring_sec, rss_delta_mb = score_video(video_path, predictor, config)
 
+    scored_predictions = postprocess_predictions(predictions, aggregation=config.aggregation)
     events = aggregate_predictions(
-        predictions,
+        scored_predictions,
         threshold=config.threshold,
         merge_gap_sec=config.merge_gap_sec,
         max_events=config.max_events,
@@ -159,12 +168,12 @@ def analyze_video(
         )
 
     processing_sec = time.perf_counter() - started
-    peak_score = max((prediction.score for prediction in predictions), default=0.0)
+    peak_score = max((prediction.score for prediction in scored_predictions), default=0.0)
     peak_time = min(
-        (prediction.center_sec for prediction in predictions if prediction.score == peak_score),
+        (prediction.center_sec for prediction in scored_predictions if prediction.score == peak_score),
         default=None,
     )
-    scores = np.asarray([prediction.score for prediction in predictions], dtype=np.float64)
+    scores = np.asarray([prediction.score for prediction in scored_predictions], dtype=np.float64)
     positive_mask = scores >= config.threshold
     longest_positive_run = 0
     current_positive_run = 0
@@ -192,6 +201,8 @@ def analyze_video(
             "realtime_factor": processing_sec / metadata.duration_sec,
             "device": predictor.device,
             "model_version": predictor.model_version,
+            "aggregation": config.aggregation,
+            "sampling": config.sampling,
             "windows": len(predictions),
             "scoring_sec": scoring_sec,
             "rss_delta_mb": rss_delta_mb,

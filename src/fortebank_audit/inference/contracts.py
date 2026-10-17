@@ -101,6 +101,8 @@ class PipelineConfig:
     stride_sec: float
     num_frames: int
     threshold: float
+    aggregation: str = "none"
+    sampling: str = "pts_nearest"
     batch_size: int = 8
     merge_gap_sec: float = 1.5
     max_events: int = 5
@@ -117,6 +119,10 @@ class PipelineConfig:
             raise ValueError("num_frames and batch_size must be positive")
         if not 0 <= self.threshold <= 1:
             raise ValueError("threshold must be in [0, 1]")
+        if self.aggregation not in {"none", "three_window_weighted_smoothing_then_peak"}:
+            raise ValueError("Unsupported aggregation strategy")
+        if self.sampling not in {"pts_nearest", "opencv_frame_index_round"}:
+            raise ValueError("Unsupported video sampling strategy")
         if self.merge_gap_sec < 0 or self.max_events <= 0:
             raise ValueError("merge_gap_sec must be non-negative and max_events positive")
         if self.evidence_count not in {1, 2, 3}:

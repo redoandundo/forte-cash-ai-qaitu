@@ -6,11 +6,10 @@ from pathlib import Path
 
 import numpy as np
 
-from .benchmark import PROJECT_ROOT
-from .contracts import PipelineConfig
+from .aggregation import postprocess_predictions
+from .benchmark import PROJECT_ROOT, load_pipeline_config
 from .pipeline import score_video
 from .predictor import OnnxPredictor
-from .preprocessing import PreprocessingConfig
 
 
 def confusion(labels: np.ndarray, scores: np.ndarray, threshold: float) -> dict[str, int]:
@@ -48,27 +47,19 @@ def main() -> None:
     parser.add_argument(
         "--reference-report",
         type=Path,
-        default=PROJECT_ROOT / "reports" / "mobilenet_noaug_full_video.json",
+        default=PROJECT_ROOT / "reports" / "mobilenet_pair_safe_v2_full_video.json",
     )
     parser.add_argument("--data-root", type=Path, default=PROJECT_ROOT / "data" / "raw" / "open" / "videos")
     args = parser.parse_args()
     if args.selection == "reference" and args.split != "validation":
         raise ValueError("The reference report contains the historical validation set only")
 
-    preprocessing = PreprocessingConfig.from_file(PROJECT_ROOT / "models" / "preprocessing.json")
-    artifact_threshold = float(
-        json.loads((PROJECT_ROOT / "models" / "thresholds.json").read_text(encoding="utf-8"))["violation"]
-    )
-    config = PipelineConfig(
-        window_sec=preprocessing.window_sec,
-        stride_sec=preprocessing.stride_sec,
-        num_frames=preprocessing.num_frames,
-        threshold=artifact_threshold,
-    )
+    preprocessing, config, _ = load_pipeline_config()
+    artifact_threshold = config.threshold
     predictor = OnnxPredictor(
         PROJECT_ROOT / "models" / "best_model.onnx",
         preprocessing,
-        PROJECT_ROOT / "configs" / "inference" / "model_manifest.json",
+        PROJECT_ROOT / "models" / "model_manifest.json",
         prefer_cuda=False,
     )
     manifest = json.loads((PROJECT_ROOT / "analysis" / "dataset_manifest.json").read_text(encoding="utf-8"))
@@ -84,7 +75,8 @@ def main() -> None:
         if path is None:
             raise FileNotFoundError(f"No local alias for source {source['source_id']}")
         metadata, predictions, processing_sec, _ = score_video(path, predictor, config)
-        peak = min(predictions, key=lambda item: (-item.score, item.center_sec))
+        scored_predictions = postprocess_predictions(predictions, aggregation=config.aggregation)
+        peak = min(scored_predictions, key=lambda item: (-item.score, item.center_sec))
         records.append(
             {
                 "source_id": source["source_id"],
@@ -127,6 +119,7 @@ def main() -> None:
         "reference_source_ids": sorted(reference_ids),
         "split_mismatch": manifest_ids != reference_ids,
         "provider": predictor.device,
+        "aggregation": config.aggregation,
         "artifact_threshold": artifact_threshold,
         "artifact_confusion": artifact_matrix,
         "artifact_metrics": metrics(artifact_matrix),

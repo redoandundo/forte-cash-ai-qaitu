@@ -1,0 +1,23 @@
+{
+  "report_version": "qwen-ab-v1",
+  "model_version": "mobilenet-temporal-pairsafe-v3",
+  "holdout_sources": 8,
+  "candidate_events": 6,
+  "baseline_processing_sec": 11.130066000001534,
+  "qwen_processing_sec": 59.9460075999923,
+  "qwen_statuses": {
+    "description_available": 5
+  },
+  "evidence_qualities": {
+    "sufficient": 5
+  },
+  "qwen_failures": {
+    "VerificationOutputError": 1
+  },
+  "public_output_changes": 0,
+  "public_verdict_influence": false,
+  "timecode_influence": false,
+  "quality_gain_measured": false,
+  "promotion_allowed": false,
+  "promotion_blocker": "The holdout has detector labels/timecodes but no human labels for description quality or review-time reduction. Qwen remains experimental until a blinded human A/B shows gain."
+}

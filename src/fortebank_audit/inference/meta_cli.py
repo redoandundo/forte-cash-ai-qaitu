@@ -6,12 +6,11 @@ import uuid
 from dataclasses import asdict
 from pathlib import Path
 
-from .benchmark import PROJECT_ROOT, build_predictor
+from .benchmark import PROJECT_ROOT, build_predictor, load_pipeline_config
 from .contracts import PipelineConfig
 from .experience_store import ExperienceStore
 from .meta_analysis import MetaAnalyzer, MetaFeatures
 from .pipeline import analyze_video
-from .preprocessing import PreprocessingConfig
 from .reporting import build_report, save_report
 from .vlm_verifier import EventVerifier, QwenLocalBackend, load_signal_policy
 
@@ -20,27 +19,19 @@ DEFAULT_DB = PROJECT_ROOT / "data" / "raw" / "meta" / "experience.sqlite3"
 
 
 def build_config() -> tuple[PipelineConfig, str]:
-    preprocessing = PreprocessingConfig.from_file(PROJECT_ROOT / "models" / "preprocessing.json")
-    threshold = float(
-        json.loads((PROJECT_ROOT / "models" / "thresholds.json").read_text(encoding="utf-8"))[
-            "violation"
-        ]
-    )
-    manifest = json.loads(
-        (PROJECT_ROOT / "configs" / "inference" / "model_manifest.json").read_text(
-            encoding="utf-8"
-        )
-    )
-    config = PipelineConfig(
-        window_sec=preprocessing.window_sec,
-        stride_sec=preprocessing.stride_sec,
-        num_frames=preprocessing.num_frames,
-        threshold=threshold,
-    )
+    _, config, manifest = load_pipeline_config()
     return config, str(manifest["sha256"])
 
 
+def validate_qwen_options(enabled: bool, model_path: Path | None) -> None:
+    if model_path is not None and not enabled:
+        raise ValueError("Qwen requires the explicit experimental feature flag")
+    if enabled and model_path is None:
+        raise ValueError("--enable-experimental-qwen requires --vlm-model")
+
+
 def analyze(args: argparse.Namespace) -> None:
+    validate_qwen_options(args.enable_experimental_qwen, args.vlm_model)
     store = ExperienceStore(args.db)
     config, model_sha256 = build_config()
     predictor = build_predictor("onnx")
@@ -69,7 +60,7 @@ def analyze(args: argparse.Namespace) -> None:
         "first_layer": result,
         "second_layer": decision.as_dict(),
     }
-    if args.vlm_model is not None:
+    if args.enable_experimental_qwen:
         policy = load_signal_policy(args.signals)
         verifier = EventVerifier(
             QwenLocalBackend(args.vlm_model, max_image_side=args.max_image_side),
@@ -143,6 +134,11 @@ def main() -> None:
         "--evidence-root", type=Path, default=PROJECT_ROOT / "data" / "raw" / "evidence" / "meta"
     )
     analyze_parser.add_argument("--run-id")
+    analyze_parser.add_argument(
+        "--enable-experimental-qwen",
+        action="store_true",
+        help="Enable the internal A/B-only Qwen evidence description path",
+    )
     analyze_parser.add_argument(
         "--vlm-model",
         type=Path,

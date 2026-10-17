@@ -16,14 +16,9 @@ def build_report(
     verifications: Sequence[VerificationResult],
     signals_version: str,
 ) -> dict[str, Any]:
-    if any(item.status == "visible_support" for item in verifications):
-        recommendation = "prioritize_human_review"
-    elif any(item.status == "insufficient_evidence" for item in verifications):
-        recommendation = "request_additional_context_or_human_review"
-    else:
-        recommendation = "no_visible_support_keep_first_layer_trace"
+    recommendation = str(second_layer.get("next_action", "human_review"))
     return {
-        "report_version": "observable-review-v1",
+        "report_version": "observable-review-v2",
         "run_id": run_id,
         "created_at": datetime.now(timezone.utc).isoformat(),
         "scope": (
@@ -35,6 +30,13 @@ def build_report(
         "visual_verifications": [item.as_dict() for item in verifications],
         "signals_version": signals_version,
         "recommendation": recommendation,
+        "qwen_experiment": {
+            "enabled": bool(verifications),
+            "ab_evaluation_only": True,
+            "public_verdict_influence": False,
+            "timecode_influence": False,
+            "score_influence": False,
+        },
         "human_review_required": bool(verifications) or bool(
             second_layer.get("human_review_required")
         ),
@@ -71,7 +73,7 @@ def render_markdown(report: dict[str, Any]) -> str:
             lines.extend(
                 [
                     f"- Visual status: `{verification['status']}`",
-                    f"- Visual confidence: {verification['confidence']:.3f}",
+                    f"- Evidence quality: `{verification['evidence_quality']}`",
                     f"- Summary: {verification['summary']}",
                     "- Matched signals: "
                     + (", ".join(verification["matched_signal_ids"]) or "none"),

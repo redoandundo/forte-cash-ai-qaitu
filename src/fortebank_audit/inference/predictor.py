@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import math
 from pathlib import Path
 from typing import Protocol, Sequence
 
@@ -66,33 +67,27 @@ class OnnxPredictor:
             raise PredictorLoadError("Model manifest is missing or invalid") from exc
         required = {
             "model_version",
-            "sha256",
-            "output_semantics",
-            "input_shape",
-            "input_name",
-            "output_name",
-            "output_shape",
-            "input_layout",
-            "dtype",
-            "color",
-            "contract_version",
-            "runtime",
             "artifact",
-            "positive_label",
-            "preprocessing_file",
-            "preprocessing_sha256",
-            "threshold_file",
-            "threshold_sha256",
+            "sha256",
+            "input",
+            "output",
+            "window_sec",
+            "stride_sec",
+            "threshold",
+            "aggregation",
+            "sampling",
         }
         missing = sorted(required - manifest.keys())
         if missing:
             raise PredictorLoadError(f"Model manifest missing fields: {', '.join(missing)}")
-        if manifest["output_semantics"] not in {"logit", "probability"}:
-            raise PredictorLoadError("output_semantics must be logit or probability")
-        if manifest["contract_version"] != 1 or manifest["runtime"] != "onnxruntime":
-            raise PredictorLoadError("Unsupported model manifest contract")
-        if manifest["positive_label"] != "possible_violation":
-            raise PredictorLoadError("Unsupported positive label")
+        input_contract = manifest["input"]
+        output_contract = manifest["output"]
+        if not isinstance(input_contract, dict) or not isinstance(output_contract, dict):
+            raise PredictorLoadError("Model input/output contracts must be objects")
+        if output_contract.get("activation") != "sigmoid":
+            raise PredictorLoadError("The accepted model must expose one binary logit")
+        if output_contract.get("classes") != ["no_violation", "violation"]:
+            raise PredictorLoadError("Unsupported output classes")
         preprocessing_contract = {
             "input_name": preprocessing.input_name,
             "output_name": preprocessing.output_name,
@@ -100,36 +95,59 @@ class OnnxPredictor:
             "dtype": preprocessing.dtype,
             "color": preprocessing.color,
         }
-        mismatches = [
-            field for field, value in preprocessing_contract.items() if manifest[field] != value
-        ]
+        manifest_contract = {
+            "input_name": input_contract.get("name"),
+            "output_name": output_contract.get("name"),
+            "input_layout": input_contract.get("layout"),
+            "dtype": input_contract.get("dtype"),
+            "color": input_contract.get("color"),
+        }
+        mismatches = [field for field, value in preprocessing_contract.items() if manifest_contract[field] != value]
         if mismatches:
             raise PredictorLoadError(
                 f"Model manifest disagrees with preprocessing: {', '.join(mismatches)}"
             )
-        project_root = manifest_path.resolve().parents[2]
-        artifact_path = (project_root / str(manifest["artifact"])).resolve()
+        expected_input_shape = input_contract.get("shape")
+        if expected_input_shape != [None, 3, preprocessing.num_frames, preprocessing.image_size, preprocessing.image_size]:
+            raise PredictorLoadError("Model manifest input shape disagrees with preprocessing")
+        if not math.isclose(float(manifest["window_sec"]), preprocessing.window_sec, abs_tol=1e-9):
+            raise PredictorLoadError("Model manifest window disagrees with preprocessing")
+        if not math.isclose(float(manifest["stride_sec"]), preprocessing.stride_sec, abs_tol=1e-9):
+            raise PredictorLoadError("Model manifest stride disagrees with preprocessing")
+
+        bundle_root = manifest_path.resolve().parent
+        artifact_path = (bundle_root / str(manifest["artifact"])).resolve()
         if artifact_path != self.model_path.resolve():
             raise PredictorLoadError("Model artifact path does not match the manifest")
-        for file_field, hash_field in (
-            ("preprocessing_file", "preprocessing_sha256"),
-            ("threshold_file", "threshold_sha256"),
-        ):
-            contract_file = (project_root / str(manifest[file_field])).resolve()
-            if not contract_file.is_file():
-                raise PredictorLoadError(f"Missing model contract file: {file_field}")
-            actual_contract_hash = hashlib.sha256(contract_file.read_bytes()).hexdigest()
-            if actual_contract_hash.lower() != str(manifest[hash_field]).lower():
-                raise PredictorLoadError(f"Model contract checksum mismatch: {file_field}")
+        thresholds_path = bundle_root / "thresholds.json"
+        checksums_path = bundle_root / "checksums.sha256"
+        try:
+            thresholds = json.loads(thresholds_path.read_text(encoding="utf-8"))
+            checksum_entries = {
+                name: digest.lower()
+                for line in checksums_path.read_text(encoding="utf-8").splitlines()
+                if line.strip()
+                for digest, name in [line.split(maxsplit=1)]
+            }
+        except (OSError, ValueError, json.JSONDecodeError) as exc:
+            raise PredictorLoadError("Model threshold or checksum contract is invalid") from exc
+        if not math.isclose(float(thresholds.get("violation", -1)), float(manifest["threshold"]), abs_tol=1e-12):
+            raise PredictorLoadError("Model threshold disagrees with manifest")
+        if thresholds.get("aggregation") != manifest["aggregation"]:
+            raise PredictorLoadError("Model aggregation disagrees with manifest")
+        if manifest["sampling"] != "opencv_frame_index_round":
+            raise PredictorLoadError("Unsupported accepted-model sampling strategy")
         if not self.model_path.is_file():
             raise PredictorLoadError("Model artifact does not exist")
         actual_hash = hashlib.sha256(self.model_path.read_bytes()).hexdigest()
         if actual_hash.lower() != str(manifest["sha256"]).lower():
             raise PredictorLoadError("Model checksum mismatch")
+        if checksum_entries.get(self.model_path.name) != actual_hash.lower():
+            raise PredictorLoadError("Model checksum file disagrees with artifact")
         self._model_version = str(manifest["model_version"])
-        self._output_semantics = str(manifest["output_semantics"])
-        self._expected_shape = list(manifest["input_shape"])
-        self._expected_output_shape = list(manifest["output_shape"])
+        self._output_semantics = "logit"
+        self._expected_shape = list(expected_input_shape)
+        self._expected_output_shape = [None]
 
         if session is None:
             available = ort.get_available_providers()
