@@ -31,6 +31,31 @@ def test_mock_pipeline_is_deterministic_on_generated_video(
         assert (tmp_path / evidence["jpeg_path"]).is_file()
 
 
+def test_progress_stages_are_monotonic_and_contain_no_payload(
+    tmp_path: Path, synthetic_video: Path
+) -> None:
+    stages: list[str] = []
+    config = PipelineConfig(window_sec=8, stride_sec=2, num_frames=4, threshold=0.5)
+
+    analyze_video(
+        synthetic_video,
+        MockPredictor([0.8]),
+        config,
+        evidence_root=tmp_path,
+        run_id="progress",
+        progress=stages.append,
+    )
+
+    assert stages == [
+        "video_decode",
+        "temporal_windows",
+        "model_inference",
+        "aggregation",
+        "evidence",
+    ]
+    assert all("/" not in stage and "\\" not in stage for stage in stages)
+
+
 def test_predictor_cannot_return_an_empty_batch(synthetic_video: Path, tmp_path: Path) -> None:
     class EmptyPredictor:
         device = "CPU"

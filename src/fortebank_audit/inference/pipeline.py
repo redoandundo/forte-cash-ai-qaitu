@@ -3,6 +3,7 @@ from __future__ import annotations
 import math
 import time
 import uuid
+from collections.abc import Callable
 from pathlib import Path
 
 import numpy as np
@@ -23,15 +24,26 @@ from .video_reader import VideoReader
 from .windowing import plan_windows
 
 
+ProgressCallback = Callable[[str], None]
+
+
+def _emit_progress(progress: ProgressCallback | None, stage: str) -> None:
+    if progress is not None:
+        progress(stage)
+
+
 def score_video(
     video_path: str | Path,
     predictor: Predictor,
     config: PipelineConfig,
+    *,
+    progress: ProgressCallback | None = None,
 ) -> tuple[VideoMetadata, list[WindowPrediction], float, float]:
     """Decode once, score all windows, and return timing/memory observations."""
     started = time.perf_counter()
     process = psutil.Process()
     initial_rss = process.memory_info().rss
+    _emit_progress(progress, "video_decode")
     reader = VideoReader(video_path)
     metadata = reader.metadata()
     planning_duration = metadata.duration_sec
@@ -64,6 +76,7 @@ def score_video(
         raise RuntimeError("No inference windows could be created")
     if len(plans) > config.max_windows:
         raise PredictionError("Video exceeds the configured inference window limit")
+    _emit_progress(progress, "temporal_windows")
 
     unique_times = sorted({timestamp for plan in plans for timestamp in plan.sample_times_sec})
     if config.sampling == "opencv_frame_index_round":
@@ -85,6 +98,7 @@ def score_video(
             last_use[timestamp] = plan.index
 
     predictions: list[WindowPrediction] = []
+    _emit_progress(progress, "model_inference")
     for offset in range(0, len(plans), config.batch_size):
         batch_plans = plans[offset : offset + config.batch_size]
         required = {timestamp for plan in batch_plans for timestamp in plan.sample_times_sec}
@@ -141,11 +155,18 @@ def analyze_video(
     *,
     evidence_root: str | Path = "data/raw/evidence",
     run_id: str | None = None,
+    progress: ProgressCallback | None = None,
 ) -> InferenceResult:
     started = time.perf_counter()
     reader = VideoReader(video_path)
-    metadata, predictions, scoring_sec, rss_delta_mb = score_video(video_path, predictor, config)
+    metadata, predictions, scoring_sec, rss_delta_mb = score_video(
+        video_path,
+        predictor,
+        config,
+        progress=progress,
+    )
 
+    _emit_progress(progress, "aggregation")
     scored_predictions = postprocess_predictions(
         predictions,
         aggregation=config.aggregation,
@@ -160,6 +181,7 @@ def analyze_video(
         stride_sec=config.stride_sec,
     )
     actual_run_id = run_id or uuid.uuid4().hex
+    _emit_progress(progress, "evidence")
     extractor = EvidenceExtractor(evidence_root)
     event_payload = []
     for index, event in enumerate(events):
