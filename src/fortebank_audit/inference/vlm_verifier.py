@@ -169,12 +169,18 @@ Decision rules:
   the workspace, or visible transaction items becoming unattended as the worker leaves. Require the
   transition in at least two frames; do not infer it from mere presence or a single image.
 - Stable ordinary service, entry, presence, or handling with no such visible transition is normal_activity.
+- Use normal_activity only with high confidence when the complete ordered context is clear. If the
+  activity appears ordinary but confidence would be low or medium, return insufficient_evidence.
+- High-confidence normal_activity requires distinct before and after context, no material view
+  limitation, and an empty limitations list.
 - Poor view or missing temporal context is insufficient_evidence.
 - If view limitations prevent confirming a matched visible risk sequence, use insufficient_evidence
   with explicit limitations, not normal_activity.
 - Prolonged inactivity/distraction requires multiple temporal observations and supporting windows.
 - State only visible facts. Never assert identity, intent, guilt, theft, crime, or a proven violation.
 - rule_candidate must be null because no verified local rule catalogue is configured.
+- matched_signal_ids must contain only signals directly supported by observations. Never copy the
+  whole catalogue. Do not return view_quality_limitation with high-confidence normal_activity.
 
 Observable signal catalogue ({signal_policy['signals_version']}):
 {signals}

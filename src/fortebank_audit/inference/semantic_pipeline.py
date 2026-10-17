@@ -17,6 +17,8 @@ from .vlm_verifier import (
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
 DEFAULT_MANIFEST = PROJECT_ROOT / "configs" / "inference" / "qwen_verifier_manifest.json"
 DEFAULT_SIGNALS = PROJECT_ROOT / "configs" / "inference" / "observable_signals.json"
+MIN_NORMAL_REJECTION_SUPPORTING_WINDOWS = 4
+CONTEXT_TIME_EPSILON_SEC = 0.05
 
 
 def build_semantic_verifier_from_env() -> EventVerifier | None:
@@ -60,6 +62,48 @@ def _event_context(event: dict[str, Any], evidence_root: Path) -> EventContext:
     )
 
 
+def _normal_rejection_safety(
+    context: EventContext, verified: Any,
+) -> tuple[bool, str | None]:
+    """Allow a destructive rejection only with strong temporal evidence."""
+    if verified.decision != "normal_activity":
+        return False, None
+    if verified.confidence != "high":
+        return False, "normal_activity confidence is not high"
+    if context.supporting_windows < MIN_NORMAL_REJECTION_SUPPORTING_WINDOWS:
+        return False, "too few supporting ONNX windows for safe rejection"
+    frames = {frame.role: frame.timestamp_sec for frame in context.frames}
+    required_roles = {"before", "start", "peak", "end", "after"}
+    if not required_roles.issubset(frames):
+        return False, "complete before/start/peak/end/after context is unavailable"
+    if frames["before"] >= context.start_sec - CONTEXT_TIME_EPSILON_SEC:
+        return False, "no distinct frame before the candidate interval"
+    if frames["after"] <= context.end_sec + CONTEXT_TIME_EPSILON_SEC:
+        return False, "no distinct frame after the candidate interval"
+    observed_roles = {item.frame_role for item in verified.observations}
+    if not required_roles.issubset(observed_roles):
+        return False, "the verifier did not observe the complete temporal context"
+    if verified.limitations or "view_quality_limitation" in verified.matched_signal_ids:
+        return False, "the verifier reported material context limitations"
+    return True, None
+
+
+def _retained_insufficient_payload(verified: Any, reason: str) -> dict[str, Any]:
+    payload = verified.as_dict()
+    payload["decision"] = "insufficient_evidence"
+    payload["confidence"] = "low"
+    payload["reasoning"] = (
+        f"Автоматическое исключение кандидата запрещено: {reason}. "
+        f"Исходное наблюдение модели: {verified.reasoning}"
+    )
+    payload["risk"] = (
+        "Кандидат сохранён для ручной проверки, потому что безопасно исключить "
+        "возможный риск по доступному временному контексту нельзя."
+    )
+    payload["limitations"] = list(dict.fromkeys([*verified.limitations, reason]))
+    return payload
+
+
 def apply_semantic_verification(
     first_layer: dict[str, Any], verifier: EventVerifier, evidence_root: str | Path,
 ) -> dict[str, Any]:
@@ -89,15 +133,22 @@ def apply_semantic_verification(
         peak_vram = max(peak_vram or 0.0, verified.peak_vram_gib or 0.0)
         qwen_model, qwen_checksum = verified.model_version, verified.model_checksum
         event.pop("_temporal_context", None)
-        if verified.decision == "normal_activity":
+        safe_rejection, retention_reason = _normal_rejection_safety(context, verified)
+        if safe_rejection:
             rejections.append({
                 "candidate_index": index,
                 "decision": verified.decision,
                 "category": verified.category,
+                "confidence": verified.confidence,
                 "reason": verified.thesis,
             })
             continue
-        event["semantic_verification"] = verified.as_dict()
+        if verified.decision == "normal_activity":
+            event["semantic_verification"] = _retained_insufficient_payload(
+                verified, retention_reason or "normal activity was not safe to reject"
+            )
+        else:
+            event["semantic_verification"] = verified.as_dict()
         retained.append(event)
 
     result["events"] = retained
