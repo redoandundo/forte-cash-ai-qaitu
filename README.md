@@ -38,15 +38,18 @@
 
 ## Установка и запуск прототипа
 
-### UI-демо без модели
+### Сквозное локальное демо
 
-Интерфейсную болванку можно запустить без Python-зависимостей, backend и ML-модели:
+По умолчанию API запускает реальный video pipeline с детерминированным demo-predictor: декодирование `.mov`, временные окна, агрегация, таймкоды и JPEG настоящие, а scores пока тестовые.
 
 ```powershell
-python -m http.server 8123 --directory web
+$env:PYTHONPATH = "src"
+$env:FORTEBANK_API_KEY = "demo-secret"
+$env:QAITU_INFERENCE_MODE = "mock"
+uv run uvicorn fortebank_audit.api:app --host 127.0.0.1 --port 8123
 ```
 
-Откройте `http://localhost:8123`, выберите локальный `.mov` и переключайте состояния `processing`, `violation`, `no_violation` и `failed` в demo-панели. Файл используется только браузером для локального предпросмотра.
+Откройте `http://127.0.0.1:8123`, выберите локальный `.mov` и нажмите «Начать проверку». Интерфейс покажет этапы pipeline, резюме, таймкоды и 1–3 JPEG для каждого эпизода. Загруженный файл и временные evidence-файлы удаляются после анализа.
 
 ### Полный прототип
 
@@ -61,6 +64,9 @@ uv run python scripts/train_baseline.py
 
 ```powershell
 $env:FORTEBANK_API_KEY = "replace-with-a-random-key"
+$env:QAITU_INFERENCE_MODE = "onnx"
+$env:QAITU_MODEL_BUNDLE = "artifacts\ml\bundles\baseline-repair-v2"
+$env:QAITU_ALLOW_DEVELOPMENT_MODEL = "true"
 uv run uvicorn fortebank_audit.api:app --host 0.0.0.0 --port 8000
 ```
 

@@ -65,9 +65,9 @@
           <details class="technical-settings">
             <summary>Технические настройки</summary>
             <div class="technical-content">
-              <label for="api-key">API-ключ для будущего подключения</label>
-              <input id="api-key" type="password" autocomplete="off" placeholder="Не требуется в демо-режиме" />
-              <p>Сейчас интерфейс работает как локальная UI-болванка без модели и отправки файла.</p>
+              <label for="api-key">API-ключ локального сервиса</label>
+              <input id="api-key" type="password" autocomplete="off" placeholder="Например, demo-secret" />
+              <p>Ключ хранится только в этой вкладке и передаётся локальному API в заголовке <code>X-API-Key</code>.</p>
             </div>
           </details>
         </form>
@@ -77,7 +77,7 @@
             <path d="M12 3 5.5 6v5.2c0 4.2 2.7 7.7 6.5 9.1 3.8-1.4 6.5-4.9 6.5-9.1V6L12 3Z" />
             <path d="m9.5 11.8 1.7 1.7 3.6-3.8" />
           </svg>
-          <span><strong>Видео остаётся на устройстве.</strong> На этом этапе файл используется только для локального предпросмотра.</span>
+          <span><strong>Видео обрабатывается локально.</strong> Файл отправляется только сервису Qaitu на этом компьютере и удаляется после анализа.</span>
         </div>
       </section>
 
@@ -106,6 +106,7 @@
                 <span>Предпросмотр появится здесь</span>
               </div>
               <div class="scan-line" aria-hidden="true"></div>
+              <div class="event-markers" id="event-markers" aria-label="Отмеченные эпизоды"></div>
             </div>
 
             <div class="preview-warning" id="preview-warning" role="status" hidden>
@@ -121,27 +122,23 @@
               <span class="local-chip"><span></span> локально</span>
             </div>
 
-            <button class="primary-button" id="start-demo" type="button">
+            <button class="primary-button" id="start-analysis" type="button">
               <span>Начать проверку</span>
               <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 6 6 6-6 6" /></svg>
             </button>
           </section>
 
           <aside class="inspector" aria-label="Состояние проверки">
-            <section class="demo-controls" aria-labelledby="demo-controls-title">
+            <section class="demo-controls" aria-labelledby="runtime-title">
               <div class="control-heading">
                 <div>
-                  <span class="demo-badge">Demo</span>
-                  <h2 id="demo-controls-title">Проверка состояний</h2>
+                  <span class="demo-badge" id="runtime-badge">Local</span>
+                  <h2 id="runtime-title">Контур анализа</h2>
                 </div>
-                <span class="control-caption">без модели</span>
+                <span class="control-caption" id="job-caption">ожидает запуска</span>
               </div>
-              <div class="state-switcher" role="group" aria-label="Выберите состояние интерфейса">
-                <button type="button" data-demo-state="ready" aria-pressed="true">Готово</button>
-                <button type="button" data-demo-state="processing" aria-pressed="false">Обработка</button>
-                <button type="button" data-demo-state="violation" aria-pressed="false">Событие</button>
-                <button type="button" data-demo-state="no_violation" aria-pressed="false">Чисто</button>
-                <button type="button" data-demo-state="failed" aria-pressed="false">Ошибка</button>
+              <div class="pipeline-strip" aria-label="Путь обработки">
+                <span>video</span><i></i><span>windows</span><i></i><span>model</span><i></i><span>evidence</span>
               </div>
             </section>
 
@@ -159,13 +156,17 @@
             <section class="processing-panel state-panel" id="processing-panel" hidden>
               <div class="progress-head">
                 <span>Ход проверки</span>
-                <strong id="progress-value">64%</strong>
+                <strong id="progress-value">5%</strong>
               </div>
-              <div class="progress-track"><span></span></div>
-              <ol class="stage-list">
-                <li class="complete"><span></span>Файл принят</li>
-                <li class="active"><span></span>Проверяем временные интервалы</li>
-                <li><span></span>Подготавливаем результат</li>
+              <div class="progress-track"><span id="progress-bar"></span></div>
+              <ol class="stage-list" id="stage-list">
+                <li data-stage="upload_received"><span></span>Файл принят</li>
+                <li data-stage="video_decode"><span></span>Декодируем запись</li>
+                <li data-stage="temporal_windows"><span></span>Нарезаем временные окна</li>
+                <li data-stage="model_inference"><span></span>Запускаем локальную модель</li>
+                <li data-stage="aggregation"><span></span>Объединяем события</li>
+                <li data-stage="evidence"><span></span>Готовим JPEG-доказательства</li>
+                <li data-stage="summary"><span></span>Собираем резюме</li>
               </ol>
             </section>
 
@@ -173,29 +174,12 @@
               <div class="result-heading">
                 <div>
                   <p class="status-kicker">Результат проверки</p>
-                  <h2>Найдено событие</h2>
+                  <h2>Найдены эпизоды</h2>
                 </div>
-                <span class="result-count">1 эпизод</span>
+                <span class="result-count" id="result-count">0 эпизодов</span>
               </div>
-
-              <article class="event-card">
-                <div class="evidence-frame">
-                  <img id="evidence-image" alt="Кадр из выбранной записи" hidden />
-                  <div class="evidence-placeholder" id="evidence-placeholder">
-                    <span>Кадр появится после воспроизведения видео</span>
-                  </div>
-                  <span class="evidence-label">Evidence 01</span>
-                </div>
-                <div class="event-copy">
-                  <button class="timecode-button" id="seek-event" type="button">
-                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 7 8 5-8 5V7Z" /></svg>
-                    <span id="event-timecode">00:00</span>
-                  </button>
-                  <h3>Признаки возможного нарушения</h3>
-                  <p>Демонстрационный эпизод для проверки карточки, таймкода и перехода по видео.</p>
-                  <span class="review-label">Требует проверки сотрудником</span>
-                </div>
-              </article>
+              <p class="result-summary" id="violation-summary"></p>
+              <div class="event-list" id="event-list"></div>
             </section>
 
             <section class="result-panel clear-panel state-panel" id="clear-panel" hidden>
@@ -204,22 +188,21 @@
               </div>
               <p class="status-kicker">Результат проверки</p>
               <h2>Признаки не обнаружены</h2>
-              <p>В этой записи не найдено эпизодов для дополнительной ручной проверки.</p>
+              <p id="clear-summary">В этой записи не найдено эпизодов для дополнительной ручной проверки.</p>
             </section>
 
             <section class="result-panel error-panel state-panel" id="error-panel" hidden>
               <div class="error-code">ERR / VIDEO</div>
               <p class="status-kicker">Техническая ошибка</p>
               <h2>Не удалось обработать файл</h2>
-              <p>Проверьте формат записи или выберите другое видео. Ошибка не считается отсутствием нарушения.</p>
-              <button class="secondary-button" id="retry-demo" type="button">Попробовать снова</button>
+              <p id="error-detail">Проверьте формат записи или конфигурацию модели. Ошибка не считается отсутствием нарушения.</p>
+              <button class="secondary-button" id="retry-analysis" type="button">Попробовать снова</button>
             </section>
           </aside>
         </div>
       </section>
     </main>
 
-    <canvas id="evidence-canvas" hidden></canvas>
     <script src="/app.js" defer></script>
   </body>
 </html>
