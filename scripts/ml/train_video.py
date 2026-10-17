@@ -89,18 +89,7 @@ def evaluate(model: nn.Module, loader: DataLoader, device: torch.device) -> tupl
 def main() -> None:
     parser = argparse.ArgumentParser(description="Train a frozen video-classification head on leakage-free clips.")
     parser.add_argument("--config", type=Path, default=PROJECT_ROOT / "configs" / "model.yaml")
-    parser.add_argument(
-        "--model",
-        choices=[
-            "mobilenet_v3_small_temporal",
-            "x3d_xs",
-            "r3d_18",
-            "dinov2_small_temporal",
-            "dinov3_convnext_tiny_temporal",
-            "videomae_base",
-        ],
-        required=True,
-    )
+    parser.add_argument("--model", choices=["mobilenet_v3_small_temporal", "x3d_xs", "r3d_18"], required=True)
     parser.add_argument("--run-id", required=True)
     parser.add_argument("--epochs", type=int)
     parser.add_argument("--no-augmentation", action="store_true")
@@ -115,24 +104,14 @@ def main() -> None:
     image_size = int(config["data"]["image_size"])
     batch_size = int(config["training"]["batch_size"])
     manifest = PROJECT_ROOT / config["data"]["clip_manifest"]
-    imagenet_models = {"mobilenet_v3_small_temporal", "dinov2_small_temporal", "dinov3_convnext_tiny_temporal", "videomae_base"}
-    normalization = "imagenet" if args.model in imagenet_models else ("r3d" if args.model == "r3d_18" else "kinetics")
+    normalization = "imagenet" if args.model.startswith("mobilenet") else ("r3d" if args.model == "r3d_18" else "kinetics")
     temporal_span = {"x3d_xs": 0.4, "r3d_18": 0.7}.get(args.model, 1.0)
     train_data = ClipDataset(manifest, "train", frames, image_size, not args.no_augmentation, normalization, temporal_span)
     validation_data = ClipDataset(manifest, "validation", frames, image_size, False, normalization, temporal_span)
     train_loader = DataLoader(train_data, batch_size=batch_size, shuffle=True, num_workers=int(config["training"]["num_workers"]), pin_memory=device.type == "cuda")
     validation_loader = DataLoader(validation_data, batch_size=batch_size, shuffle=False, num_workers=0, pin_memory=device.type == "cuda")
 
-    configured_path = config.get("pretrained_path")
-    pretrained_path = PROJECT_ROOT / configured_path if configured_path else None
-    if pretrained_path is not None and not pretrained_path.exists():
-        raise FileNotFoundError(f"Local pretrained model is missing: {pretrained_path}")
-    model = build_model(
-        args.model,
-        pretrained=True,
-        train_backbone=args.unfreeze_last_stage,
-        pretrained_path=pretrained_path,
-    ).to(device)
+    model = build_model(args.model, pretrained=True, train_backbone=args.unfreeze_last_stage).to(device)
     trainable = [parameter for parameter in model.parameters() if parameter.requires_grad]
     optimizer = torch.optim.AdamW(trainable, lr=float(config["training"]["learning_rate"]), weight_decay=float(config["training"]["weight_decay"]))
     loss_function = nn.BCEWithLogitsLoss(reduction="none")
@@ -147,26 +126,20 @@ def main() -> None:
     if device.type == "cuda":
         torch.cuda.reset_peak_memory_stats()
 
-    accumulation_steps = int(config["training"].get("gradient_accumulation_steps", 1))
-    if accumulation_steps < 1:
-        raise ValueError("gradient_accumulation_steps must be at least 1")
-
     for epoch in range(1, epochs + 1):
         model.train()
         total_loss = 0.0
-        optimizer.zero_grad(set_to_none=True)
-        for batch_index, (videos, targets, sample_weights, _, _) in enumerate(train_loader, start=1):
+        for videos, targets, sample_weights, _, _ in train_loader:
             videos = videos.to(device, non_blocking=True)
             targets = targets.to(device, non_blocking=True)
             sample_weights = sample_weights.to(device, non_blocking=True)
+            optimizer.zero_grad(set_to_none=True)
             with torch.amp.autocast(device_type=device.type, enabled=use_amp):
                 logits = model(videos)
                 loss = (loss_function(logits, targets) * sample_weights).sum() / sample_weights.sum().clamp_min(1e-6)
-            scaler.scale(loss / accumulation_steps).backward()
-            if batch_index % accumulation_steps == 0 or batch_index == len(train_loader):
-                scaler.step(optimizer)
-                scaler.update()
-                optimizer.zero_grad(set_to_none=True)
+            scaler.scale(loss).backward()
+            scaler.step(optimizer)
+            scaler.update()
             total_loss += loss.item() * len(videos)
         clip_labels, clip_scores, sources, eval_seconds = evaluate(model, validation_loader, device)
         source_labels, source_scores = aggregate(clip_labels, clip_scores, sources)
@@ -177,7 +150,7 @@ def main() -> None:
         if f2 > best_f2 + 1e-8:
             best_f2 = f2
             patience = 0
-            torch.save({"state_dict": model.state_dict(), "model": args.model, "frames": frames, "image_size": image_size, "normalization": normalization, "temporal_span": temporal_span, "train_backbone": args.unfreeze_last_stage, "pretrained_path": configured_path}, run_dir / "best.pt")
+            torch.save({"state_dict": model.state_dict(), "model": args.model, "frames": frames, "image_size": image_size, "normalization": normalization, "temporal_span": temporal_span, "train_backbone": args.unfreeze_last_stage}, run_dir / "best.pt")
         else:
             patience += 1
             if patience >= int(config["training"]["early_stopping_patience"]):
