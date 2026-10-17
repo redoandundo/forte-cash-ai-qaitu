@@ -121,6 +121,12 @@ def test_threshold_constraint_and_invalid_scores():
         calibrate_threshold([0, 1], [float("nan"), .5])
 
 
+def test_equal_metric_threshold_uses_margin_instead_of_a_score_boundary():
+    result = calibrate_threshold([0, 0, 1, 1], [.1, .2, .7, .8])
+    assert result["threshold"] == pytest.approx(.45)
+    assert result["min_score_margin"] == pytest.approx(.25)
+
+
 def test_emitted_events_are_separate_and_matches_are_one_to_one():
     starts = np.arange(0, 16, 2)
     events = events_from_scores(starts, starts + 6, [.1, .8, .9, .1, .1, .1, .8, .1], .5, 2)

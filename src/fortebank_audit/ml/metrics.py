@@ -33,10 +33,10 @@ def calibrate_threshold(labels, scores, min_recall: float = 0.75) -> dict:
     for threshold in candidates:
         result = binary_metrics(labels, scores, float(threshold))
         if result["recall"] >= min_recall:
-            choices.append({**result, "threshold": float(threshold)})
+            choices.append({**result, "threshold": float(threshold), "min_score_margin": float(np.min(np.abs(scores - threshold)))})
     if not choices:
         raise ValueError("No threshold satisfies the recall constraint")
-    return max(choices, key=lambda row: (row["macro_f1"], row["precision"], row["recall"], row["threshold"]))
+    return max(choices, key=lambda row: (row["macro_f1"], row["precision"], row["recall"], row["min_score_margin"], row["threshold"]))
 
 
 def smooth_scores(scores) -> np.ndarray:
