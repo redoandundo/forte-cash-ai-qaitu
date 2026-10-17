@@ -13,4 +13,6 @@ release:
   automatic_promotion: false
   fallback_version: mobilenet-temporal-pairsafe-v3
   fallback_sha256: e44cddb9a9cb259ca7fb68b024c5be7be591fcc623116c3f1fc918583a6bac91
+  fallback_distribution: external_only
+  fallback_available_in_checkout: false
   report: reports/training_report.md
