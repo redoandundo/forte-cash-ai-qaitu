@@ -2,9 +2,9 @@
 
 Дата: 2026-10-18.
 
-Статус: код полного API/UI пути с каноническим ONNX проверен; приём точного
-`baseline-audited-v4.zip` и end-to-end на реальных видео заблокированы отсутствием
-архива на интеграционной машине.
+Статус: точный `baseline-audited-v4.zip` принят, проверен и подключён к полному
+API/UI пути. Технический end-to-end на реальных видео подтверждён. Модель остаётся
+development-only и не проходит quality gate.
 
 ## Входные версии
 
@@ -23,9 +23,9 @@
   `00ae541eac23249dd4751093ce276bfa9c14afca2d5f15f4fec9719c009ae52d`.
 - Release status: `development_only_not_promoted`; `quality_passed=false`.
 
-Архив и модель не найдены в рабочих каталогах, Downloads, Temp или других
-проверенных каталогах профиля. Случайные веса не скачивались и фиктивный
-`baseline-audited-v4` не создавался.
+Принятый архив имел точный размер 7,425,647 bytes и ожидаемый archive SHA-256.
+После распаковки `model.onnx` имел ожидаемый SHA-256; случайные веса и
+репозиторный historical `models/best_model.onnx` не использовались.
 
 ## Подключение
 
@@ -101,8 +101,15 @@ git diff --check
 | Повреждённый/отсутствующий model file | bundle/model load rejected | passed в bundle tests |
 | CPU fallback | `CPUExecutionProvider` | passed |
 | Browser console | no errors | passed: 0 errors, 0 warnings |
-| Real positive/negative/known FP/known FN/short/long/early/late | exact v4 через API/UI | blocked: exact archive absent |
-| Integrated temporal shift `0/+4/-4` | `19/23/15 s` | blocked: exact archive and diagnostic source video absent |
+| Exact v4 identity | правильные bundle/version/SHA/provider | passed через `/health`: `OnnxPredictor`, `baseline-audited-v4-development`, exact SHA, `CPUExecutionProvider` |
+| 42 локальных размеченных видео | все завершаются технически | passed: 42 `done`, 0 `failed`, все созданные JPEG декодируются |
+| True positive через API/UI | событие и уникальные evidence | passed на `Х-11`: peak 19.0 s, JPEG 16.0/19.0/22.0 s |
+| True negative | `no_violation` | passed на `Х-3` |
+| Known false positive | ошибка качества остаётся видимой | confirmed на `Х-12`: peak 37.0 s |
+| Known false negative | ошибка качества остаётся видимой | confirmed на `X-1`: размеченный момент 22 s, API вернул `no_violation` |
+| Unicode filename | загрузка и обработка без ошибки | passed через API и headed browser на `Х-11.mov` |
+| Повреждённый Unicode MOV | `failed`, не `no_violation` | passed через exact-v4 API |
+| Integrated temporal shift `0/+4/-4` | `19/23/15 s` | passed через exact-v4 API; JPEG также сдвинулись `16/19/22 -> 20/23/26 -> 12/15/18` |
 
 Synthetic fixture проверяет wiring, а не качество распознавания. Он не является
 `baseline-audited-v4` и не используется в demo после проверки.
@@ -119,35 +126,35 @@ ONNX Runtime 1.23.2. Доступен `CPUExecutionProvider`; `nvidia-smi` и CU
 - Повторный запрос: 0.140 s; pipeline 0.081 s.
 - Две ограниченно-параллельные задачи: обе `done`, общий wall 0.879 s.
 
-Эти времена не доказывают SLA для реальной модели. Upstream ML release record
-отдельно сообщает CPU model/decode max 10.300 s на 40 видео и adapter+JPEG max
-21.874 s на 11 видео, но без API. Полный 300-second limit для exact v4 через
-этот API остаётся непроверенным.
+Exact-v4 полный HTTP upload-to-result был измерен на 42 локальных видео:
+
+- максимальная проверенная длительность видео: 142.533 s;
+- максимальный wall time: 33.371 s;
+- technical failures: 0;
+- runtime provider: `CPUExecutionProvider`;
+- ограничение 300 s выполнено для этого набора и этой машины, но не является
+  гарантией для произвольного размера видео или другого оборудования.
 
 ## Temporal shift
 
-Upstream ML release record для exact v4 сообщает `19 -> 23 s` после добавления
-4 s и `19 -> 15 s` после удаления 4 s, с нулевой ошибкой соответствующих logits.
-Это source-branch evidence, не результат текущего интегрированного API. Повторять
-его как пройденный интеграционный тест до получения архива нельзя.
+Temporal shift повторён через текущий HTTP API на `Х-11`: исходный peak 19.0 s,
+held-frame prefix +4 s дал 23.0 s, удаление первых 4 s дало 15.0 s. Оба результата
+`done/violation`; evidence timestamps сдвинулись согласованно. Это подтверждает,
+что интегрированный pipeline реагирует на положение содержимого, а не выдаёт
+фиксированный пик около десятой секунды.
 
 ## Решение и блокеры
 
 - Code compatibility: verified.
 - Synthetic real-ONNX API/UI path: verified.
-- Exact `baseline-audited-v4` API/UI path: not verified.
-- Ready to show as final real-model demo: **no**, пока отсутствует exact archive.
+- Exact `baseline-audited-v4` API/UI path: verified.
+- Ready to show as a technical hackathon demo: **yes**, на `127.0.0.1:8123`.
+- Ready for production or autonomous legal conclusions: **no**.
 - Quality promotion: **no**; baseline metrics остаются precision 0.500,
   recall 0.619, positive F1 0.553, macro F1 0.458, FP events/min 1.033,
   event recall ±5 s 0.364, peak MAE 7.133 s на reused development dataset.
 
-Нужный следующий файл: приватно переданный `baseline-audited-v4.zip` с точным
-archive SHA-256 из этого handoff. После передачи тимлид должен проверить hash,
-распаковать bundle без изменения файлов, запустить real-video matrix и только
-затем поднимать финальный backend на `127.0.0.1:8123`.
-
-Для этого добавлен `scripts/start_onnx_demo.ps1`: он принимает путь к приватному
-архиву, проверяет archive/model SHA-256, устанавливает bundle без молчаливой
-перезаписи и запускает API только в явном ONNX-режиме. Проверены синтаксис
-PowerShell и fail-closed поведение при отсутствии bundle; успешная установка
-exact v4 остаётся заблокирована отсутствующим архивом.
+`scripts/start_onnx_demo.ps1` проверил archive/model SHA-256, установил exact
+bundle без молчаливой перезаписи и запустил API в явном ONNX-режиме. Перед
+презентацией `/health` должен снова подтвердить exact SHA, `OnnxPredictor` и
+активный provider; `8124` остаётся старым mock-прототипом и не используется.

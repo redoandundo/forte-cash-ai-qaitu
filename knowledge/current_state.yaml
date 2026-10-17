@@ -34,7 +34,7 @@ components:
     status: live_onnx_identity_and_unique_evidence_connected
   end_to_end_integration:
     owner: teamlead
-    status: synthetic_onnx_verified_exact_bundle_pending
+    status: exact_v4_api_ui_verified_development_only
 
 requirements:
   frontend_required: true
@@ -47,12 +47,10 @@ requirements:
   cloud_ai_allowed: false
 
 next_actions:
-  - receive exact baseline-audited-v4.zip outside Git and verify archive SHA-256 c387bdea9bd80a124c5587fccfcec3243d2550658ee09ca6834acaa9e54a1241
-  - verify canonical model.onnx SHA-256 00ae541eac23249dd4751093ce276bfa9c14afca2d5f15f4fec9719c009ae52d
-  - run real positive negative false-positive false-negative short long and temporal-shift cases through API and UI
-  - measure cold warm and limited parallel full-service latency on the target demo laptop
-  - review and merge the integration commits only after exact-bundle acceptance
+  - keep final demo on http://127.0.0.1:8123 and verify health shows OnnxPredictor before presentation
+  - review and merge the verified integration commits through the team process
+  - present recognition errors as development-model limitations rather than integration failures
+  - repeat performance verification on the final presentation laptop if its runtime providers differ
 
 blockers:
-  - exact baseline-audited-v4.zip is not available on the integration machine
   - development-only model quality gates are not sufficient for promotion
