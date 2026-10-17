@@ -1,0 +1,19 @@
+{
+  "schema_version": 1,
+  "task": "binary_violation_detection_and_weak_temporal_localization",
+  "labels": {
+    "0": "no_violation",
+    "1": "violation"
+  },
+  "source_group": "SHA-256 of the complete source video",
+  "event": {
+    "time_sec": "annotated candidate-event center in seconds",
+    "window": "8-second clip centered on time_sec and clamped to video bounds"
+  },
+  "notes": [
+    "Violation types are hypotheses and are not trained as separate classes because the case data has no class-level ground truth.",
+    "Duplicate files always remain in one split.",
+    "Х-4 and Х-47 are one positive source with two retained candidate events: 57 and 68 seconds.",
+    "Х-5 and Х-48 are one negative source."
+  ]
+}

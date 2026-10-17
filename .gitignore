@@ -1,0 +1,12 @@
+.venv/
+.venv-ml/
+__pycache__/
+*.py[cod]
+.ipynb_checkpoints/
+data/raw/*
+!data/raw/.gitkeep
+artifacts/*
+!artifacts/.gitkeep
+data/processed/
+models/checkpoints/
+

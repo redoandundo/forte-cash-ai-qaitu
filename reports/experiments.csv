@@ -1,0 +1,4 @@
+run_id,model,augmentation,epochs,validation_sources,threshold,precision,recall,f1,macro_f1,auroc,full_video_macro_f1,timestamp_mae_sec,within_2_sec,within_5_sec,latency_p95_sec,peak_vram_mb,notes
+mobilenet_noaug,mobilenet_v3_small_temporal,false,4,8,0.534097,0.666667,1.0,0.8,0.733333,0.5,0.733333,8.75,0.25,0.25,6.5186,51.28,selected and exported; full-video metrics
+mobilenet_aug,mobilenet_v3_small_temporal,true,4,8,0.53,0.571429,1.0,0.727273,0.563636,0.625,,,,,,51.28,clip/source evaluation only
+x3d_xs_4x12,x3d_xs,true,12,8,0.0,0.5,1.0,0.666667,0.333333,0.5,0.333333,7.25,0.25,0.5,4.9488,114.27,full-video evaluation; not selected

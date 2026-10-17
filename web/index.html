@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>ForteBank Video Audit</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <main class="shell">
+      <header class="hero">
+        <p class="eyebrow">Локальный видеоконтроль</p>
+        <h1>Проверка кассовой операции</h1>
+        <p class="lead">Загрузите запись в формате MOV. Сервис покажет найденные события, таймкоды и кадры для проверки сотрудником.</p>
+      </header>
+
+      <section class="panel" aria-labelledby="upload-title">
+        <div class="section-heading">
+          <div>
+            <p class="step">Шаг 1</p>
+            <h2 id="upload-title">Загрузите видео</h2>
+          </div>
+          <span class="local-badge">Обработка локально</span>
+        </div>
+
+        <form id="analysis-form">
+          <label class="field">
+            <span>API-ключ</span>
+            <input id="api-key" type="password" autocomplete="off" required placeholder="Введите ключ команды" />
+          </label>
+
+          <label class="dropzone" id="dropzone">
+            <input id="video-file" type="file" accept=".mov,video/quicktime" required />
+            <span class="drop-icon">MOV</span>
+            <strong id="file-label">Выберите файл или перетащите его сюда</strong>
+            <small>До 100 МБ</small>
+          </label>
+
+          <button id="submit-button" type="submit">Начать анализ</button>
+        </form>
+      </section>
+
+      <section class="panel status-panel" id="status-panel" hidden aria-live="polite">
+        <div class="status-line">
+          <span class="spinner" id="spinner"></span>
+          <div>
+            <p class="step">Статус</p>
+            <h2 id="status-title">Видео обрабатывается</h2>
+          </div>
+        </div>
+        <p id="status-detail">Извлекаем кадры и анализируем временные изменения.</p>
+      </section>
+
+      <section id="result" hidden></section>
+    </main>
+    <script src="/app.js" defer></script>
+  </body>
+</html>
