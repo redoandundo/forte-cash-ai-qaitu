@@ -38,6 +38,18 @@
 
 ## Установка и запуск прототипа
 
+### UI-демо без модели
+
+Интерфейсную болванку можно запустить без Python-зависимостей, backend и ML-модели:
+
+```powershell
+python -m http.server 8123 --directory web
+```
+
+Откройте `http://localhost:8123`, выберите локальный `.mov` и переключайте состояния `processing`, `violation`, `no_violation` и `failed` в demo-панели. Файл используется только браузером для локального предпросмотра.
+
+### Полный прототип
+
 ```powershell
 uv sync
 uv run python scripts/prepare_data.py "<PATH_TO_OPEN_ZIP>"

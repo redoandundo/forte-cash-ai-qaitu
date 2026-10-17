@@ -3,56 +3,223 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>ForteBank Video Audit</title>
+    <meta name="theme-color" content="#b51f5d" />
+    <title>Qaitu — проверка кассового видео</title>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='9' fill='%2334101f'/%3E%3Cpath d='M7 10c7-4 12-3 18-4-1 5-8 7-18 7zm0 8c6-3 10-2 15-3-1 5-6 7-15 7z' fill='%23d63778'/%3E%3C/svg%3E" />
     <link rel="stylesheet" href="/styles.css" />
   </head>
-  <body>
-    <main class="shell">
-      <header class="hero">
-        <p class="eyebrow">Локальный видеоконтроль</p>
-        <h1>Проверка кассовой операции</h1>
-        <p class="lead">Загрузите запись в формате MOV. Сервис покажет найденные события, таймкоды и кадры для проверки сотрудником.</p>
-      </header>
+  <body data-state="empty">
+    <header class="topbar">
+      <a class="brand" href="/" aria-label="Qaitu — на главную">
+        <span class="brand-mark" aria-hidden="true"><span></span><span></span></span>
+        <span class="brand-copy">
+          <strong>Qaitu</strong>
+          <small>Forte video control</small>
+        </span>
+      </a>
 
-      <section class="panel" aria-labelledby="upload-title">
-        <div class="section-heading">
-          <div>
-            <p class="step">Шаг 1</p>
-            <h2 id="upload-title">Загрузите видео</h2>
-          </div>
-          <span class="local-badge">Обработка локально</span>
+      <div class="system-status" title="Файл не покидает этот компьютер">
+        <span class="status-dot" aria-hidden="true"></span>
+        Локальная обработка
+      </div>
+    </header>
+
+    <main class="app-shell">
+      <section class="upload-view" id="upload-view" aria-labelledby="page-title">
+        <div class="intro">
+          <p class="overline">Проверка кассовой зоны</p>
+          <h1 id="page-title">Загрузите видео<br />для проверки</h1>
+          <p class="intro-copy">
+            Выберите запись кассовой операции. Интерфейс подготовит локальное превью и откроет рабочее пространство проверки.
+          </p>
         </div>
 
-        <form id="analysis-form">
-          <label class="field">
-            <span>API-ключ</span>
-            <input id="api-key" type="password" autocomplete="off" required placeholder="Введите ключ команды" />
+        <form class="upload-card" id="upload-form">
+          <label class="dropzone" id="dropzone" for="video-file">
+            <input id="video-file" type="file" accept=".mov,video/quicktime" />
+            <span class="frame-corner top-left" aria-hidden="true"></span>
+            <span class="frame-corner top-right" aria-hidden="true"></span>
+            <span class="frame-corner bottom-left" aria-hidden="true"></span>
+            <span class="frame-corner bottom-right" aria-hidden="true"></span>
+
+            <span class="dropzone-index" aria-hidden="true">INPUT / 01</span>
+            <span class="upload-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" role="img">
+                <path d="M12 16V4m0 0L7.5 8.5M12 4l4.5 4.5M5 14v4.25A1.75 1.75 0 0 0 6.75 20h10.5A1.75 1.75 0 0 0 19 18.25V14" />
+              </svg>
+            </span>
+            <span class="drop-copy">
+              <strong>Перетащите видео сюда</strong>
+              <span>или нажмите, чтобы выбрать файл</span>
+            </span>
+            <span class="choose-button">Выбрать видео</span>
+            <span class="file-rules">
+              <span>MOV</span>
+              <span>до 100 МБ</span>
+              <span>без облака</span>
+            </span>
           </label>
 
-          <label class="dropzone" id="dropzone">
-            <input id="video-file" type="file" accept=".mov,video/quicktime" required />
-            <span class="drop-icon">MOV</span>
-            <strong id="file-label">Выберите файл или перетащите его сюда</strong>
-            <small>До 100 МБ</small>
-          </label>
+          <p class="upload-error" id="upload-error" role="alert" hidden></p>
 
-          <button id="submit-button" type="submit">Начать анализ</button>
+          <details class="technical-settings">
+            <summary>Технические настройки</summary>
+            <div class="technical-content">
+              <label for="api-key">API-ключ для будущего подключения</label>
+              <input id="api-key" type="password" autocomplete="off" placeholder="Не требуется в демо-режиме" />
+              <p>Сейчас интерфейс работает как локальная UI-болванка без модели и отправки файла.</p>
+            </div>
+          </details>
         </form>
-      </section>
 
-      <section class="panel status-panel" id="status-panel" hidden aria-live="polite">
-        <div class="status-line">
-          <span class="spinner" id="spinner"></span>
-          <div>
-            <p class="step">Статус</p>
-            <h2 id="status-title">Видео обрабатывается</h2>
-          </div>
+        <div class="privacy-note">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M12 3 5.5 6v5.2c0 4.2 2.7 7.7 6.5 9.1 3.8-1.4 6.5-4.9 6.5-9.1V6L12 3Z" />
+            <path d="m9.5 11.8 1.7 1.7 3.6-3.8" />
+          </svg>
+          <span><strong>Видео остаётся на устройстве.</strong> На этом этапе файл используется только для локального предпросмотра.</span>
         </div>
-        <p id="status-detail">Извлекаем кадры и анализируем временные изменения.</p>
       </section>
 
-      <section id="result" hidden></section>
+      <section class="workspace" id="workspace" hidden aria-labelledby="workspace-title">
+        <div class="workspace-heading">
+          <div>
+            <p class="overline">Рабочее пространство</p>
+            <h1 id="workspace-title">Проверка записи</h1>
+          </div>
+          <button class="text-button" id="remove-file" type="button">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 6-6 6 6 6" /></svg>
+            Выбрать другое видео
+          </button>
+        </div>
+
+        <div class="workspace-grid">
+          <section class="video-column" aria-labelledby="video-title">
+            <h2 class="visually-hidden" id="video-title">Предпросмотр видео</h2>
+            <div class="video-frame">
+              <div class="video-rail">
+                <span>CAM / LOCAL</span>
+                <span id="video-time-display">00:00:00</span>
+              </div>
+              <video id="video-preview" controls preload="metadata" playsinline></video>
+              <div class="video-empty" id="video-empty">
+                <span>Предпросмотр появится здесь</span>
+              </div>
+              <div class="scan-line" aria-hidden="true"></div>
+            </div>
+
+            <div class="preview-warning" id="preview-warning" role="status" hidden>
+              Браузер не смог воспроизвести кодек этого `.mov`. Состояния интерфейса всё равно доступны для проверки.
+            </div>
+
+            <div class="file-summary">
+              <div class="file-type" aria-hidden="true">MOV</div>
+              <div class="file-details">
+                <strong id="selected-file-name">video.mov</strong>
+                <span id="selected-file-meta">Размер файла</span>
+              </div>
+              <span class="local-chip"><span></span> локально</span>
+            </div>
+
+            <button class="primary-button" id="start-demo" type="button">
+              <span>Начать проверку</span>
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 6 6 6-6 6" /></svg>
+            </button>
+          </section>
+
+          <aside class="inspector" aria-label="Состояние проверки">
+            <section class="demo-controls" aria-labelledby="demo-controls-title">
+              <div class="control-heading">
+                <div>
+                  <span class="demo-badge">Demo</span>
+                  <h2 id="demo-controls-title">Проверка состояний</h2>
+                </div>
+                <span class="control-caption">без модели</span>
+              </div>
+              <div class="state-switcher" role="group" aria-label="Выберите состояние интерфейса">
+                <button type="button" data-demo-state="ready" aria-pressed="true">Готово</button>
+                <button type="button" data-demo-state="processing" aria-pressed="false">Обработка</button>
+                <button type="button" data-demo-state="violation" aria-pressed="false">Событие</button>
+                <button type="button" data-demo-state="no_violation" aria-pressed="false">Чисто</button>
+                <button type="button" data-demo-state="failed" aria-pressed="false">Ошибка</button>
+              </div>
+            </section>
+
+            <section class="status-card" id="status-card" aria-live="polite">
+              <div class="status-icon" id="status-icon" aria-hidden="true">
+                <span></span>
+              </div>
+              <div class="status-copy">
+                <p class="status-kicker" id="status-kicker">Файл готов</p>
+                <h2 id="status-title">Можно начинать проверку</h2>
+                <p id="status-detail">Видео выбрано и доступно для локального предпросмотра.</p>
+              </div>
+            </section>
+
+            <section class="processing-panel state-panel" id="processing-panel" hidden>
+              <div class="progress-head">
+                <span>Ход проверки</span>
+                <strong id="progress-value">64%</strong>
+              </div>
+              <div class="progress-track"><span></span></div>
+              <ol class="stage-list">
+                <li class="complete"><span></span>Файл принят</li>
+                <li class="active"><span></span>Проверяем временные интервалы</li>
+                <li><span></span>Подготавливаем результат</li>
+              </ol>
+            </section>
+
+            <section class="result-panel violation-panel state-panel" id="violation-panel" hidden>
+              <div class="result-heading">
+                <div>
+                  <p class="status-kicker">Результат проверки</p>
+                  <h2>Найдено событие</h2>
+                </div>
+                <span class="result-count">1 эпизод</span>
+              </div>
+
+              <article class="event-card">
+                <div class="evidence-frame">
+                  <img id="evidence-image" alt="Кадр из выбранной записи" hidden />
+                  <div class="evidence-placeholder" id="evidence-placeholder">
+                    <span>Кадр появится после воспроизведения видео</span>
+                  </div>
+                  <span class="evidence-label">Evidence 01</span>
+                </div>
+                <div class="event-copy">
+                  <button class="timecode-button" id="seek-event" type="button">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 7 8 5-8 5V7Z" /></svg>
+                    <span id="event-timecode">00:00</span>
+                  </button>
+                  <h3>Признаки возможного нарушения</h3>
+                  <p>Демонстрационный эпизод для проверки карточки, таймкода и перехода по видео.</p>
+                  <span class="review-label">Требует проверки сотрудником</span>
+                </div>
+              </article>
+            </section>
+
+            <section class="result-panel clear-panel state-panel" id="clear-panel" hidden>
+              <div class="clear-mark" aria-hidden="true">
+                <svg viewBox="0 0 24 24"><path d="m7 12.5 3.2 3.2L17.5 8" /></svg>
+              </div>
+              <p class="status-kicker">Результат проверки</p>
+              <h2>Признаки не обнаружены</h2>
+              <p>В этой записи не найдено эпизодов для дополнительной ручной проверки.</p>
+            </section>
+
+            <section class="result-panel error-panel state-panel" id="error-panel" hidden>
+              <div class="error-code">ERR / VIDEO</div>
+              <p class="status-kicker">Техническая ошибка</p>
+              <h2>Не удалось обработать файл</h2>
+              <p>Проверьте формат записи или выберите другое видео. Ошибка не считается отсутствием нарушения.</p>
+              <button class="secondary-button" id="retry-demo" type="button">Попробовать снова</button>
+            </section>
+          </aside>
+        </div>
+      </section>
     </main>
+
+    <canvas id="evidence-canvas" hidden></canvas>
     <script src="/app.js" defer></script>
   </body>
 </html>
