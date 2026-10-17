@@ -16,7 +16,7 @@
       "source_video_ids": [
         1
       ],
-      "path": "C:\\Users\\royze\\Documents\\ChatGPT\\дататон\\data\\processed\\clips\\train\\8911a9219b943309_0_1.mp4",
+      "path": "data/processed/clips/train/8911a9219b943309_0_1.mp4",
       "label": 1,
       "split": "train",
       "event_center_sec": 22.0,
@@ -34,7 +34,7 @@
       "source_video_ids": [
         2
       ],
-      "path": "C:\\Users\\royze\\Documents\\ChatGPT\\дататон\\data\\processed\\clips\\train\\9932ae0a10d3b937_0_1.mp4",
+      "path": "data/processed/clips/train/9932ae0a10d3b937_0_1.mp4",
       "label": 1,
       "split": "train",
       "event_center_sec": 10.0,
@@ -52,7 +52,7 @@
       "source_video_ids": [
         3
       ],
-      "path": "C:\\Users\\royze\\Documents\\ChatGPT\\дататон\\data\\processed\\clips\\train\\21468fcef4ea5f45_0_0.mp4",
+      "path": "data/processed/clips/train/21468fcef4ea5f45_0_0.mp4",
       "label": 0,
       "split": "train",
       "event_center_sec": null,
@@ -70,7 +70,7 @@
       "source_video_ids": [
         3
       ],
-      "path": "C:\\Users\\royze\\Documents\\ChatGPT\\дататон\\data\\processed\\clips\\train\\21468fcef4ea5f45_1_0.mp4",
+      "path": "data/processed/clips/train/21468fcef4ea5f45_1_0.mp4",
       "label": 0,
       "split": "train",
       "event_center_sec": null,
@@ -88,7 +88,7 @@
       "source_video_ids": [
         3
       ],
-      "path": "C:\\Users\\royze\\Documents\\ChatGPT\\дататон\\data\\processed\\clips\\train\\21468fcef4ea5f45_2_0.mp4",
+      "path": "data/processed/clips/train/21468fcef4ea5f45_2_0.mp4",
       "label": 0,
       "split": "train",
       "event_center_sec": null,
@@ -107,7 +107,7 @@
         4,
         47
       ],
-      "path": "C:\\Users\\royze\\Documents\\ChatGPT\\дататон\\data\\processed\\clips\\train\\5385be9420e6a705_0_1.mp4",
+      "path": "data/processed/clips/train/5385be9420e6a705_0_1.mp4",
       "label": 1,
       "split": "train",
       "event_center_sec": 57.0,
@@ -126,7 +126,7 @@
         4,
         47
       ],
-      "path": "C:\\Users\\royze\\Documents\\ChatGPT\\дататон\\data\\processed\\clips\\train\\5385be9420e6a705_1_1.mp4",
+      "path": "data/processed/clips/train/5385be9420e6a705_1_1.mp4",
       "label": 1,
       "split": "train",
       "event_center_sec": 68.0,
@@ -145,7 +145,7 @@
         5,
         48
       ],
-      "path": "C:\\Users\\royze\\Documents\\ChatGPT\\дататон\\data\\processed\\clips\\train\\1f5840bff58f298e_0_0.mp4",
+      "path": "data/processed/clips/train/1f5840bff58f298e_0_0.mp4",
       "label": 0,
       "split": "train",
       "event_center_sec": null,
@@ -164,7 +164,7 @@
         5,
         48
       ],
-      "path": "C:\\Users\\royze\\Documents\\ChatGPT\\дататон\\data\\processed\\clips\\train\\1f5840bff58f298e_1_0.mp4",
+      "path": "data/processed/clips/train/1f5840bff58f298e_1_0.mp4",
       "label": 0,
       "split": "train",
       "event_center_sec": null,
@@ -183,7 +183,7 @@
         5,
         48
       ],
-      "path": "C:\\Users\\royze\\Documents\\ChatGPT\\дататон\\data\\processed\\clips\\train\\1f5840bff58f298e_2_0.mp4",
+      "path": "data/processed/clips/train/1f5840bff58f298e_2_0.mp4",
       "label": 0,
       "split": "train",
       "event_center_sec": null,
@@ -201,7 +201,7 @@
       "source_video_ids": [
         8
       ],
-      "path": "C:\\Users\\royze\\Documents\\ChatGPT\\дататон\\data\\processed\\clips\\train\\6a53e10acdcf5239_0_0.mp4",
+      "path": "data/processed/clips/train/6a53e10acdcf5239_0_0.mp4",
       "label": 0,
       "split": "train",
       "event_center_sec": null,
@@ -219,7 +219,7 @@
       "source_video_ids": [
         8
       ],
-      "path": "C:\\Users\\royze\\Documents\\ChatGPT\\дататон\\data\\processed\\clips\\train\\6a53e10acdcf5239_1_0.mp4",
+      "path": "data/processed/clips/train/6a53e10acdcf5239_1_0.mp4",
       "label": 0,
       "split": "train",
       "event_center_sec": null,
@@ -237,7 +237,7 @@
       "source_video_ids": [
         8
       ],
-      "path": "C:\\Users\\royze\\Documents\\ChatGPT\\дататон\\data\\processed\\clips\\train\\6a53e10acdcf5239_2_0.mp4",
+      "path": "data/processed/clips/train/6a53e10acdcf5239_2_0.mp4",
       "label": 0,
       "split": "train",
       "event_center_sec": null,
@@ -255,7 +255,7 @@
       "source_video_ids": [
         10
       ],
-      "path": "C:\\Users\\royze\\Documents\\ChatGPT\\дататон\\data\\processed\\clips\\train\\57a0e46c7a45f0e8_0_0.mp4",
+      "path": "data/processed/clips/train/57a0e46c7a45f0e8_0_0.mp4",
       "label": 0,
       "split": "train",
       "event_center_sec": null,
@@ -273,7 +273,7 @@
       "source_video_ids": [
         10
       ],
-      "path": "C:\\Users\\royze\\Documents\\ChatGPT\\дататон\\data\\processed\\clips\\train\\57a0e46c7a45f0e8_1_0.mp4",
+      "path": "data/processed/clips/train/57a0e46c7a45f0e8_1_0.mp4",
       "label": 0,
       "split": "train",
       "event_center_sec": null,
@@ -291,7 +291,7 @@
       "source_video_ids": [
         10
       ],
-      "path": "C:\\Users\\royze\\Documents\\ChatGPT\\дататон\\data\\processed\\clips\\train\\57a0e46c7a45f0e8_2_0.mp4",
+      "path": "data/processed/clips/train/57a0e46c7a45f0e8_2_0.mp4",
       "label": 0,
       "split": "train",
       "event_center_sec": null,
@@ -309,7 +309,7 @@
       "source_video_ids": [
         11
       ],
-      "path": "C:\\Users\\royze\\Documents\\ChatGPT\\дататон\\data\\processed\\clips\\train\\b3a954a5b761ad47_0_1.mp4",
+      "path": "data/processed/clips/train/b3a954a5b761ad47_0_1.mp4",
       "label": 1,
       "split": "train",
       "event_center_sec": 18.0,
@@ -327,7 +327,7 @@
       "source_video_ids": [
         12
       ],
-      "path": "C:\\Users\\royze\\Documents\\ChatGPT\\дататон\\data\\processed\\clips\\train\\955755baf54418b4_0_0.mp4",
+      "path": "data/processed/clips/train/955755baf54418b4_0_0.mp4",
       "label": 0,
       "split": "train",
       "event_center_sec": null,
@@ -345,7 +345,7 @@
       "source_video_ids": [
         12
       ],
-      "path": "C:\\Users\\royze\\Documents\\ChatGPT\\дататон\\data\\processed\\clips\\train\\955755baf54418b4_1_0.mp4",
+      "path": "data/processed/clips/train/955755baf54418b4_1_0.mp4",
       "label": 0,
       "split": "train",
       "event_center_sec": null,
@@ -363,7 +363,7 @@
       "source_video_ids": [
         12
       ],
-      "path": "C:\\Users\\royze\\Documents\\ChatGPT\\дататон\\data\\processed\\clips\\train\\955755baf54418b4_2_0.mp4",
+      "path": "data/processed/clips/train/955755baf54418b4_2_0.mp4",
       "label": 0,
       "split": "train",
       "event_center_sec": null,
@@ -381,7 +381,7 @@
       "source_video_ids": [
         13
       ],
-      "path": "C:\\Users\\royze\\Documents\\ChatGPT\\дататон\\data\\processed\\clips\\train\\a37930cf119bb691_0_1.mp4",
+      "path": "data/processed/clips/train/a37930cf119bb691_0_1.mp4",
       "label": 1,
       "split": "train",
       "event_center_sec": 47.0,
@@ -399,7 +399,7 @@
       "source_video_ids": [
         14
       ],
-      "path": "C:\\Users\\royze\\Documents\\ChatGPT\\дататон\\data\\processed\\clips\\train\\7d6890ecb4a2b28b_0_0.mp4",
+      "path": "data/processed/clips/train/7d6890ecb4a2b28b_0_0.mp4",
       "label": 0,
       "split": "train",
       "event_center_sec": null,
@@ -417,7 +417,7 @@
       "source_video_ids": [
         14
       ],
-      "path": "C:\\Users\\royze\\Documents\\ChatGPT\\дататон\\data\\processed\\clips\\train\\7d6890ecb4a2b28b_1_0.mp4",
+      "path": "data/processed/clips/train/7d6890ecb4a2b28b_1_0.mp4",
       "label": 0,
       "split": "train",
       "event_center_sec": null,
@@ -435,7 +435,7 @@
       "source_video_ids": [
         14
       ],
-      "path": "C:\\Users\\royze\\Documents\\ChatGPT\\дататон\\data\\processed\\clips\\train\\7d6890ecb4a2b28b_2_0.mp4",
+      "path": "data/processed/clips/train/7d6890ecb4a2b28b_2_0.mp4",
       "label": 0,
       "split": "train",
       "event_center_sec": null,
@@ -453,7 +453,7 @@
       "source_video_ids": [
         15
       ],
-      "path": "C:\\Users\\royze\\Documents\\ChatGPT\\дататон\\data\\processed\\clips\\validation\\69caf59620fcd80b_0_1.mp4",
+      "path": "data/processed/clips/validation/69caf59620fcd80b_0_1.mp4",
       "label": 1,
       "split": "validation",
       "event_center_sec": 15.0,
@@ -471,7 +471,7 @@
       "source_video_ids": [
         16
       ],
-      "path": "C:\\Users\\royze\\Documents\\ChatGPT\\дататон\\data\\processed\\clips\\validation\\3f516431cf37e390_0_0.mp4",
+      "path": "data/processed/clips/validation/3f516431cf37e390_0_0.mp4",
       "label": 0,
       "split": "validation",
       "event_center_sec": null,
@@ -489,7 +489,7 @@
       "source_video_ids": [
         16
       ],
-      "path": "C:\\Users\\royze\\Documents\\ChatGPT\\дататон\\data\\processed\\clips\\validation\\3f516431cf37e390_1_0.mp4",
+      "path": "data/processed/clips/validation/3f516431cf37e390_1_0.mp4",
       "label": 0,
       "split": "validation",
       "event_center_sec": null,
@@ -507,7 +507,7 @@
       "source_video_ids": [
         16
       ],
-      "path": "C:\\Users\\royze\\Documents\\ChatGPT\\дататон\\data\\processed\\clips\\validation\\3f516431cf37e390_2_0.mp4",
+      "path": "data/processed/clips/validation/3f516431cf37e390_2_0.mp4",
       "label": 0,
       "split": "validation",
       "event_center_sec": null,
@@ -525,7 +525,7 @@
       "source_video_ids": [
         17
       ],
-      "path": "C:\\Users\\royze\\Documents\\ChatGPT\\дататон\\data\\processed\\clips\\train\\0378b8026b2e6afd_0_1.mp4",
+      "path": "data/processed/clips/train/0378b8026b2e6afd_0_1.mp4",
       "label": 1,
       "split": "train",
       "event_center_sec": 7.0,
@@ -543,7 +543,7 @@
       "source_video_ids": [
         18
       ],
-      "path": "C:\\Users\\royze\\Documents\\ChatGPT\\дататон\\data\\processed\\clips\\train\\90607b0b0cb772fc_0_1.mp4",
+      "path": "data/processed/clips/train/90607b0b0cb772fc_0_1.mp4",
       "label": 1,
       "split": "train",
       "event_center_sec": 20.0,
@@ -561,7 +561,7 @@
       "source_video_ids": [
         19
       ],
-      "path": "C:\\Users\\royze\\Documents\\ChatGPT\\дататон\\data\\processed\\clips\\train\\16065504b21260bf_0_0.mp4",
+      "path": "data/processed/clips/train/16065504b21260bf_0_0.mp4",
       "label": 0,
       "split": "train",
       "event_center_sec": null,
@@ -579,7 +579,7 @@
       "source_video_ids": [
         19
       ],
-      "path": "C:\\Users\\royze\\Documents\\ChatGPT\\дататон\\data\\processed\\clips\\train\\16065504b21260bf_1_0.mp4",
+      "path": "data/processed/clips/train/16065504b21260bf_1_0.mp4",
       "label": 0,
       "split": "train",
       "event_center_sec": null,
@@ -597,7 +597,7 @@
       "source_video_ids": [
         19
       ],
-      "path": "C:\\Users\\royze\\Documents\\ChatGPT\\дататон\\data\\processed\\clips\\train\\16065504b21260bf_2_0.mp4",
+      "path": "data/processed/clips/train/16065504b21260bf_2_0.mp4",
       "label": 0,
       "split": "train",
       "event_center_sec": null,
@@ -615,7 +615,7 @@
       "source_video_ids": [
         20
       ],
-      "path": "C:\\Users\\royze\\Documents\\ChatGPT\\дататон\\data\\processed\\clips\\train\\7e585e33517f7258_0_1.mp4",
+      "path": "data/processed/clips/train/7e585e33517f7258_0_1.mp4",
       "label": 1,
       "split": "train",
       "event_center_sec": 5.0,
@@ -633,7 +633,7 @@
       "source_video_ids": [
         21
       ],
-      "path": "C:\\Users\\royze\\Documents\\ChatGPT\\дататон\\data\\processed\\clips\\train\\efd876a04224cac7_0_0.mp4",
+      "path": "data/processed/clips/train/efd876a04224cac7_0_0.mp4",
       "label": 0,
       "split": "train",
       "event_center_sec": null,
@@ -651,7 +651,7 @@
       "source_video_ids": [
         21
       ],
-      "path": "C:\\Users\\royze\\Documents\\ChatGPT\\дататон\\data\\processed\\clips\\train\\efd876a04224cac7_1_0.mp4",
+      "path": "data/processed/clips/train/efd876a04224cac7_1_0.mp4",
       "label": 0,
       "split": "train",
       "event_center_sec": null,
@@ -669,7 +669,7 @@
       "source_video_ids": [
         21
       ],
-      "path": "C:\\Users\\royze\\Documents\\ChatGPT\\дататон\\data\\processed\\clips\\train\\efd876a04224cac7_2_0.mp4",
+      "path": "data/processed/clips/train/efd876a04224cac7_2_0.mp4",
       "label": 0,
       "split": "train",
       "event_center_sec": null,
@@ -687,7 +687,7 @@
       "source_video_ids": [
         22
       ],
-      "path": "C:\\Users\\royze\\Documents\\ChatGPT\\дататон\\data\\processed\\clips\\validation\\c9a30d44907e4a41_0_1.mp4",
+      "path": "data/processed/clips/validation/c9a30d44907e4a41_0_1.mp4",
       "label": 1,
       "split": "validation",
       "event_center_sec": 14.0,
@@ -705,7 +705,7 @@
       "source_video_ids": [
         23
       ],
-      "path": "C:\\Users\\royze\\Documents\\ChatGPT\\дататон\\data\\processed\\clips\\validation\\b637677ef5a7f0fa_0_0.mp4",
+      "path": "data/processed/clips/validation/b637677ef5a7f0fa_0_0.mp4",
       "label": 0,
       "split": "validation",
       "event_center_sec": null,
@@ -723,7 +723,7 @@
       "source_video_ids": [
         23
       ],
-      "path": "C:\\Users\\royze\\Documents\\ChatGPT\\дататон\\data\\processed\\clips\\validation\\b637677ef5a7f0fa_1_0.mp4",
+      "path": "data/processed/clips/validation/b637677ef5a7f0fa_1_0.mp4",
       "label": 0,
       "split": "validation",
       "event_center_sec": null,
@@ -741,7 +741,7 @@
       "source_video_ids": [
         23
       ],
-      "path": "C:\\Users\\royze\\Documents\\ChatGPT\\дататон\\data\\processed\\clips\\validation\\b637677ef5a7f0fa_2_0.mp4",
+      "path": "data/processed/clips/validation/b637677ef5a7f0fa_2_0.mp4",
       "label": 0,
       "split": "validation",
       "event_center_sec": null,
@@ -759,7 +759,7 @@
       "source_video_ids": [
         24
       ],
-      "path": "C:\\Users\\royze\\Documents\\ChatGPT\\дататон\\data\\processed\\clips\\train\\c175a683749401d5_0_1.mp4",
+      "path": "data/processed/clips/train/c175a683749401d5_0_1.mp4",
       "label": 1,
       "split": "train",
       "event_center_sec": 8.0,
@@ -777,7 +777,7 @@
       "source_video_ids": [
         25
       ],
-      "path": "C:\\Users\\royze\\Documents\\ChatGPT\\дататон\\data\\processed\\clips\\train\\901f61cf1a1b8754_0_0.mp4",
+      "path": "data/processed/clips/train/901f61cf1a1b8754_0_0.mp4",
       "label": 0,
       "split": "train",
       "event_center_sec": null,
@@ -795,7 +795,7 @@
       "source_video_ids": [
         25
       ],
-      "path": "C:\\Users\\royze\\Documents\\ChatGPT\\дататон\\data\\processed\\clips\\train\\901f61cf1a1b8754_1_0.mp4",
+      "path": "data/processed/clips/train/901f61cf1a1b8754_1_0.mp4",
       "label": 0,
       "split": "train",
       "event_center_sec": null,
@@ -813,7 +813,7 @@
       "source_video_ids": [
         25
       ],
-      "path": "C:\\Users\\royze\\Documents\\ChatGPT\\дататон\\data\\processed\\clips\\train\\901f61cf1a1b8754_2_0.mp4",
+      "path": "data/processed/clips/train/901f61cf1a1b8754_2_0.mp4",
       "label": 0,
       "split": "train",
       "event_center_sec": null,
@@ -831,7 +831,7 @@
       "source_video_ids": [
         26
       ],
-      "path": "C:\\Users\\royze\\Documents\\ChatGPT\\дататон\\data\\processed\\clips\\train\\e3a00b6e0f38b1d9_0_1.mp4",
+      "path": "data/processed/clips/train/e3a00b6e0f38b1d9_0_1.mp4",
       "label": 1,
       "split": "train",
       "event_center_sec": 9.0,
@@ -849,7 +849,7 @@
       "source_video_ids": [
         27
       ],
-      "path": "C:\\Users\\royze\\Documents\\ChatGPT\\дататон\\data\\processed\\clips\\train\\d3d21494d74e40a7_0_0.mp4",
+      "path": "data/processed/clips/train/d3d21494d74e40a7_0_0.mp4",
       "label": 0,
       "split": "train",
       "event_center_sec": null,
@@ -867,7 +867,7 @@
       "source_video_ids": [
         27
       ],
-      "path": "C:\\Users\\royze\\Documents\\ChatGPT\\дататон\\data\\processed\\clips\\train\\d3d21494d74e40a7_1_0.mp4",
+      "path": "data/processed/clips/train/d3d21494d74e40a7_1_0.mp4",
       "label": 0,
       "split": "train",
       "event_center_sec": null,
@@ -885,7 +885,7 @@
       "source_video_ids": [
         27
       ],
-      "path": "C:\\Users\\royze\\Documents\\ChatGPT\\дататон\\data\\processed\\clips\\train\\d3d21494d74e40a7_2_0.mp4",
+      "path": "data/processed/clips/train/d3d21494d74e40a7_2_0.mp4",
       "label": 0,
       "split": "train",
       "event_center_sec": null,
@@ -903,7 +903,7 @@
       "source_video_ids": [
         28
       ],
-      "path": "C:\\Users\\royze\\Documents\\ChatGPT\\дататон\\data\\processed\\clips\\train\\d15ef04bcfae571b_0_1.mp4",
+      "path": "data/processed/clips/train/d15ef04bcfae571b_0_1.mp4",
       "label": 1,
       "split": "train",
       "event_center_sec": 7.0,
@@ -921,7 +921,7 @@
       "source_video_ids": [
         29
       ],
-      "path": "C:\\Users\\royze\\Documents\\ChatGPT\\дататон\\data\\processed\\clips\\train\\b9bfb76ac8ea47eb_0_0.mp4",
+      "path": "data/processed/clips/train/b9bfb76ac8ea47eb_0_0.mp4",
       "label": 0,
       "split": "train",
       "event_center_sec": null,
@@ -939,7 +939,7 @@
       "source_video_ids": [
         29
       ],
-      "path": "C:\\Users\\royze\\Documents\\ChatGPT\\дататон\\data\\processed\\clips\\train\\b9bfb76ac8ea47eb_1_0.mp4",
+      "path": "data/processed/clips/train/b9bfb76ac8ea47eb_1_0.mp4",
       "label": 0,
       "split": "train",
       "event_center_sec": null,
@@ -957,7 +957,7 @@
       "source_video_ids": [
         29
       ],
-      "path": "C:\\Users\\royze\\Documents\\ChatGPT\\дататон\\data\\processed\\clips\\train\\b9bfb76ac8ea47eb_2_0.mp4",
+      "path": "data/processed/clips/train/b9bfb76ac8ea47eb_2_0.mp4",
       "label": 0,
       "split": "train",
       "event_center_sec": null,
@@ -975,7 +975,7 @@
       "source_video_ids": [
         30
       ],
-      "path": "C:\\Users\\royze\\Documents\\ChatGPT\\дататон\\data\\processed\\clips\\train\\05af66ce27b83d7c_0_1.mp4",
+      "path": "data/processed/clips/train/05af66ce27b83d7c_0_1.mp4",
       "label": 1,
       "split": "train",
       "event_center_sec": 13.0,
@@ -993,7 +993,7 @@
       "source_video_ids": [
         31
       ],
-      "path": "C:\\Users\\royze\\Documents\\ChatGPT\\дататон\\data\\processed\\clips\\train\\6a9fa7dd2e6db4cb_0_0.mp4",
+      "path": "data/processed/clips/train/6a9fa7dd2e6db4cb_0_0.mp4",
       "label": 0,
       "split": "train",
       "event_center_sec": null,
@@ -1011,7 +1011,7 @@
       "source_video_ids": [
         31
       ],
-      "path": "C:\\Users\\royze\\Documents\\ChatGPT\\дататон\\data\\processed\\clips\\train\\6a9fa7dd2e6db4cb_1_0.mp4",
+      "path": "data/processed/clips/train/6a9fa7dd2e6db4cb_1_0.mp4",
       "label": 0,
       "split": "train",
       "event_center_sec": null,
@@ -1029,7 +1029,7 @@
       "source_video_ids": [
         31
       ],
-      "path": "C:\\Users\\royze\\Documents\\ChatGPT\\дататон\\data\\processed\\clips\\train\\6a9fa7dd2e6db4cb_2_0.mp4",
+      "path": "data/processed/clips/train/6a9fa7dd2e6db4cb_2_0.mp4",
       "label": 0,
       "split": "train",
       "event_center_sec": null,
@@ -1047,7 +1047,7 @@
       "source_video_ids": [
         32
       ],
-      "path": "C:\\Users\\royze\\Documents\\ChatGPT\\дататон\\data\\processed\\clips\\train\\bcc277cbf1a36245_0_1.mp4",
+      "path": "data/processed/clips/train/bcc277cbf1a36245_0_1.mp4",
       "label": 1,
       "split": "train",
       "event_center_sec": 5.0,
@@ -1065,7 +1065,7 @@
       "source_video_ids": [
         33
       ],
-      "path": "C:\\Users\\royze\\Documents\\ChatGPT\\дататон\\data\\processed\\clips\\train\\209e8aaca88df590_0_1.mp4",
+      "path": "data/processed/clips/train/209e8aaca88df590_0_1.mp4",
       "label": 1,
       "split": "train",
       "event_center_sec": 6.0,
@@ -1083,7 +1083,7 @@
       "source_video_ids": [
         34
       ],
-      "path": "C:\\Users\\royze\\Documents\\ChatGPT\\дататон\\data\\processed\\clips\\validation\\f3e351bea71150f4_0_1.mp4",
+      "path": "data/processed/clips/validation/f3e351bea71150f4_0_1.mp4",
       "label": 1,
       "split": "validation",
       "event_center_sec": 13.0,
@@ -1101,7 +1101,7 @@
       "source_video_ids": [
         35
       ],
-      "path": "C:\\Users\\royze\\Documents\\ChatGPT\\дататон\\data\\processed\\clips\\validation\\26430119e074d6f0_0_0.mp4",
+      "path": "data/processed/clips/validation/26430119e074d6f0_0_0.mp4",
       "label": 0,
       "split": "validation",
       "event_center_sec": null,
@@ -1119,7 +1119,7 @@
       "source_video_ids": [
         35
       ],
-      "path": "C:\\Users\\royze\\Documents\\ChatGPT\\дататон\\data\\processed\\clips\\validation\\26430119e074d6f0_1_0.mp4",
+      "path": "data/processed/clips/validation/26430119e074d6f0_1_0.mp4",
       "label": 0,
       "split": "validation",
       "event_center_sec": null,
@@ -1137,7 +1137,7 @@
       "source_video_ids": [
         35
       ],
-      "path": "C:\\Users\\royze\\Documents\\ChatGPT\\дататон\\data\\processed\\clips\\validation\\26430119e074d6f0_2_0.mp4",
+      "path": "data/processed/clips/validation/26430119e074d6f0_2_0.mp4",
       "label": 0,
       "split": "validation",
       "event_center_sec": null,
@@ -1155,7 +1155,7 @@
       "source_video_ids": [
         37
       ],
-      "path": "C:\\Users\\royze\\Documents\\ChatGPT\\дататон\\data\\processed\\clips\\train\\ac4cf04844c0aa08_0_0.mp4",
+      "path": "data/processed/clips/train/ac4cf04844c0aa08_0_0.mp4",
       "label": 0,
       "split": "train",
       "event_center_sec": null,
@@ -1173,7 +1173,7 @@
       "source_video_ids": [
         37
       ],
-      "path": "C:\\Users\\royze\\Documents\\ChatGPT\\дататон\\data\\processed\\clips\\train\\ac4cf04844c0aa08_1_0.mp4",
+      "path": "data/processed/clips/train/ac4cf04844c0aa08_1_0.mp4",
       "label": 0,
       "split": "train",
       "event_center_sec": null,
@@ -1191,7 +1191,7 @@
       "source_video_ids": [
         37
       ],
-      "path": "C:\\Users\\royze\\Documents\\ChatGPT\\дататон\\data\\processed\\clips\\train\\ac4cf04844c0aa08_2_0.mp4",
+      "path": "data/processed/clips/train/ac4cf04844c0aa08_2_0.mp4",
       "label": 0,
       "split": "train",
       "event_center_sec": null,
@@ -1209,7 +1209,7 @@
       "source_video_ids": [
         38
       ],
-      "path": "C:\\Users\\royze\\Documents\\ChatGPT\\дататон\\data\\processed\\clips\\train\\5a6f6a13ef88191e_0_1.mp4",
+      "path": "data/processed/clips/train/5a6f6a13ef88191e_0_1.mp4",
       "label": 1,
       "split": "train",
       "event_center_sec": 33.0,
@@ -1227,7 +1227,7 @@
       "source_video_ids": [
         39
       ],
-      "path": "C:\\Users\\royze\\Documents\\ChatGPT\\дататон\\data\\processed\\clips\\train\\deeeee54539fb894_0_0.mp4",
+      "path": "data/processed/clips/train/deeeee54539fb894_0_0.mp4",
       "label": 0,
       "split": "train",
       "event_center_sec": null,
@@ -1245,7 +1245,7 @@
       "source_video_ids": [
         39
       ],
-      "path": "C:\\Users\\royze\\Documents\\ChatGPT\\дататон\\data\\processed\\clips\\train\\deeeee54539fb894_1_0.mp4",
+      "path": "data/processed/clips/train/deeeee54539fb894_1_0.mp4",
       "label": 0,
       "split": "train",
       "event_center_sec": null,
@@ -1263,7 +1263,7 @@
       "source_video_ids": [
         39
       ],
-      "path": "C:\\Users\\royze\\Documents\\ChatGPT\\дататон\\data\\processed\\clips\\train\\deeeee54539fb894_2_0.mp4",
+      "path": "data/processed/clips/train/deeeee54539fb894_2_0.mp4",
       "label": 0,
       "split": "train",
       "event_center_sec": null,
@@ -1281,7 +1281,7 @@
       "source_video_ids": [
         40
       ],
-      "path": "C:\\Users\\royze\\Documents\\ChatGPT\\дататон\\data\\processed\\clips\\train\\6a81739ced0efdcd_0_1.mp4",
+      "path": "data/processed/clips/train/6a81739ced0efdcd_0_1.mp4",
       "label": 1,
       "split": "train",
       "event_center_sec": 17.0,
@@ -1299,7 +1299,7 @@
       "source_video_ids": [
         43
       ],
-      "path": "C:\\Users\\royze\\Documents\\ChatGPT\\дататон\\data\\processed\\clips\\train\\39e28d7be01cdb09_0_0.mp4",
+      "path": "data/processed/clips/train/39e28d7be01cdb09_0_0.mp4",
       "label": 0,
       "split": "train",
       "event_center_sec": null,
@@ -1317,7 +1317,7 @@
       "source_video_ids": [
         43
       ],
-      "path": "C:\\Users\\royze\\Documents\\ChatGPT\\дататон\\data\\processed\\clips\\train\\39e28d7be01cdb09_1_0.mp4",
+      "path": "data/processed/clips/train/39e28d7be01cdb09_1_0.mp4",
       "label": 0,
       "split": "train",
       "event_center_sec": null,
@@ -1335,7 +1335,7 @@
       "source_video_ids": [
         43
       ],
-      "path": "C:\\Users\\royze\\Documents\\ChatGPT\\дататон\\data\\processed\\clips\\train\\39e28d7be01cdb09_2_0.mp4",
+      "path": "data/processed/clips/train/39e28d7be01cdb09_2_0.mp4",
       "label": 0,
       "split": "train",
       "event_center_sec": null,
@@ -1353,7 +1353,7 @@
       "source_video_ids": [
         44
       ],
-      "path": "C:\\Users\\royze\\Documents\\ChatGPT\\дататон\\data\\processed\\clips\\validation\\9774ed882153af3b_0_1.mp4",
+      "path": "data/processed/clips/validation/9774ed882153af3b_0_1.mp4",
       "label": 1,
       "split": "validation",
       "event_center_sec": 16.0,
@@ -1371,7 +1371,7 @@
       "source_video_ids": [
         45
       ],
-      "path": "C:\\Users\\royze\\Documents\\ChatGPT\\дататон\\data\\processed\\clips\\validation\\524bf9ff2d5e8121_0_0.mp4",
+      "path": "data/processed/clips/validation/524bf9ff2d5e8121_0_0.mp4",
       "label": 0,
       "split": "validation",
       "event_center_sec": null,
@@ -1389,7 +1389,7 @@
       "source_video_ids": [
         45
       ],
-      "path": "C:\\Users\\royze\\Documents\\ChatGPT\\дататон\\data\\processed\\clips\\validation\\524bf9ff2d5e8121_1_0.mp4",
+      "path": "data/processed/clips/validation/524bf9ff2d5e8121_1_0.mp4",
       "label": 0,
       "split": "validation",
       "event_center_sec": null,
@@ -1407,7 +1407,7 @@
       "source_video_ids": [
         45
       ],
-      "path": "C:\\Users\\royze\\Documents\\ChatGPT\\дататон\\data\\processed\\clips\\validation\\524bf9ff2d5e8121_2_0.mp4",
+      "path": "data/processed/clips/validation/524bf9ff2d5e8121_2_0.mp4",
       "label": 0,
       "split": "validation",
       "event_center_sec": null,
@@ -1425,7 +1425,7 @@
       "source_video_ids": [
         46
       ],
-      "path": "C:\\Users\\royze\\Documents\\ChatGPT\\дататон\\data\\processed\\clips\\train\\66fc5d28c2371592_0_1.mp4",
+      "path": "data/processed/clips/train/66fc5d28c2371592_0_1.mp4",
       "label": 1,
       "split": "train",
       "event_center_sec": 11.0,

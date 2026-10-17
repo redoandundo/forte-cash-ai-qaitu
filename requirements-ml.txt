@@ -8,3 +8,7 @@ openpyxl>=3.1
 opencv-python-headless>=4.10
 scikit-learn>=1.6
 pandas>=2.2
+transformers>=4.56,<6
+huggingface_hub[hf_xet]>=0.34,<2
+safetensors>=0.5
+accelerate>=1.0

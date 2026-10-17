@@ -93,7 +93,7 @@ def main() -> None:
                 "sha256": digest,
                 "video_ids": ids,
                 "aliases": sorted(row.path.name for row in duplicate_records),
-                "path": str(duplicate_records[0].path.resolve()),
+                "path": duplicate_records[0].path.resolve().relative_to(PROJECT_ROOT).as_posix(),
                 "label": int(duplicate_records[0].has_violation),
                 "events_sec": events,
                 "duration_sec": round(duration, 3),

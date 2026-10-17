@@ -9,4 +9,5 @@ artifacts/*
 !artifacts/.gitkeep
 data/processed/
 models/checkpoints/
+models/pretrained/
 
