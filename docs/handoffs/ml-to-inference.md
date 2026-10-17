@@ -2,11 +2,20 @@
 
 ## Статус и границы
 
-Ветка: `feature/ml-model`. Пакет `baseline-repair-v1-development` предназначен для технической интеграции; обе проверенные архитектуры пока не проходят quality gate. Резервный v3 сохранён отдельно без изменения весов. Отчёт: [training_report.md](../../reports/training_report.md).
+Ветка: `feature/ml-model`. Пакет `baseline-repair-v2-development` предназначен для технической интеграции; обе проверенные архитектуры пока не проходят quality gate. Резервный v3 сохранён отдельно без изменения весов. Отчёт: [training_report.md](../../reports/training_report.md).
 
 Изменения относятся к ML, его тестам, конфигурации и отчётам. Общие contracts, API и frontend принадлежат их владельцам. Для интеграции переносить новые ML-коммиты после `3b605c1`, без merge смешанной ветки `codex/model-output-integration`.
 
 Веса и подробные данные находятся вне обычного Git. В старой истории веса уже есть; эта работа историю не переписывает.
+
+## Зафиксированная поставка
+
+- Код: `5c9f0958f6d1c4d56353665c4da221dd1c59a0be` (включает основной ремонт `744f5e8`).
+- Архив: `artifacts/ml/bundles/baseline-repair-v2.zip`, около 7,4 МБ.
+- Archive SHA-256: `b9a8b2c809f7a6dc72e0bf655707fb9d2e430c906e573aa2f10ed4750d0ae90b`.
+- Canonical model SHA-256: `00ae541eac23249dd4751093ce276bfa9c14afca2d5f15f4fec9719c009ae52d`.
+- Проверено 9 файлов архива по SHA256SUMS; 32 ML-теста прошли.
+- Реестр: [release_record.json](../../reports/ml/release_record.json).
 
 ## Окружение
 
@@ -51,8 +60,8 @@ Fold 4 зарезервирован для калибровки. Оценива�
 
 ```powershell
 $codeCommit = git rev-parse HEAD
-$bundle = "artifacts/ml/bundles/baseline-repair-v1-release"
-& $py scripts/ml/export_model.py --checkpoint "$run/final_baseline/best.pt" --calibration "$run/final_baseline/calibration.json" --metrics "$run/baseline/summary.json" --output-dir "$bundle" --model-version baseline-repair-v1-development --code-commit "$codeCommit" --parity-video "$env:QAITU_POSITIVE_VIDEO" "$env:QAITU_NEGATIVE_VIDEO"
+$bundle = "artifacts/ml/bundles/baseline-repair-v2"
+& $py scripts/ml/export_model.py --checkpoint "$run/final_baseline/best.pt" --calibration "$run/final_baseline/calibration.json" --metrics "$run/baseline/summary.json" --output-dir "$bundle" --model-version baseline-repair-v2-development --code-commit "$codeCommit" --parity-video "$env:QAITU_POSITIVE_VIDEO" "$env:QAITU_NEGATIVE_VIDEO"
 & $py scripts/ml/infer_onnx.py "$env:QAITU_POSITIVE_VIDEO" --bundle "$bundle"
 & $py scripts/ml/benchmark_bundle.py --manifest "$env:QAITU_DATASET_MANIFEST" --data-root "$env:QAITU_VIDEO_ROOT" --bundle "$bundle" --output "$run/benchmark.json"
 & $py -m pytest tests/ml -q
@@ -94,3 +103,19 @@ Snapshot официальной schema хранится только в ML-ко�
 ## Критерии принятия
 
 Ориентироваться на [сводный отчёт](../../reports/training_report.md), а не только на успешный smoke. Сейчас качество не проходит: macro F1 < 0,64, recall < 0,75, ложные события > 0,60/мин, MAE > 5 с, event recall < 70%. Проверка полного API, JPEG и новых длинных видео остаётся интеграционной задачей. Новые веса автоматически не становятся основной моделью.
+
+## Совмещение веток
+
+Совместимость графа с OnnxPredictor подтверждена. Полный Git merge с `feature/video-inference@271400f` отдельно проверен через `git merge-tree`: он имеет 9 конфликтующих путей, потому что эта ветка содержит также изменения ML.
+
+Конфликты: `.gitignore`, `analysis/clip_manifest.json`, `analysis/dataset_manifest.json`, `reports/hardware.md`, `requirements-ml.txt`, `scripts/ml/evaluate_full_videos.py`, `scripts/ml/prepare_clips.py`, `scripts/ml/train_video.py`, `src/fortebank_audit/ml/models.py`. Рабочие ветки этой проверкой не изменялись.
+
+Порядок для владельца integration:
+
+1. Сохранить общие contracts/API из ветки тимлида.
+2. Взять актуальные ML-код, ML-зависимости, тесты и handoff из `feature/ml-model`.
+3. Взять модуль `src/fortebank_audit/inference/` и относящиеся к inference конфигурации/тесты из ветки inference. Находящиеся там дополнительные ML-challenger модели и их тесты не входят в проверенный здесь рецепт из двух вариантов.
+4. Объединить правила `.gitignore`; manifests исходных данных оставить вне Git. Заполненный ML handoff заменяет шаблон из ветки тимлида.
+5. Применить настройки tail/smoothing из этого handoff и выполнить полные integration tests.
+
+В ML-ветку API и inference не переносились. Автоматический merge и end-to-end совместимость всего сервиса этой поставкой не подтверждаются.
