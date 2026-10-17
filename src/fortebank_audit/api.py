@@ -57,6 +57,24 @@ class JobResponse(BaseModel):
     error: str | None = None
 
 
+class RuleReference(BaseModel):
+    status: Literal["matched", "not_established"]
+    label: str
+    document_name: str | None = None
+    section: str | None = None
+    source_url: str | None = None
+    applicability: str
+
+
+class AnalysisDetail(BaseModel):
+    event_index: int = Field(ge=1)
+    thesis: str
+    observations: list[str] = Field(min_length=1)
+    reasoning: str
+    risk: str
+    rule: RuleReference
+
+
 class ProgressResponse(BaseModel):
     job_id: str
     status: Literal["processing", "done", "failed"]
@@ -65,6 +83,7 @@ class ProgressResponse(BaseModel):
     runtime_mode: str
     summary: str | None = None
     runtime: dict[str, object] = Field(default_factory=dict)
+    analysis_details: list[AnalysisDetail] = Field(default_factory=list)
     error: str | None = None
 
 
@@ -116,6 +135,7 @@ def _run_analysis(job_id: str, video_path: Path) -> None:
             violations=result.violations,
             summary=result.summary,
             runtime=result.runtime,
+            analysis_details=result.analysis_details,
             error=None,
         )
         _set_stage(job_id, "done")
@@ -125,6 +145,7 @@ def _run_analysis(job_id: str, video_path: Path) -> None:
             status="failed",
             verdict=None,
             violations=[],
+            analysis_details=[],
             error=_public_error(exc),
         )
         _set_stage(job_id, "failed")
@@ -180,6 +201,7 @@ def create_analysis(background_tasks: BackgroundTasks, file: Annotated[UploadFil
         runtime_mode="Preparing runtime",
         summary=None,
         runtime={},
+        analysis_details=[],
     )
     background_tasks.add_task(_run_analysis, job_id, target)
     return AnalyzeAccepted(job_id=job_id)

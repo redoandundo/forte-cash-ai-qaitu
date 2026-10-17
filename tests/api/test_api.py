@@ -97,7 +97,13 @@ def test_mock_job_runs_full_video_pipeline(client: TestClient, tmp_path: Path) -
     assert progress["stage"] == "done"
     assert progress["progress_percent"] == 100
     assert progress["runtime_mode"] == "Demo predictor"
-    assert "ручной проверки" in progress["summary"]
+    assert "автоматический анализ" in progress["summary"].lower()
+    assert "ручн" not in progress["summary"].lower()
+    assert len(progress["analysis_details"]) == len(job["violations"])
+    detail = progress["analysis_details"][0]
+    assert detail["event_index"] == 1
+    assert len(detail["observations"]) >= 2
+    assert detail["rule"]["status"] == "not_established"
     assert not list(api.UPLOAD_ROOT.glob("*.mov"))
 
 

@@ -60,6 +60,7 @@ class RuntimeSettings:
 class RuntimeResult:
     verdict: Literal["no_violation", "violation"]
     violations: list[dict[str, object]]
+    analysis_details: list[dict[str, object]]
     summary: str
     runtime: dict[str, object]
 
@@ -130,7 +131,7 @@ class InferenceRuntime:
         if progress is not None:
             progress("summary")
         try:
-            violations = self._map_violations(result)
+            violations, analysis_details = self._map_violations(result)
         finally:
             self._remove_job_evidence(job_id)
         verdict: Literal["no_violation", "violation"] = (
@@ -139,6 +140,7 @@ class InferenceRuntime:
         return RuntimeResult(
             verdict=verdict,
             violations=violations,
+            analysis_details=analysis_details,
             summary=_build_summary(verdict, violations),
             runtime={
                 **dict(result.get("runtime", {})),
@@ -147,16 +149,24 @@ class InferenceRuntime:
             },
         )
 
-    def _map_violations(self, result: dict[str, object]) -> list[dict[str, object]]:
+    def _map_violations(
+        self, result: dict[str, object]
+    ) -> tuple[list[dict[str, object]], list[dict[str, object]]]:
         raw_events = result.get("events")
         if not isinstance(raw_events, list):
             raise InferenceError("Inference result does not contain an event list")
         violations: list[dict[str, object]] = []
-        for event in raw_events:
+        analysis_details: list[dict[str, object]] = []
+        for event_index, event in enumerate(raw_events, start=1):
             if not isinstance(event, dict):
                 raise InferenceError("Inference event is invalid")
+            start_time = _finite_number(event.get("start_sec"), "event start")
+            end_time = _finite_number(event.get("end_sec"), "event end")
             peak_time = _finite_number(event.get("peak_time_sec"), "event timecode")
             _finite_number(event.get("score"), "event score")
+            supporting_windows = event.get("supporting_windows")
+            if not isinstance(supporting_windows, int) or supporting_windows < 1:
+                raise InferenceError("Inference event support is invalid")
             evidence_items = event.get("evidence")
             if not isinstance(evidence_items, list) or not 1 <= len(evidence_items) <= 3:
                 raise InferenceError("Inference event must contain 1-3 evidence frames")
@@ -166,14 +176,58 @@ class InferenceRuntime:
                     "type": "Визуально нетипичное действие",
                     "timecode_sec": round(peak_time, 3),
                     "description": (
-                        "Локальный временной детектор отметил этот эпизод для "
-                        "ручной проверки. Кадры показывают контекст события; "
-                        "система не устанавливает юридический факт нарушения."
+                        "Автоматический локальный анализ обнаружил в этом "
+                        "интервале устойчивый модельный сигнал выше порога. "
+                        "Это указывает на признаки возможного нарушения, но "
+                        "не является юридическим заключением."
                     ),
                     "evidence_frames": frames,
                 }
             )
-        return violations
+            analysis_details.append(
+                {
+                    "event_index": event_index,
+                    "thesis": (
+                        "Вероятно, в отмеченном интервале присутствует "
+                        "визуально нетипичное действие."
+                    ),
+                    "observations": [
+                        (
+                            f"Модельный сигнал выше порога сохранялся в "
+                            f"{supporting_windows} временных окнах с "
+                            f"{start_time:.1f} до {end_time:.1f} сек."
+                        ),
+                        (
+                            f"Пиковый момент отмечен на {peak_time:.1f} сек.; "
+                            f"для эпизода сформировано JPEG-кадров: {len(frames)}."
+                        ),
+                    ],
+                    "reasoning": (
+                        "Сигнал поддерживается последовательностью временных "
+                        "окон, а не одиночным кадром. Совпадение пикового "
+                        "таймкода с сохранёнными кадрами подкрепляет вывод о "
+                        "локализованном подозрительном эпизоде."
+                    ),
+                    "risk": (
+                        "Нетипичная активность в кассовой зоне может повышать "
+                        "риск потери контроля над операцией, нарушения "
+                        "прослеживаемости действий или затруднения последующей "
+                        "сверки. Наличие риска не доказывает фактический ущерб."
+                    ),
+                    "rule": {
+                        "status": "not_established",
+                        "label": "Нормативное основание не установлено",
+                        "document_name": None,
+                        "section": None,
+                        "source_url": None,
+                        "applicability": (
+                            "Конкретное правило будет показано только после "
+                            "совпадения с проверенным локальным каталогом."
+                        ),
+                    },
+                }
+            )
+        return violations, analysis_details
 
     def _map_evidence(self, item: object) -> dict[str, object]:
         if not isinstance(item, dict):
@@ -218,15 +272,18 @@ def _build_summary(
 ) -> str:
     if verdict == "no_violation":
         return (
-            "Анализ завершён: признаки возможного нарушения в этой записи не "
-            "обнаружены. Результат относится только к загруженному видео."
+            "Автоматический анализ завершён: признаки возможного нарушения в "
+            "этой записи не обнаружены. Вывод относится только к видимым "
+            "действиям в загруженном видео."
         )
     timecodes = [float(item["timecode_sec"]) for item in violations]
     earliest = min(timecodes)
     return (
-        f"Обнаружено эпизодов для ручной проверки: {len(violations)}. "
+        f"Автоматический анализ обнаружил эпизодов с признаками возможного "
+        f"нарушения: {len(violations)}. "
         f"Первый отмеченный момент — {earliest:.1f} сек. "
-        "Окончательное решение принимает проверяющий по видео и JPEG-кадрам."
+        "Для каждого эпизода сформированы таймкод, логическое обоснование и "
+        "JPEG-доказательства."
     )
 
 

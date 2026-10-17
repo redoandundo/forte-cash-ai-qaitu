@@ -61,9 +61,18 @@ def test_mock_runtime_maps_real_evidence_and_summary(tmp_path: Path) -> None:
 
     assert result.verdict == "violation"
     assert len(result.violations) == 1
-    assert "ручной проверки" in result.summary
+    assert "автоматический анализ" in result.summary.lower()
+    assert "ручн" not in result.summary.lower()
     assert result.runtime["mode_label"] == "Demo predictor"
     assert stages[-1] == "summary"
+    detail = result.analysis_details[0]
+    assert detail["event_index"] == 1
+    assert detail["thesis"].startswith("Вероятно")
+    assert len(detail["observations"]) >= 2
+    assert detail["reasoning"]
+    assert detail["risk"]
+    assert detail["rule"]["status"] == "not_established"
+    assert detail["rule"]["label"] == "Нормативное основание не установлено"
     frames = result.violations[0]["evidence_frames"]
     assert len(frames) == 3
     for frame in frames:
