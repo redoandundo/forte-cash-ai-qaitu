@@ -3,7 +3,7 @@ updated_at: 2026-10-17
 event: Datathon26
 team: Qaitu
 repository: https://github.com/redoandundo/forte-cash-ai-qaitu
-phase: prototype_validation
+phase: end_to_end_demo_validation
 
 branches:
   stable: main
@@ -23,15 +23,18 @@ components:
     artifact_ready: true
   video_inference:
     owner: inference_engineer
-    status: baseline_pipeline_available
-    mock_predictor_ready: false
+    status: integrated_pipeline_available
+    mock_predictor_ready: true
     real_model_connected: true
   api_jobs:
     owner: teamlead
-    status: prototype_available
+    status: inference_runtime_connected
+  frontend:
+    owner: teamlead
+    status: live_job_flow_connected
   end_to_end_integration:
     owner: teamlead
-    status: requires_validation
+    status: mock_mode_verified_real_bundle_pending
 
 requirements:
   frontend_required: true
@@ -44,9 +47,11 @@ requirements:
   cloud_ai_allowed: false
 
 next_actions:
-  - validate the imported prototype against the jury API contract
-  - compare the current model artifact with the model manifest contract
-  - add focused tests for API, inference, and branch handoffs
-  - continue ML and inference work in their feature branches
+  - receive the exact baseline-repair-v2 archive outside Git and verify its published SHA-256
+  - run representative positive and long-negative videos with the exact ONNX bundle
+  - measure target laptop CPU and GPU latency without changing the public API contract
+  - review and merge the integration commits after real-bundle acceptance
 
-blockers: []
+blockers:
+  - exact baseline-repair-v2 archive is not available in the integration checkout
+  - development-only model quality gates are not sufficient for promotion

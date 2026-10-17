@@ -1,6 +1,6 @@
 # ML/Inference integration status
 
-Статус: code integration verified; real ML artifact acceptance blocked
+Статус: API/frontend/mock end-to-end verified; real ML artifact acceptance blocked
 
 ## Входные версии
 
@@ -10,6 +10,9 @@
 - Inference source: `origin/feature/video-inference@2f53ce1`
 - Inference integration commit: `63cb5ba`
 - Cross-component test commit: `9185e26`
+- Inference progress callback commit: `5abf369`
+- API/runtime integration commit: `88e49dc`
+- Live frontend integration commit: `e5bf43e`
 - Expected ML bundle: `baseline-repair-v2.zip`
 - Expected archive SHA-256: `b9a8b2c809f7a6dc72e0bf655707fb9d2e430c906e573aa2f10ed4750d0ae90b`
 - The expected archive is intentionally not stored in Git and was not available locally during integration.
@@ -23,6 +26,7 @@ python -m pytest tests/inference -q
 python -m pytest tests/integration/test_ml_inference_bundle.py -q
 python -m pytest -q
 python -m pip check
+node --check web/app.js
 git diff --check
 ```
 
@@ -31,8 +35,10 @@ Observed results:
 - ML: `32 passed`.
 - Inference: `32 passed`.
 - Synthetic cross-component ONNX smoke: `1 passed`.
-- Full available suite: `65 passed`.
+- API/runtime: `7 passed`.
+- Full available suite: `73 passed`.
 - Dependency check: `No broken requirements found`.
+- JavaScript syntax check: passed.
 - Diff whitespace check: passed.
 
 ## Проверки
@@ -47,6 +53,9 @@ Observed results:
 - Evidence validation: passed; three JPEG files were produced and verified on disk.
 - Real `baseline-repair-v2` quality/latency: not verified because the archive was unavailable.
 - Source-branch v3 ONNX weight: deliberately not imported; repository policy requires model weights to be transferred outside Git. ONNX execution fails closed unless an explicit canonical bundle is supplied.
+- Browser smoke on local `Х-10.mov`: passed at `http://127.0.0.1:8123`; upload returned `202`, public/progress polling returned `200`, one event at 10 seconds and three JPEG frames rendered, timecode navigation worked, browser console had zero errors.
+- Cleanup after browser smoke: zero uploaded MOV files and zero generated evidence files remained in the configured temporary roots.
+- Mock-mode boundary: decode, temporal windows, aggregation, evidence and API/UI are real; only predictor scores are deterministic demo values and the UI labels them `Demo model`.
 
 ## Производительность
 
@@ -58,7 +67,8 @@ Observed results:
 
 - Code compatibility between the current ML contract and inference adapter: yes.
 - Ready for code review: yes.
-- Ready for `develop`: no.
+- Ready for a local technical demo in explicit mock mode: yes.
+- Ready for `develop`: no, pending exact real-bundle acceptance and team review.
 - Blockers:
   1. The exact `baseline-repair-v2.zip` artifact is missing locally.
   2. The ML release record remains development-only/not promoted; reported quality gates are not sufficient for production approval.

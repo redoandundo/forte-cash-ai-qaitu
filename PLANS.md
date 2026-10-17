@@ -27,7 +27,7 @@
 
 ## Фаза 2 — Параллельные ML и inference
 
-Статус: planned
+Статус: implemented; model quality work continues
 
 ML-инженер:
 
@@ -47,7 +47,7 @@ Inference-инженер:
 
 ## Фаза 3 — ML/inference integration
 
-Статус: planned
+Статус: code integration verified; real artifact validation blocked
 
 - Объединение в `integration/ml-inference`.
 - Проверка checksum и manifest.
@@ -59,7 +59,7 @@ Inference-инженер:
 
 ## Фаза 4 — API и demo
 
-Статус: planned
+Статус: local mock demo verified; real-model and public deployment pending
 
 - `/api/v1/analyze`.
 - Job status и артефакты.
