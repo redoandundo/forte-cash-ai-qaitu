@@ -47,12 +47,16 @@ class EvidenceExtractor:
 
         if count == 1:
             requested = [event.peak_time_sec]
-        elif count == 2:
-            radius = min(0.5, max(0.0, (event.end_sec - event.start_sec) / 4))
-            requested = [event.peak_time_sec - radius, event.peak_time_sec + radius]
         else:
-            radius = min(0.5, max(0.0, (event.end_sec - event.start_sec) / 4))
-            requested = [event.peak_time_sec - radius, event.peak_time_sec, event.peak_time_sec + radius]
+            before = event.peak_time_sec - min(
+                2.0, max(0.0, event.peak_time_sec - event.start_sec)
+            )
+            after = event.peak_time_sec + min(
+                2.0, max(0.0, event.end_sec - event.peak_time_sec)
+            )
+            requested = [before, after]
+            if count == 3:
+                requested.append(event.peak_time_sec)
         duration = reader.metadata().duration_sec
         requested = sorted({min(duration, max(0.0, value)) for value in requested})
         frames = reader.sample_nearest(requested)
@@ -66,8 +70,16 @@ class EvidenceExtractor:
             seen_actual.add(rounded)
             path = run_dir / f"event_{event_index:03d}_{evidence_index:02d}.jpg"
             bgr = cv2.cvtColor(frame.image_rgb, cv2.COLOR_RGB2BGR)
-            ok = cv2.imwrite(str(path), bgr, [cv2.IMWRITE_JPEG_QUALITY, self.jpeg_quality])
-            if not ok:
-                raise EvidenceExtractionError("Could not save JPEG evidence")
+            try:
+                ok, encoded = cv2.imencode(
+                    ".jpg",
+                    bgr,
+                    [cv2.IMWRITE_JPEG_QUALITY, self.jpeg_quality],
+                )
+                if not ok:
+                    raise EvidenceExtractionError("Could not encode JPEG evidence")
+                path.write_bytes(encoded.tobytes())
+            except (cv2.error, OSError) as exc:
+                raise EvidenceExtractionError("Could not save JPEG evidence") from exc
             evidence.append(EvidenceFrame(frame.timestamp_sec, path))
         return evidence

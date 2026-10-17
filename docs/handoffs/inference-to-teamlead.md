@@ -8,9 +8,9 @@
 - Team-contract sync: `3978ae9`
 - Accepted-model integration: `db5198e`
 - DINO/VideoMAE production revert: `212d2f2`
-- ML source commit reviewed: `5e6d383` (runtime fix `5c9f095`, repair `744f5e8`)
+- ML source commit reviewed: `f891b21` (decoder guard `aba56d3`, audit `b07e69e`)
 - Model version: `mobilenet-temporal-pairsafe-v3`
-- Optional development bundle: `baseline-repair-v2-development`
+- Optional development bundle: `baseline-audited-v4-development`
 - Runtime/provider: ONNX Runtime, verified on CPU
 
 ## Реализовано
@@ -30,7 +30,11 @@
 - New ML postprocessing: fewer than three windows remain unsmoothed; active
   centers merge only within one stride; retain the three strongest events and
   return them chronologically.
-- Evidence: 1-3 local JPEG frames per candidate event.
+- Evidence: 1-3 local JPEG frames per candidate event. Unicode output paths use
+  in-memory JPEG encoding; before/peak/after frames are spread by up to two
+  seconds inside the event.
+- Unsupported codecs are rejected before native decode with a controlled
+  `UnsupportedVideoError`.
 - Failure semantics: exceptions propagate as technical failures; no inference or
   Qwen exception is converted into `no_violation` or a positive result.
 - Meta/human-review layer from `322aa28` remains internal and never rewrites
@@ -47,7 +51,7 @@
 .\.venv\Scripts\python.exe -m pytest -q
 ```
 
-Observed: `33 passed`.
+Observed: `36 passed`.
 
 ```powershell
 $env:PYTHONPATH = "src"
@@ -74,21 +78,22 @@ reproduces the same eight-source result above.
 ## Новый ML bundle
 
 Expected archive outside Git:
-`artifacts/ml/bundles/baseline-repair-v2.zip`, archive SHA-256
-`b9a8b2c809f7a6dc72e0bf655707fb9d2e430c906e573aa2f10ed4750d0ae90b`.
+`artifacts/ml/bundles/baseline-audited-v4.zip`, archive SHA-256
+`c387bdea9bd80a124c5587fccfcec3243d2550658ee09ca6834acaa9e54a1241`.
 Canonical model SHA-256:
 `00ae541eac23249dd4751093ce276bfa9c14afca2d5f15f4fec9719c009ae52d`.
 
-The archive is not present in Git or in this checkout, so its real weights could
-not be executed here. Once the ML engineer transfers and extracts it, the
-integration smoke is:
+The archive is not present in Git or in this checkout. The ML engineer's audited
+checkout ran its real weights through inference adapter `2f53ce1` on 11 videos
+with zero score/timestamp difference. Once the archive is transferred and
+extracted here, the integration smoke is:
 
 ```powershell
 $env:PYTHONPATH = "src"
 .\.venv\Scripts\python.exe -m fortebank_audit.inference.benchmark `
   --video "data\raw\open\videos\Х-15.mov" `
   --predictor onnx `
-  --bundle artifacts\ml\bundles\baseline-repair-v2 `
+  --bundle artifacts\ml\bundles\baseline-audited-v4 `
   --allow-development-model
 ```
 

@@ -177,6 +177,7 @@ def analyze_video(
                 "end_sec": event.end_sec,
                 "peak_time_sec": event.peak_time_sec,
                 "supporting_windows": event.supporting_windows,
+                "supporting_window_indices": list(event.supporting_window_indices),
                 "evidence": [
                     {
                         "timecode_sec": item.timecode_sec,

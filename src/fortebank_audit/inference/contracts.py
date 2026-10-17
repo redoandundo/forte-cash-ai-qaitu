@@ -87,6 +87,7 @@ class DetectedEvent:
     peak_time_sec: float
     peak_score: float
     supporting_windows: int
+    supporting_window_indices: tuple[int, ...] = ()
 
 
 @dataclass(frozen=True)

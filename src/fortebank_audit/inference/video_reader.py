@@ -33,6 +33,9 @@ class VideoReader:
             if not container.streams.video:
                 raise VideoOpenError(f"No video stream found: {self.path.name}")
             stream = container.streams.video[0]
+            codec_context = stream.codec_context
+            if codec_context is None:
+                raise UnsupportedVideoError("Unsupported video codec: decoder is unavailable")
             duration = 0.0
             if stream.duration is not None and stream.time_base is not None:
                 duration = float(stream.duration * stream.time_base)
@@ -47,11 +50,11 @@ class VideoReader:
             return VideoMetadata(
                 path=self.path,
                 duration_sec=duration,
-                width=int(stream.codec_context.width or 0),
-                height=int(stream.codec_context.height or 0),
+                width=int(codec_context.width or 0),
+                height=int(codec_context.height or 0),
                 nominal_fps=fps,
                 frame_count=frame_count,
-                codec=str(stream.codec_context.name or "unknown"),
+                codec=str(codec_context.name or "unknown"),
                 has_audio=bool(container.streams.audio),
             )
 
@@ -60,6 +63,8 @@ class VideoReader:
             if not container.streams.video:
                 raise VideoOpenError(f"No video stream found: {self.path.name}")
             stream = container.streams.video[0]
+            if stream.codec_context is None:
+                raise UnsupportedVideoError("Unsupported video codec: decoder is unavailable")
             origin = float(stream.start_time * stream.time_base) if stream.start_time is not None else 0.0
             fps = float(stream.average_rate) if stream.average_rate else 0.0
             previous = -math.inf

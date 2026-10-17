@@ -11,6 +11,16 @@ from .contracts import PipelineConfig, PredictorLoadError
 from .preprocessing import PreprocessingConfig
 
 
+POSTPROCESSING = {
+    "aggregation": "three_window_weighted_smoothing_then_peak",
+    "smoothing_weights": [0.25, 0.5, 0.25],
+    "smoothing_edges": "replicate",
+    "short_sequence_rule": "identity_if_fewer_than_three",
+    "event_merge": "adjacent_centers_within_stride",
+    "max_events": 3,
+}
+
+
 @dataclass(frozen=True)
 class ModelBundleContract:
     root: Path
@@ -43,6 +53,30 @@ def _safe_file(root: Path, name: object) -> Path:
 
 def _sha256(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def _fingerprint(payload: object) -> str:
+    serialized = json.dumps(
+        payload,
+        sort_keys=True,
+        ensure_ascii=True,
+        allow_nan=False,
+    ).encode()
+    return hashlib.sha256(serialized).hexdigest()
+
+
+def _scoring_fingerprint(thresholds: dict[str, Any]) -> str:
+    fields = (
+        "checkpoint_sha256",
+        "pipeline_sha256",
+        "violation",
+        *POSTPROCESSING,
+    )
+    try:
+        payload = {key: thresholds[key] for key in fields}
+    except KeyError as exc:
+        raise PredictorLoadError("ML bundle scoring fingerprint fields are incomplete") from exc
+    return _fingerprint(payload)
 
 
 def _checksum_inventory(root: Path) -> dict[str, str]:
@@ -99,6 +133,8 @@ def load_bundle_contract(
     required_files = {
         "model_manifest.json",
         "ml-to-inference.md",
+        "compatibility/model_dynamic.onnx",
+        "compatibility/inference/model_manifest.json",
         str(manifest["artifact"]),
         str(manifest["preprocessing_file"]),
         str(manifest["thresholds_file"]),
@@ -164,19 +200,49 @@ def load_bundle_contract(
     threshold = thresholds.get("violation")
     if not isinstance(threshold, (int, float)) or not math.isfinite(float(threshold)) or not 0 <= float(threshold) <= 1:
         raise PredictorLoadError("Invalid ML bundle threshold")
-    expected_thresholds = {
-        "aggregation": "three_window_weighted_smoothing_then_peak",
-        "smoothing_weights": [0.25, 0.5, 0.25],
-        "smoothing_edges": "replicate",
-        "short_sequence_rule": "identity_if_fewer_than_three",
-        "event_merge": "adjacent_centers_within_stride",
-        "max_events": 3,
-    }
-    if any(thresholds.get(key) != value for key, value in expected_thresholds.items()):
+    if any(thresholds.get(key) != value for key, value in POSTPROCESSING.items()):
         raise PredictorLoadError("Unsupported ML bundle postprocessing contract")
     pipeline_sha = thresholds.get("pipeline_sha256")
-    if not isinstance(pipeline_sha, str) or len(pipeline_sha) != 64:
+    checkpoint_sha = thresholds.get("checkpoint_sha256")
+    scoring_sha = thresholds.get("scoring_sha256")
+    digests = (pipeline_sha, checkpoint_sha, scoring_sha)
+    if any(
+        not isinstance(digest, str)
+        or len(digest) != 64
+        or any(char not in "0123456789abcdef" for char in digest)
+        for digest in digests
+    ):
         raise PredictorLoadError("ML bundle pipeline fingerprint is invalid")
+    if scoring_sha != _scoring_fingerprint(thresholds):
+        raise PredictorLoadError("ML bundle scoring fingerprint is invalid")
+    if metrics.get("checkpoint_sha256") != checkpoint_sha:
+        raise PredictorLoadError("ML bundle metrics refer to another checkpoint")
+    if metrics.get("calibration_is_test") is not False:
+        raise PredictorLoadError("ML bundle calibration metadata is invalid")
+    calibration_metrics = metrics.get("calibration_metrics")
+    if not isinstance(calibration_metrics, dict) or calibration_metrics.get(
+        "threshold", threshold
+    ) != threshold:
+        raise PredictorLoadError("ML bundle calibration threshold is inconsistent")
+
+    compatibility_path = _safe_file(
+        bundle_root,
+        "compatibility/inference/model_manifest.json",
+    )
+    compatibility = _json(compatibility_path, "compatibility manifest")
+    compatibility_model = "compatibility/model_dynamic.onnx"
+    if (
+        compatibility.get("artifact") != compatibility_model
+        or compatibility.get("sha256") != entries[compatibility_model]
+        or compatibility.get("input_shape") != [None, *expected_shape[1:]]
+        or compatibility.get("model_version") != manifest["model_version"]
+        or compatibility.get("output_semantics") != "logit"
+        or compatibility.get("preprocessing_sha256")
+        != entries[str(manifest["preprocessing_file"])]
+        or compatibility.get("threshold_sha256")
+        != entries[str(manifest["thresholds_file"])]
+    ):
+        raise PredictorLoadError("ML bundle compatibility metadata is inconsistent")
 
     release_status = str(metrics.get("release_status", "missing"))
     if release_status not in {"promoted", "production_approved"} and not allow_development_model:

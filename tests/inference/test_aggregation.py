@@ -30,6 +30,7 @@ def test_overlapping_windows_merge_and_earliest_peak_wins_tie() -> None:
     assert merged.end_sec == 10
     assert merged.peak_time_sec == 4
     assert merged.supporting_windows == 2
+    assert merged.supporting_window_indices == (0, 1)
 
 
 def test_invalid_score_is_rejected() -> None:

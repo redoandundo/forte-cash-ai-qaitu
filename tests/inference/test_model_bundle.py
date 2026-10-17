@@ -75,17 +75,68 @@ def make_bundle(root: Path) -> Path:
         "event_merge": "adjacent_centers_within_stride",
         "max_events": 3,
         "pipeline_sha256": "a" * 64,
+        "checkpoint_sha256": "b" * 64,
     }
+    scoring_fields = (
+        "checkpoint_sha256",
+        "pipeline_sha256",
+        "violation",
+        "aggregation",
+        "smoothing_weights",
+        "smoothing_edges",
+        "short_sequence_rule",
+        "event_merge",
+        "max_events",
+    )
+    thresholds["scoring_sha256"] = hashlib.sha256(
+        json.dumps(
+            {key: thresholds[key] for key in scoring_fields},
+            sort_keys=True,
+            ensure_ascii=True,
+            allow_nan=False,
+        ).encode()
+    ).hexdigest()
     write_json(root / "model_manifest.json", manifest)
     write_json(root / "preprocessing.json", preprocessing)
     write_json(root / "thresholds.json", thresholds)
     write_json(root / "labels.json", {"0": "no_violation", "1": "possible_violation"})
-    write_json(root / "metrics.json", {"release_status": "development_only_not_promoted"})
+    write_json(
+        root / "metrics.json",
+        {
+            "release_status": "development_only_not_promoted",
+            "checkpoint_sha256": thresholds["checkpoint_sha256"],
+            "calibration_is_test": False,
+            "calibration_metrics": {"threshold": thresholds["violation"]},
+        },
+    )
+    compatibility_dir = root / "compatibility" / "inference"
+    compatibility_dir.mkdir(parents=True)
+    compatibility_model = root / "compatibility" / "model_dynamic.onnx"
+    compatibility_model.write_bytes(b"synthetic-dynamic-model")
+    write_json(
+        compatibility_dir / "model_manifest.json",
+        {
+            "artifact": "compatibility/model_dynamic.onnx",
+            "sha256": hashlib.sha256(compatibility_model.read_bytes()).hexdigest(),
+            "input_shape": [None, 3, 4, 160, 160],
+            "model_version": manifest["model_version"],
+            "output_semantics": "logit",
+            "preprocessing_sha256": hashlib.sha256(
+                (root / "preprocessing.json").read_bytes()
+            ).hexdigest(),
+            "threshold_sha256": hashlib.sha256(
+                (root / "thresholds.json").read_bytes()
+            ).hexdigest(),
+        },
+    )
     (root / "ml-to-inference.md").write_text("development bundle\n", encoding="utf-8")
-    files = sorted(path for path in root.iterdir() if path.is_file())
+    files = sorted(path for path in root.rglob("*") if path.is_file())
     (root / "SHA256SUMS.txt").write_text(
         "".join(
-            hashlib.sha256(path.read_bytes()).hexdigest() + "  " + path.name + "\n"
+            hashlib.sha256(path.read_bytes()).hexdigest()
+            + "  "
+            + path.relative_to(root).as_posix()
+            + "\n"
             for path in files
         ),
         encoding="ascii",
