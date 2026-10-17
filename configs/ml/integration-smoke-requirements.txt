@@ -1,0 +1,2 @@
+# Additional dependency of the team's inference pipeline; ML lock stays unchanged.
+psutil==7.2.2

@@ -69,6 +69,7 @@ def score_sources(checkpoint_path: Path, sources: list[dict], cache: Path, batch
             "annotation_confidence": source.get("annotation_confidence", "high"),
             "duration_sec": samples.duration, "starts": samples.starts.tolist(),
             "ends": samples.ends.tolist(), "window_scores": scores.tolist(),
+            "raw_scores": values,
             "score": float(scores.max()), "truth_points": truth,
             "scoring_with_cache_sec": time.perf_counter() - started,
         })

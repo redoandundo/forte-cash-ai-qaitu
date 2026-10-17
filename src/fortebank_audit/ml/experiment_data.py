@@ -61,6 +61,12 @@ def validate_sources(sources: list[dict]) -> None:
             raise ValueError("Missing label or scenario group")
         if row.get("annotation_confidence", "high") not in {"high", "medium", "low"}:
             raise ValueError("Unknown annotation confidence")
+        if not isinstance(row.get("events_complete", False), bool):
+            raise ValueError("events_complete must be an explicit boolean")
+        if row.get("events_complete") and (row.get("review_status") != "confirmed" or not row.get("reviewer")):
+            raise ValueError("Complete events require an identified, confirmed reviewer")
+        if row.get("events_complete") and row["label"] and not row.get("events"):
+            raise ValueError("Complete positive events require confirmed intervals, not points")
         duration = float(row["duration_sec"])
         if not math.isfinite(duration) or duration <= 0:
             raise ValueError("Invalid source duration")
@@ -114,10 +120,17 @@ def split_sources(sources: list[dict], folds: dict[str, int], outer: int, calibr
     return train, cal, test
 
 
-def selected_training_windows(source: dict, samples) -> list[tuple[int, int, float]]:
+def selected_training_windows(source: dict, samples, hard_indices: list[int] | None = None) -> list[tuple[int, int, float]]:
     confidence = {"high": 1.0, "medium": 0.5, "low": 0.25}[source.get("annotation_confidence", "high")]
     if source["label"] == 0:
         indices = np.unique(np.rint(np.linspace(0, len(samples.frames) - 1, min(5, len(samples.frames)))).astype(int))
+        if hard_indices is not None:
+            if any(not isinstance(index, int) or not 0 <= index < len(samples.frames) for index in hard_indices):
+                raise ValueError("Invalid mined window index")
+            anchors = np.unique(np.rint(np.linspace(0, len(samples.frames) - 1, min(3, len(samples.frames)))).astype(int)).tolist()
+            indices = sorted(dict.fromkeys([*anchors, *hard_indices]))
+            if len(indices) > 5:
+                raise ValueError("Mining must retain at most five windows per source")
         return [(int(index), 0, 1.0 / len(indices)) for index in indices]
     intervals = source.get("events", [])
     if not intervals:
@@ -157,15 +170,18 @@ def augment_frames(frames: np.ndarray) -> np.ndarray:
 
 
 class SourceWindowDataset(Dataset):
-    def __init__(self, sources: list[dict], spec: VideoSpec, cache: Path, augment: bool = True):
+    def __init__(self, sources: list[dict], spec: VideoSpec, cache: Path, augment: bool = True, hard_negatives: dict | None = None):
         self.spec, self.augment = spec, augment
+        if hard_negatives and set(hard_negatives) - {row["source_id"] for row in sources if row["label"] == 0}:
+            raise ValueError("Mining may use training negatives only")
+        validate_sources(sources)
         self.items = []
         for source in sources:
             path = Path(source["path"])
             if hashlib.sha256(path.read_bytes()).hexdigest() != source["sha256"]:
                 raise ValueError("Video checksum disagrees with dataset")
             samples = cached_video(path, spec, cache)
-            for index, label, weight in selected_training_windows(source, samples):
+            for index, label, weight in selected_training_windows(source, samples, (hard_negatives or {}).get(source["source_id"])):
                 self.items.append((samples.frames[index], label, weight))
         totals = Counter()
         for _, label, weight in self.items:
