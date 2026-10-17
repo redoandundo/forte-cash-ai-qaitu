@@ -1,121 +1,182 @@
-# Передача ML участнику inference
+# ML → inference: проверенная development-поставка
 
-## Статус и границы
+Дата: 2026-10-17. Ветка: `feature/ml-model`.
+Код: `aba56d31030aa9830fe2770e4aa9d54d2879ef24`.
+Полный структурированный отчёт: [diagnosis_report.md](../../reports/ml/diagnosis_report.md).
+Метрики: [diagnostic_metrics.json](../../reports/ml/diagnostic_metrics.json).
+Архив, SHA и фактические финальные проверки: [audited_release_record.json](../../reports/ml/audited_release_record.json).
 
-Ветка: `feature/ml-model`. Пакет `baseline-repair-v2-development` предназначен для технической интеграции; обе проверенные архитектуры пока не проходят quality gate. Резервный v3 сохранён отдельно без изменения весов. Отчёт: [training_report.md](../../reports/training_report.md).
+## Решение
 
-Изменения относятся к ML, его тестам, конфигурации и отчётам. Общие contracts, API и frontend принадлежат их владельцам. Для интеграции переносить новые ML-коммиты после `3b605c1`, без merge смешанной ветки `codex/model-output-integration`.
+`baseline-audited-v4-development` — воспроизводимый **development-only** bundle.
+Quality gate не пройден. Новые веса не приняты: исправленная нормировка loss
+повысила recall, но ухудшила macro F1 и FP/min. Веса baseline-repair-v2 сохранены;
+это диагностированная поставка с проверенными метаданными, не улучшенная модель.
+Прежний fallback не заменять автоматически.
 
-Веса и подробные данные находятся вне обычного Git. В старой истории веса уже есть; эта работа историю не переписывает.
+v4 включает guard отсутствующего decoder перед PyAV decode: обнаруженный
+native crash заменён контролируемой ошибкой. После изменения fingerprint
+калибровка и OOF пересчитаны; scores поддерживаемых видео не изменились.
+Предыдущий локальный v3 архив сохранён, но текущая поставка — v4.
 
-## Зафиксированная поставка
+- Baseline nested OOF: precision 0.500, recall 0.619, positive F1 0.553,
+  macro F1 0.458, FP events/min 1.033, event recall ±5 s 0.364, peak MAE 7.133 s.
+- Confusion `[TN,FP; FN,TP]`: `[6,13; 8,13]`.
+- Кандидат: macro F1 0.413, recall 0.667, FP/min 1.191 — отклонён.
+- Five-fold split проверен по source/SHA/scenario. Calibration отделена от
+  outer fold. Это повторно используемый development dataset, не новый test.
+- Точки неоднозначного дубликата не подтверждены как два события. Без него
+  baseline event recall 0.400, MAE 5.061 s. Полных подтверждённых интервалов нет.
 
-- Код: `5c9f0958f6d1c4d56353665c4da221dd1c59a0be` (включает основной ремонт `744f5e8`).
-- Архив: `artifacts/ml/bundles/baseline-repair-v2.zip`, около 7,4 МБ.
-- Archive SHA-256: `b9a8b2c809f7a6dc72e0bf655707fb9d2e430c906e573aa2f10ed4750d0ae90b`.
-- Canonical model SHA-256: `00ae541eac23249dd4751093ce276bfa9c14afca2d5f15f4fec9719c009ae52d`.
-- Проверено 9 файлов архива по SHA256SUMS; 32 ML-теста прошли.
-- Реестр: [release_record.json](../../reports/ml/release_record.json).
+## Mock и реальная модель
 
-## Окружение
+Настроенный MockPredictor игнорирует содержание и повторяет
+`[0.1,0.2,0.8,0.9,0.3]`. С window=8 и stride=2 первый максимум — 10 s.
+На том же ролике ONNX дал 19 s; разные окна имеют разные тензоры.
+После добавления/удаления 4 s пик ONNX смещается на 23/15 s точно.
+Нельзя исправлять mock настройкой порога реальной модели.
 
-Python 3.12. Проверено на Windows, PyTorch 2.5.1+cu121, torchvision 0.20.1+cu121, RTX 3050 Ti 4 ГБ. ONNX Runtime установлен только CPU, отдельная GPU-версия ORT не нужна.
+## Bundle и I/O
+
+Локальный каталог: `artifacts/ml/bundles/baseline-audited-v4`.
+Архив: `artifacts/ml/bundles/baseline-audited-v4.zip`.
+Archive SHA-256: `c387bdea9bd80a124c5587fccfcec3243d2550658ee09ca6834acaa9e54a1241`.
+ONNX SHA-256: `00ae541eac23249dd4751093ce276bfa9c14afca2d5f15f4fec9719c009ae52d`.
+Вес и архив передаются приватно, вне Git. SHA архива — в release record.
+
+Содержимое: model.onnx, model_manifest.json, preprocessing.json, thresholds.json,
+labels.json, metrics.json, SHA256SUMS.txt, ml-to-inference.md,
+compatibility/model_dynamic.onnx, compatibility/inference/model_manifest.json.
+
+- Canonical schema-v1: вложенные input/output, fixed batch `[1,3,4,160,160]`.
+- RGB float32, NCTHW, OpenCV linear stretch, ImageNet normalization.
+- Window 6 s, stride 2 s, endpoint-false uniform sampling по nearest PTS,
+  начало timeline = stream start; обязательный tail window.
+- Output `logits`, sigmoid **ровно один раз**.
+- Threshold `0.45335930958390236`, отдельный calibration fold 4 (8 источников).
+  Его precision/recall/F1 не являются независимым test.
+- Smoothing `[0.25,0.5,0.25]`, replicate edges; <3 окон — identity.
+- Active centers объединяются в пределах stride, максимум 3 сильнейших события,
+  итоговый порядок хронологический. Score — ranking score, не вероятность закона.
+- Compatibility graph имеет dynamic batch; старый flat-manifest adapter может
+  читать его из compatibility/inference. **Актуальный adapter 2f53ce1 должен
+  использовать canonical bundle напрямую.**
+
+Pipeline fingerprint и checkpoint SHA записаны раздельно; новый `scoring_sha256`
+связывает их с threshold и postprocessing. Все файлы проверяются по inventory.
+Parity: 16 реальных окон, fixed N=1 / dynamic N=16, максимальная ошибка logit
+`3.5762786865234375e-7`, tolerance `1e-4`, threshold decisions совпали.
+
+## Запуск из ML checkout
+
+Использовать Python 3.12 и существующий `requirements-ml-repair.txt` плюс
+согласованный PyTorch 2.5.1 / torchvision 0.20.1. Проверено CUDA 12.1,
+RTX 3050 Ti 4 ГБ; ONNX Runtime 1.23.2 CPU. Для полного adapter smoke дополнительно:
 
 ```powershell
-uv venv --python 3.12 .venv-ml
-uv pip install --python .venv-ml/Scripts/python.exe torch==2.5.1 torchvision==0.20.1 --index-url https://download.pytorch.org/whl/cu121
-uv pip install --python .venv-ml/Scripts/python.exe -r requirements-ml-repair.txt
-```
-
-Для CPU обучения установить те же версии torch/torchvision с официального индекса `https://download.pytorch.org/whl/cpu`. Не смешивать GPU и CPU пакеты onnxruntime в одном окружении.
-
-Задайте переменные окружения для локальных входов: `QAITU_DATASET_MANIFEST` — существующий нормализованный manifest, `QAITU_VIDEO_ROOT` — каталог исходных видео. Они и индивидуальная разметка не коммитятся.
-
-## Аудит, окна и эксперимент
-
-```powershell
+uv pip install --python .venv-ml/Scripts/python.exe -r configs/ml/integration-smoke-requirements.txt
+$env:PYTHONPATH = "src"
 $py = ".venv-ml/Scripts/python.exe"
-$run = "artifacts/ml/repair-20261017"
-& $py scripts/ml/audit_training_sources.py --manifest "$env:QAITU_DATASET_MANIFEST" --data-root "$env:QAITU_VIDEO_ROOT" --output "$run/data_audit.json"
-& $py scripts/ml/prepare_clips.py --manifest "$env:QAITU_DATASET_MANIFEST" --data-root "$env:QAITU_VIDEO_ROOT" --output "$run/windows.json"
-& $py scripts/ml/run_repair_experiment.py --manifest "$env:QAITU_DATASET_MANIFEST" --data-root "$env:QAITU_VIDEO_ROOT" --output "$run"
-```
-
-Команды не перезаписывают имеющиеся результаты; для новой итерации задайте новый `$run`. `--resume` у experiment повторно проверяет lineage завершённых folds. Если доступны только workbook и видео, `audit_annotations.py --data-root <каталог open> --output <новый локальный manifest>` формирует аудит; новый аудит может менять confidence и группировку, поэтому это новый эксперимент.
-
-`prepare_clips.py` сохраняет cache RGB-окон с реальными PTS в NPZ, без повторного сжатия исходных видео. Dataset использует те же функции выбора окон. Подтверждённые исправления разметки передаются через `--review` во все команды данных. Review JSON индексируется source_id; требует `review_status: confirmed`, `reviewer`; интервалы содержат `start_sec`, `end_sec`, `review_status: confirmed`. `events_complete: true` разрешается только после проверки всех событий записи.
-
-## Финальный checkpoint и калибровка
-
-```powershell
-& $py scripts/ml/train_video.py --manifest "$env:QAITU_DATASET_MANIFEST" --data-root "$env:QAITU_VIDEO_ROOT" --plan "$run/frozen_plan.json" --variant baseline --output "$run/final_baseline"
-& $py scripts/ml/evaluate_full_videos.py --mode calibrate --checkpoint "$run/final_baseline/best.pt" --manifest "$env:QAITU_DATASET_MANIFEST" --data-root "$env:QAITU_VIDEO_ROOT" --plan "$run/frozen_plan.json" --fold 4 --output "$run/final_baseline/calibration.json"
-```
-
-Fold 4 зарезервирован для калибровки. Оценивать финальный checkpoint как независимый тест на остальных четырёх folds нельзя: он на них обучен. Для разработки используется nested OOF. `--mode evaluate --calibration <файл>` отклонит пересечение с train/calibration.
-
-## Экспорт и smoke
-
-Положительный и отрицательный файлы для parity задаются в `QAITU_POSITIVE_VIDEO` и `QAITU_NEGATIVE_VIDEO`.
-
-```powershell
-$codeCommit = git rev-parse HEAD
-$bundle = "artifacts/ml/bundles/baseline-repair-v2"
-& $py scripts/ml/export_model.py --checkpoint "$run/final_baseline/best.pt" --calibration "$run/final_baseline/calibration.json" --metrics "$run/baseline/summary.json" --output-dir "$bundle" --model-version baseline-repair-v2-development --code-commit "$codeCommit" --parity-video "$env:QAITU_POSITIVE_VIDEO" "$env:QAITU_NEGATIVE_VIDEO"
+$bundle = "artifacts/ml/bundles/baseline-audited-v4"
 & $py scripts/ml/infer_onnx.py "$env:QAITU_POSITIVE_VIDEO" --bundle "$bundle"
-& $py scripts/ml/benchmark_bundle.py --manifest "$env:QAITU_DATASET_MANIFEST" --data-root "$env:QAITU_VIDEO_ROOT" --bundle "$bundle" --output "$run/benchmark.json"
 & $py -m pytest tests/ml -q
 ```
 
-В bundle входят `model.onnx`, `model_manifest.json`, `preprocessing.json`, `thresholds.json`, `labels.json`, `metrics.json`, `SHA256SUMS.txt`, `ml-to-inference.md` и совместимый динамический граф с manifest. Код commit записывается в bundle. Ошибочный export не публикует частичный каталог и не изменяет fallback.
+`QAITU_POSITIVE_VIDEO` и `QAITU_NEGATIVE_VIDEO` задаёт пользователь полным
+локальным путём. Нужны видео кассовой сцены: произвольное видео можно технически
+прочитать, но модель не обучена понимать любой сюжет.
 
-## Два представления одного checkpoint
-
-| Получатель | Граф | Manifest |
-|---|---|---|
-| Каноническая schema v1 | `model.onnx`, batch 1 | `model_manifest.json`, вложенные input/output |
-| Существующий OnnxPredictor | `compatibility/model_dynamic.onnx`, dynamic batch | `compatibility/inference/model_manifest.json`, плоский формат |
-
-Snapshot официальной schema хранится только в ML-конфигурации: `configs/ml/model_manifest.v1.schema.json`, источник — `feature/teamlead-core@fd23a1b`, `docs/contracts/model_manifest.schema.json`. Общая schema не изменялась. Статический граф соответствует требованию целочисленных dimensions, динамический сохраняет совместимость текущего адаптера.
-
-Не перемещайте файлы совместимости отдельно: существующий OnnxPredictor вычисляет корень как `manifest.parents[2]`. Передавайте абсолютные пути к графу и manifest после раскрытия каталога bundle; сохраняйте внутренние относительные пути.
-
-Для проверки конкретного кода inference:
+Для полного внутреннего timeline и shift test (новый каталог на каждый запуск):
 
 ```powershell
-& $py scripts/ml/verify_inference_adapter.py --reference-package artifacts/reference_inference --reference-commit 271400fdbc51f516c9dc9c3d1c10742496f63b03 --bundle "$bundle" --video "$env:QAITU_POSITIVE_VIDEO" --output "$run/adapter_verification.json"
+& $py -m fortebank_audit.ml.diagnostics --video "$env:QAITU_POSITIVE_VIDEO" --bundle "$bundle" --output artifacts/ml/repro-diagnostics --shift-seconds 4
 ```
 
-`reference_inference` — локальная копия `__init__.py`, `contracts.py`, `preprocessing.py`, `predictor.py` из указанного commit; инструмент не загружает код из сети и не меняет его.
+Выбирать положительное видео с действием после 4 s; trim удаляет первые 4 s.
+Команда не скрывает неуспешный shift и завершается ненулевым кодом при провале.
+Для сравнения с настоящим MockPredictor добавить `--reference-package` с локальной
+копией inference package из указанного ниже commit, которую создаёт adapter smoke.
 
-## Обязательные настройки владельцу inference
+```powershell
+& $py -m fortebank_audit.ml.adapter_smoke --reference-commit 2f53ce18a91bcddae5135f2cac0a03aa36c7e7d4 --video "$env:QAITU_POSITIVE_VIDEO" "$env:QAITU_NEGATIVE_VIDEO" --bundle "$bundle" --output artifacts/ml/repro-adapter --evidence-root "$env:QAITU_EVIDENCE_ROOT"
+```
 
-- Читать все sidecars из одного bundle. `labels.json`: 0 = no_violation, 1 = possible_violation.
-- Вход float32 RGB NCTHW; baseline [N,3,4,160,160]. Resize OpenCV INTER_LINEAR stretch; ImageNet mean/std.
-- Окно 6 с, stride 2 с, endpoint=False, nearest PTS, время от stream start. `include_tail_window=True`.
-- Выход графа — **logit**. Sigmoid ровно один раз.
-- Сглаживание [0.25,0.5,0.25], края повторяются; менее трёх окон — без сглаживания. Затем сравнение с порогом, объединение активных центров с расстоянием ≤ stride, максимум три сильнейших события.
-- Событие: `start_sec, end_sec, peak_time_sec, peak_score`. Score — показатель ранжирования.
-- Старые правила агрегации и новый threshold не смешивать. Совпадение OnnxPredictor проверено на уровне тензоров; весь pipeline после включения этих правил ещё требует проверки.
-- JPEG и технический статус failed — ответственность inference/API. ML CLI выбрасывает исключение при технической ошибке, а не возвращает no_violation.
-- При смене preprocessing, sampling, smoothing или checkpoint нужна новая калибровка. Pipeline fingerprint переносится между LF/CRLF checkout.
+Этот SHA должен присутствовать локально после `git fetch origin`. Инструмент
+копирует выбранные файлы из Git в ignored output, не меняет inference checkout
+и не скачивает модели. До исправления Unicode writer `QAITU_EVIDENCE_ROOT`
+должен указывать на локальный каталог с латинским абсолютным путём.
 
-## Критерии принятия
+## Воспроизведение обучения и оценки
 
-Ориентироваться на [сводный отчёт](../../reports/training_report.md), а не только на успешный smoke. Сейчас качество не проходит: macro F1 < 0,64, recall < 0,75, ложные события > 0,60/мин, MAE > 5 с, event recall < 70%. Проверка полного API, JPEG и новых длинных видео остаётся интеграционной задачей. Новые веса автоматически не становятся основной моделью.
+`QAITU_DATASET_MANIFEST` — локальный нормализованный manifest,
+`QAITU_VIDEO_ROOT` — каталог исходных видео. Они не публикуются.
+Чтобы заново получить baseline checkpoints и frozen folds:
 
-## Совмещение веток
+```powershell
+$run = "artifacts/ml/repro-baseline"
+& $py scripts/ml/audit_training_sources.py --manifest "$env:QAITU_DATASET_MANIFEST" --data-root "$env:QAITU_VIDEO_ROOT" --output "$run/data_audit.json"
+& $py scripts/ml/run_repair_experiment.py --manifest "$env:QAITU_DATASET_MANIFEST" --data-root "$env:QAITU_VIDEO_ROOT" --variants baseline --output "$run"
+& $py scripts/ml/train_video.py --manifest "$env:QAITU_DATASET_MANIFEST" --data-root "$env:QAITU_VIDEO_ROOT" --plan "$run/frozen_plan.json" --variant baseline --output "$run/final_baseline"
+& $py scripts/ml/evaluate_full_videos.py --mode calibrate --manifest "$env:QAITU_DATASET_MANIFEST" --data-root "$env:QAITU_VIDEO_ROOT" --plan "$run/frozen_plan.json" --fold 4 --checkpoint "$run/final_baseline/best.pt" --output "$run/final_calibration.json"
+```
 
-Совместимость графа с OnnxPredictor подтверждена. Полный Git merge с `feature/video-inference@271400f` отдельно проверен через `git merge-tree`: он имеет 9 конфликтующих путей, потому что эта ветка содержит также изменения ML.
+Диагностическая OOF-оценка с группами, positive F1 и анализом ошибок:
 
-Конфликты: `.gitignore`, `analysis/clip_manifest.json`, `analysis/dataset_manifest.json`, `reports/hardware.md`, `requirements-ml.txt`, `scripts/ml/evaluate_full_videos.py`, `scripts/ml/prepare_clips.py`, `scripts/ml/train_video.py`, `src/fortebank_audit/ml/models.py`. Рабочие ветки этой проверкой не изменялись.
+```powershell
+& $py -m fortebank_audit.ml.experiments --stage rescore --manifest "$env:QAITU_DATASET_MANIFEST" --data-root "$env:QAITU_VIDEO_ROOT" --plan "$run/frozen_plan.json" --checkpoints "$run/baseline" --output artifacts/ml/repro-baseline-details
+& $py -m fortebank_audit.ml.experiments --stage development --manifest "$env:QAITU_DATASET_MANIFEST" --data-root "$env:QAITU_VIDEO_ROOT" --plan "$run/frozen_plan.json" --config configs/ml/weighted_objective.yaml --output artifacts/ml/repro-weighted-dev
+& $py -m fortebank_audit.ml.experiments --stage oof --manifest "$env:QAITU_DATASET_MANIFEST" --data-root "$env:QAITU_VIDEO_ROOT" --plan "$run/frozen_plan.json" --config configs/ml/weighted_objective.yaml --output artifacts/ml/repro-weighted-oof
+```
 
-Порядок для владельца integration:
+Остальные development ablations используют отдельные configs
+`weighted_objective_30.yaml`, `weighted_hard_negatives.yaml`,
+`weighted_objective_8frames.yaml` и новые output directories.
 
-1. Сохранить общие contracts/API из ветки тимлида.
-2. Взять актуальные ML-код, ML-зависимости, тесты и handoff из `feature/ml-model`.
-3. Взять модуль `src/fortebank_audit/inference/` и относящиеся к inference конфигурации/тесты из ветки inference. Находящиеся там дополнительные ML-challenger модели и их тесты не входят в проверенный здесь рецепт из двух вариантов.
-4. Объединить правила `.gitignore`; manifests исходных данных оставить вне Git. Заполненный ML handoff заменяет шаблон из ветки тимлида.
-5. Применить настройки tail/smoothing из этого handoff и выполнить полные integration tests.
+Экспортировать в **новый** каталог, не перезаписывая поставку:
 
-В ML-ветку API и inference не переносились. Автоматический merge и end-to-end совместимость всего сервиса этой поставкой не подтверждаются.
+```powershell
+$exportCommit = git rev-parse HEAD
+& $py scripts/ml/export_model.py --checkpoint "$run/final_baseline/best.pt" --calibration "$run/final_calibration.json" --metrics "$run/baseline/summary.json" --output-dir artifacts/ml/bundles/baseline-reproduced --model-version baseline-reproduced-development --code-commit "$exportCommit" --parity-video "$env:QAITU_POSITIVE_VIDEO" "$env:QAITU_NEGATIVE_VIDEO"
+& $py scripts/ml/benchmark_bundle.py --manifest "$env:QAITU_DATASET_MANIFEST" --data-root "$env:QAITU_VIDEO_ROOT" --bundle "$bundle" --output artifacts/ml/repro-cpu-benchmark.json
+```
+
+## Inference-инженеру
+
+Подключать bundle adapter из `feature/video-inference@2f53ce1`. Реальный smoke
+с весами выполнен этим ML checkout через `ml.adapter_smoke`; итог в release record.
+В его checkout команда после приватного переноса и проверки SHA архива:
+
+```powershell
+$env:PYTHONPATH = "src"
+python -m fortebank_audit.inference.benchmark --video "$env:QAITU_POSITIVE_VIDEO" --predictor onnx --bundle artifacts/ml/bundles/baseline-audited-v4 --allow-development-model --evidence-root "$env:QAITU_EVIDENCE_ROOT"
+```
+
+Исправить отдельно `cv2.imwrite` для Unicode evidence root. Рекомендуемый путь:
+`cv2.imencode` + `Path.write_bytes` и регрессионный тест. До этого ASCII output
+позволяет выполнить demo; Unicode input уже проверен. Не превращать JPEG failure
+в `no_violation`. Визуальную различимость JPEG и UI-округление ML-ветка не меняет.
+
+Отдельно проверен unknown-codec fixture: текущий `VideoReader.metadata()`
+завершается `AttributeError` из-за отсутствующего decoder, без verdict.
+Владельцу нужно проверять `stream.codec_context is None` до чтения width/decode
+и выдавать `UnsupportedVideoError`. ML sampler уже содержит такой guard.
+
+Внутренние события: start_sec, end_sec, peak_time_sec, peak_score,
+`supporting_windows` (число), `supporting_window_indices`. Полный timeline:
+CLI diagnostics либо `ml.runtime.predict_video(..., include_window_scores=True)`.
+Не публиковать подробные window traces и dataset-derived отчёты в Git.
+
+## Тимлиду: подключение API
+
+В доступном `feature/teamlead-core@fd23a1b` API всё ещё использует joblib-путь;
+переменная `FORTEBANK_MODEL_PATH` сама по себе не переключает его на новый ONNX.
+Нужна интеграция composition root с `load_bundle_contract`, `OnnxPredictor` и
+`analyze_video` из 2f53ce1. При загрузке development bundle передать явный
+`allow_development_model=True`; не делать его незаметной production-подменой.
+Логировать predictor class, model_version и проверенный SHA при старте API.
+
+`possible_violation` переводится в публичное `violation` только после успешного
+анализа. Любой decode/model/evidence failure возвращает `failed`. Проверить API,
+повторную загрузку, frontend и время целого запроса. Полный ML CPU-прогон 40 видео
+успешен, max 10.300 s, p95 4.482 s; это не общий API SLA. Предыдущий прогон тех же весов достигал 24.941 s при другой нагрузке компьютера; ускорение модели не заявляется. Live backend и API этой
+задачей не переключались. Тип действия/нарушения и юридический вывод не выдумывать.

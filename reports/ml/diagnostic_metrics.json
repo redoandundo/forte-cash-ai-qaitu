@@ -1,0 +1,1260 @@
+{
+  "baseline": {
+    "metrics": {
+      "precision": 0.5,
+      "recall": 0.6190476190476191,
+      "macro_f1": 0.4584139264990329,
+      "confusion_matrix": [
+        [
+          6,
+          13
+        ],
+        [
+          8,
+          13
+        ]
+      ],
+      "source_count": 40,
+      "false_positive_videos_per_minute": 1.0325689454889646,
+      "false_positive_events_per_minute": 1.0325689454889646,
+      "event_tp": 8,
+      "event_fp": 18,
+      "event_fn": 14,
+      "event_recall_within_5_sec": 0.36363636363636365,
+      "timestamp_mae_sec": 7.133333333333334,
+      "timestamp_metric": "one_to_one_emitted_peaks_to_annotated_points",
+      "positive_f1": 0.5531914893617021,
+      "excluded_ambiguous_temporal_sources": 1,
+      "unambiguous_point_metrics": {
+        "precision": 0.48,
+        "recall": 0.6,
+        "macro_f1": 0.4484848484848485,
+        "confusion_matrix": [
+          [
+            6,
+            13
+          ],
+          [
+            8,
+            12
+          ]
+        ],
+        "source_count": 39,
+        "false_positive_videos_per_minute": 1.0325689454889646,
+        "false_positive_events_per_minute": 1.0325689454889646,
+        "event_tp": 8,
+        "event_fp": 17,
+        "event_fn": 12,
+        "event_recall_within_5_sec": 0.4,
+        "timestamp_mae_sec": 5.061111111111111,
+        "timestamp_metric": "one_to_one_emitted_peaks_to_annotated_points"
+      },
+      "annotation_scope": "point_reference_metrics_not_verified_action_intervals",
+      "complete_positive_annotation_sources": 0
+    },
+    "scenario_cohorts": {
+      "paired": {
+        "precision": 0.4444444444444444,
+        "recall": 0.6153846153846154,
+        "macro_f1": 0.4009216589861751,
+        "confusion_matrix": [
+          [
+            3,
+            10
+          ],
+          [
+            5,
+            8
+          ]
+        ],
+        "source_count": 26,
+        "false_positive_videos_per_minute": 1.2000037500117189,
+        "false_positive_events_per_minute": 1.2000037500117189,
+        "event_tp": 5,
+        "event_fp": 13,
+        "event_fn": 9,
+        "event_recall_within_5_sec": 0.35714285714285715,
+        "timestamp_mae_sec": 8.716666666666667,
+        "timestamp_metric": "one_to_one_emitted_peaks_to_annotated_points"
+      },
+      "single_source": {
+        "precision": 0.625,
+        "recall": 0.625,
+        "macro_f1": 0.5625,
+        "confusion_matrix": [
+          [
+            3,
+            3
+          ],
+          [
+            3,
+            5
+          ]
+        ],
+        "source_count": 14,
+        "false_positive_videos_per_minute": 0.704779407716111,
+        "false_positive_events_per_minute": 0.704779407716111,
+        "event_tp": 3,
+        "event_fp": 5,
+        "event_fn": 5,
+        "event_recall_within_5_sec": 0.375,
+        "timestamp_mae_sec": 4.6,
+        "timestamp_metric": "one_to_one_emitted_peaks_to_annotated_points"
+      }
+    },
+    "error_counts": {
+      "positive_source_with_missed_or_mislocalized_point": 13,
+      "false_positive_video": 13,
+      "classification_error_with_flat_window_scores_range_lt_0_02": 11,
+      "false_negative": 8,
+      "classification_error_on_uncertain_annotation": 7,
+      "false_positive_event_at_video_boundary": 4,
+      "classification_error_with_threshold_margin_lt_0_01": 8,
+      "false_negative_crosses_threshold_before_smoothing": 1
+    },
+    "folds": [
+      {
+        "precision": 0.5555555555555556,
+        "recall": 1.0,
+        "macro_f1": 0.35714285714285715,
+        "confusion_matrix": [
+          [
+            0,
+            4
+          ],
+          [
+            0,
+            5
+          ]
+        ],
+        "source_count": 9,
+        "false_positive_videos_per_minute": 1.593279458727562,
+        "false_positive_events_per_minute": 1.593279458727562,
+        "event_tp": 3,
+        "event_fp": 6,
+        "event_fn": 3,
+        "event_recall_within_5_sec": 0.5,
+        "timestamp_mae_sec": 8.8,
+        "timestamp_metric": "one_to_one_emitted_peaks_to_annotated_points",
+        "positive_f1": 0.7142857142857143,
+        "excluded_ambiguous_temporal_sources": 1,
+        "unambiguous_point_metrics": {
+          "precision": 0.5,
+          "recall": 1.0,
+          "macro_f1": 0.3333333333333333,
+          "confusion_matrix": [
+            [
+              0,
+              4
+            ],
+            [
+              0,
+              4
+            ]
+          ],
+          "source_count": 8,
+          "false_positive_videos_per_minute": 1.593279458727562,
+          "false_positive_events_per_minute": 1.593279458727562,
+          "event_tp": 3,
+          "event_fp": 5,
+          "event_fn": 1,
+          "event_recall_within_5_sec": 0.75,
+          "timestamp_mae_sec": 3.0,
+          "timestamp_metric": "one_to_one_emitted_peaks_to_annotated_points"
+        },
+        "annotation_scope": "point_reference_metrics_not_verified_action_intervals",
+        "complete_positive_annotation_sources": 0
+      },
+      {
+        "precision": 0.25,
+        "recall": 0.3333333333333333,
+        "macro_f1": 0.2857142857142857,
+        "confusion_matrix": [
+          [
+            1,
+            3
+          ],
+          [
+            2,
+            1
+          ]
+        ],
+        "source_count": 7,
+        "false_positive_videos_per_minute": 1.9007454486056252,
+        "false_positive_events_per_minute": 1.9007454486056252,
+        "event_tp": 1,
+        "event_fp": 3,
+        "event_fn": 2,
+        "event_recall_within_5_sec": 0.3333333333333333,
+        "timestamp_mae_sec": 2.0,
+        "timestamp_metric": "one_to_one_emitted_peaks_to_annotated_points",
+        "positive_f1": 0.2857142857142857,
+        "excluded_ambiguous_temporal_sources": 0,
+        "unambiguous_point_metrics": {
+          "precision": 0.25,
+          "recall": 0.3333333333333333,
+          "macro_f1": 0.2857142857142857,
+          "confusion_matrix": [
+            [
+              1,
+              3
+            ],
+            [
+              2,
+              1
+            ]
+          ],
+          "source_count": 7,
+          "false_positive_videos_per_minute": 1.9007454486056252,
+          "false_positive_events_per_minute": 1.9007454486056252,
+          "event_tp": 1,
+          "event_fp": 3,
+          "event_fn": 2,
+          "event_recall_within_5_sec": 0.3333333333333333,
+          "timestamp_mae_sec": 2.0,
+          "timestamp_metric": "one_to_one_emitted_peaks_to_annotated_points"
+        },
+        "annotation_scope": "point_reference_metrics_not_verified_action_intervals",
+        "complete_positive_annotation_sources": 0
+      },
+      {
+        "precision": 0.5,
+        "recall": 0.2,
+        "macro_f1": 0.41558441558441556,
+        "confusion_matrix": [
+          [
+            3,
+            1
+          ],
+          [
+            4,
+            1
+          ]
+        ],
+        "source_count": 9,
+        "false_positive_videos_per_minute": 0.45192385396896634,
+        "false_positive_events_per_minute": 0.45192385396896634,
+        "event_tp": 0,
+        "event_fp": 2,
+        "event_fn": 5,
+        "event_recall_within_5_sec": 0.0,
+        "timestamp_mae_sec": 14.0,
+        "timestamp_metric": "one_to_one_emitted_peaks_to_annotated_points",
+        "positive_f1": 0.2857142857142857,
+        "excluded_ambiguous_temporal_sources": 0,
+        "unambiguous_point_metrics": {
+          "precision": 0.5,
+          "recall": 0.2,
+          "macro_f1": 0.41558441558441556,
+          "confusion_matrix": [
+            [
+              3,
+              1
+            ],
+            [
+              4,
+              1
+            ]
+          ],
+          "source_count": 9,
+          "false_positive_videos_per_minute": 0.45192385396896634,
+          "false_positive_events_per_minute": 0.45192385396896634,
+          "event_tp": 0,
+          "event_fp": 2,
+          "event_fn": 5,
+          "event_recall_within_5_sec": 0.0,
+          "timestamp_mae_sec": 14.0,
+          "timestamp_metric": "one_to_one_emitted_peaks_to_annotated_points"
+        },
+        "annotation_scope": "point_reference_metrics_not_verified_action_intervals",
+        "complete_positive_annotation_sources": 0
+      },
+      {
+        "precision": 0.6666666666666666,
+        "recall": 0.5,
+        "macro_f1": 0.5714285714285714,
+        "confusion_matrix": [
+          [
+            2,
+            1
+          ],
+          [
+            2,
+            2
+          ]
+        ],
+        "source_count": 7,
+        "false_positive_videos_per_minute": 0.32673862101553314,
+        "false_positive_events_per_minute": 0.32673862101553314,
+        "event_tp": 1,
+        "event_fp": 2,
+        "event_fn": 3,
+        "event_recall_within_5_sec": 0.25,
+        "timestamp_mae_sec": 5.0,
+        "timestamp_metric": "one_to_one_emitted_peaks_to_annotated_points",
+        "positive_f1": 0.5714285714285714,
+        "excluded_ambiguous_temporal_sources": 0,
+        "unambiguous_point_metrics": {
+          "precision": 0.6666666666666666,
+          "recall": 0.5,
+          "macro_f1": 0.5714285714285714,
+          "confusion_matrix": [
+            [
+              2,
+              1
+            ],
+            [
+              2,
+              2
+            ]
+          ],
+          "source_count": 7,
+          "false_positive_videos_per_minute": 0.32673862101553314,
+          "false_positive_events_per_minute": 0.32673862101553314,
+          "event_tp": 1,
+          "event_fp": 2,
+          "event_fn": 3,
+          "event_recall_within_5_sec": 0.25,
+          "timestamp_mae_sec": 5.0,
+          "timestamp_metric": "one_to_one_emitted_peaks_to_annotated_points"
+        },
+        "annotation_scope": "point_reference_metrics_not_verified_action_intervals",
+        "complete_positive_annotation_sources": 0
+      },
+      {
+        "precision": 0.5,
+        "recall": 1.0,
+        "macro_f1": 0.3333333333333333,
+        "confusion_matrix": [
+          [
+            0,
+            4
+          ],
+          [
+            0,
+            4
+          ]
+        ],
+        "source_count": 8,
+        "false_positive_videos_per_minute": 1.2392446846676282,
+        "false_positive_events_per_minute": 1.2392446846676282,
+        "event_tp": 3,
+        "event_fp": 5,
+        "event_fn": 1,
+        "event_recall_within_5_sec": 0.75,
+        "timestamp_mae_sec": 5.683333333333334,
+        "timestamp_metric": "one_to_one_emitted_peaks_to_annotated_points",
+        "positive_f1": 0.6666666666666666,
+        "excluded_ambiguous_temporal_sources": 0,
+        "unambiguous_point_metrics": {
+          "precision": 0.5,
+          "recall": 1.0,
+          "macro_f1": 0.3333333333333333,
+          "confusion_matrix": [
+            [
+              0,
+              4
+            ],
+            [
+              0,
+              4
+            ]
+          ],
+          "source_count": 8,
+          "false_positive_videos_per_minute": 1.2392446846676282,
+          "false_positive_events_per_minute": 1.2392446846676282,
+          "event_tp": 3,
+          "event_fp": 5,
+          "event_fn": 1,
+          "event_recall_within_5_sec": 0.75,
+          "timestamp_mae_sec": 5.683333333333334,
+          "timestamp_metric": "one_to_one_emitted_peaks_to_annotated_points"
+        },
+        "annotation_scope": "point_reference_metrics_not_verified_action_intervals",
+        "complete_positive_annotation_sources": 0
+      }
+    ],
+    "evaluation_protocol": "Five frozen scenario-safe outer folds; three train folds, one separate calibration fold, one outer evaluation fold; fixed six epochs. Reused development dataset, not an untouched external test.",
+    "quality_passed": false
+  },
+  "rejected_weighted_objective": {
+    "metrics": {
+      "precision": 0.4827586206896552,
+      "recall": 0.6666666666666666,
+      "macro_f1": 0.41333333333333333,
+      "confusion_matrix": [
+        [
+          4,
+          15
+        ],
+        [
+          7,
+          14
+        ]
+      ],
+      "source_count": 40,
+      "false_positive_videos_per_minute": 1.1914257063334206,
+      "false_positive_events_per_minute": 1.1914257063334206,
+      "event_tp": 9,
+      "event_fp": 20,
+      "event_fn": 13,
+      "event_recall_within_5_sec": 0.4090909090909091,
+      "timestamp_mae_sec": 5.623809523809524,
+      "timestamp_metric": "one_to_one_emitted_peaks_to_annotated_points",
+      "positive_f1": 0.56,
+      "excluded_ambiguous_temporal_sources": 1,
+      "unambiguous_point_metrics": {
+        "precision": 0.4642857142857143,
+        "recall": 0.65,
+        "macro_f1": 0.4041666666666667,
+        "confusion_matrix": [
+          [
+            4,
+            15
+          ],
+          [
+            7,
+            13
+          ]
+        ],
+        "source_count": 39,
+        "false_positive_videos_per_minute": 1.1914257063334206,
+        "false_positive_events_per_minute": 1.1914257063334206,
+        "event_tp": 8,
+        "event_fp": 20,
+        "event_fn": 12,
+        "event_recall_within_5_sec": 0.4,
+        "timestamp_mae_sec": 5.97948717948718,
+        "timestamp_metric": "one_to_one_emitted_peaks_to_annotated_points"
+      },
+      "annotation_scope": "point_reference_metrics_not_verified_action_intervals",
+      "complete_positive_annotation_sources": 0
+    },
+    "scenario_cohorts": {
+      "paired": {
+        "precision": 0.42857142857142855,
+        "recall": 0.6923076923076923,
+        "macro_f1": 0.3202614379084967,
+        "confusion_matrix": [
+          [
+            1,
+            12
+          ],
+          [
+            4,
+            9
+          ]
+        ],
+        "source_count": 26,
+        "false_positive_videos_per_minute": 1.4400045000140627,
+        "false_positive_events_per_minute": 1.4400045000140627,
+        "event_tp": 6,
+        "event_fp": 15,
+        "event_fn": 8,
+        "event_recall_within_5_sec": 0.42857142857142855,
+        "timestamp_mae_sec": 5.970370370370371,
+        "timestamp_metric": "one_to_one_emitted_peaks_to_annotated_points"
+      },
+      "single_source": {
+        "precision": 0.625,
+        "recall": 0.625,
+        "macro_f1": 0.5625,
+        "confusion_matrix": [
+          [
+            3,
+            3
+          ],
+          [
+            3,
+            5
+          ]
+        ],
+        "source_count": 14,
+        "false_positive_videos_per_minute": 0.704779407716111,
+        "false_positive_events_per_minute": 0.704779407716111,
+        "event_tp": 3,
+        "event_fp": 5,
+        "event_fn": 5,
+        "event_recall_within_5_sec": 0.375,
+        "timestamp_mae_sec": 5.0,
+        "timestamp_metric": "one_to_one_emitted_peaks_to_annotated_points"
+      }
+    },
+    "error_counts": {
+      "positive_source_with_missed_or_mislocalized_point": 13,
+      "false_positive_video": 15,
+      "classification_error_with_flat_window_scores_range_lt_0_02": 11,
+      "false_negative": 7,
+      "classification_error_on_uncertain_annotation": 6,
+      "false_positive_event_at_video_boundary": 4,
+      "classification_error_with_threshold_margin_lt_0_01": 8
+    },
+    "folds": [
+      {
+        "precision": 0.5555555555555556,
+        "recall": 1.0,
+        "macro_f1": 0.35714285714285715,
+        "confusion_matrix": [
+          [
+            0,
+            4
+          ],
+          [
+            0,
+            5
+          ]
+        ],
+        "source_count": 9,
+        "false_positive_videos_per_minute": 1.593279458727562,
+        "false_positive_events_per_minute": 1.593279458727562,
+        "event_tp": 4,
+        "event_fp": 5,
+        "event_fn": 2,
+        "event_recall_within_5_sec": 0.6666666666666666,
+        "timestamp_mae_sec": 2.6,
+        "timestamp_metric": "one_to_one_emitted_peaks_to_annotated_points",
+        "positive_f1": 0.7142857142857143,
+        "excluded_ambiguous_temporal_sources": 1,
+        "unambiguous_point_metrics": {
+          "precision": 0.5,
+          "recall": 1.0,
+          "macro_f1": 0.3333333333333333,
+          "confusion_matrix": [
+            [
+              0,
+              4
+            ],
+            [
+              0,
+              4
+            ]
+          ],
+          "source_count": 8,
+          "false_positive_videos_per_minute": 1.593279458727562,
+          "false_positive_events_per_minute": 1.593279458727562,
+          "event_tp": 3,
+          "event_fp": 5,
+          "event_fn": 1,
+          "event_recall_within_5_sec": 0.75,
+          "timestamp_mae_sec": 3.0,
+          "timestamp_metric": "one_to_one_emitted_peaks_to_annotated_points"
+        },
+        "annotation_scope": "point_reference_metrics_not_verified_action_intervals",
+        "complete_positive_annotation_sources": 0
+      },
+      {
+        "precision": 0.25,
+        "recall": 0.3333333333333333,
+        "macro_f1": 0.2857142857142857,
+        "confusion_matrix": [
+          [
+            1,
+            3
+          ],
+          [
+            2,
+            1
+          ]
+        ],
+        "source_count": 7,
+        "false_positive_videos_per_minute": 1.9007454486056252,
+        "false_positive_events_per_minute": 1.9007454486056252,
+        "event_tp": 1,
+        "event_fp": 3,
+        "event_fn": 2,
+        "event_recall_within_5_sec": 0.3333333333333333,
+        "timestamp_mae_sec": 2.0,
+        "timestamp_metric": "one_to_one_emitted_peaks_to_annotated_points",
+        "positive_f1": 0.2857142857142857,
+        "excluded_ambiguous_temporal_sources": 0,
+        "unambiguous_point_metrics": {
+          "precision": 0.25,
+          "recall": 0.3333333333333333,
+          "macro_f1": 0.2857142857142857,
+          "confusion_matrix": [
+            [
+              1,
+              3
+            ],
+            [
+              2,
+              1
+            ]
+          ],
+          "source_count": 7,
+          "false_positive_videos_per_minute": 1.9007454486056252,
+          "false_positive_events_per_minute": 1.9007454486056252,
+          "event_tp": 1,
+          "event_fp": 3,
+          "event_fn": 2,
+          "event_recall_within_5_sec": 0.3333333333333333,
+          "timestamp_mae_sec": 2.0,
+          "timestamp_metric": "one_to_one_emitted_peaks_to_annotated_points"
+        },
+        "annotation_scope": "point_reference_metrics_not_verified_action_intervals",
+        "complete_positive_annotation_sources": 0
+      },
+      {
+        "precision": 0.4,
+        "recall": 0.4,
+        "macro_f1": 0.325,
+        "confusion_matrix": [
+          [
+            1,
+            3
+          ],
+          [
+            3,
+            2
+          ]
+        ],
+        "source_count": 9,
+        "false_positive_videos_per_minute": 1.355771561906899,
+        "false_positive_events_per_minute": 1.355771561906899,
+        "event_tp": 0,
+        "event_fp": 5,
+        "event_fn": 5,
+        "event_recall_within_5_sec": 0.0,
+        "timestamp_mae_sec": 15.5,
+        "timestamp_metric": "one_to_one_emitted_peaks_to_annotated_points",
+        "positive_f1": 0.4,
+        "excluded_ambiguous_temporal_sources": 0,
+        "unambiguous_point_metrics": {
+          "precision": 0.4,
+          "recall": 0.4,
+          "macro_f1": 0.325,
+          "confusion_matrix": [
+            [
+              1,
+              3
+            ],
+            [
+              3,
+              2
+            ]
+          ],
+          "source_count": 9,
+          "false_positive_videos_per_minute": 1.355771561906899,
+          "false_positive_events_per_minute": 1.355771561906899,
+          "event_tp": 0,
+          "event_fp": 5,
+          "event_fn": 5,
+          "event_recall_within_5_sec": 0.0,
+          "timestamp_mae_sec": 15.5,
+          "timestamp_metric": "one_to_one_emitted_peaks_to_annotated_points"
+        },
+        "annotation_scope": "point_reference_metrics_not_verified_action_intervals",
+        "complete_positive_annotation_sources": 0
+      },
+      {
+        "precision": 0.6666666666666666,
+        "recall": 0.5,
+        "macro_f1": 0.5714285714285714,
+        "confusion_matrix": [
+          [
+            2,
+            1
+          ],
+          [
+            2,
+            2
+          ]
+        ],
+        "source_count": 7,
+        "false_positive_videos_per_minute": 0.32673862101553314,
+        "false_positive_events_per_minute": 0.32673862101553314,
+        "event_tp": 1,
+        "event_fp": 2,
+        "event_fn": 3,
+        "event_recall_within_5_sec": 0.25,
+        "timestamp_mae_sec": 5.0,
+        "timestamp_metric": "one_to_one_emitted_peaks_to_annotated_points",
+        "positive_f1": 0.5714285714285714,
+        "excluded_ambiguous_temporal_sources": 0,
+        "unambiguous_point_metrics": {
+          "precision": 0.6666666666666666,
+          "recall": 0.5,
+          "macro_f1": 0.5714285714285714,
+          "confusion_matrix": [
+            [
+              2,
+              1
+            ],
+            [
+              2,
+              2
+            ]
+          ],
+          "source_count": 7,
+          "false_positive_videos_per_minute": 0.32673862101553314,
+          "false_positive_events_per_minute": 0.32673862101553314,
+          "event_tp": 1,
+          "event_fp": 2,
+          "event_fn": 3,
+          "event_recall_within_5_sec": 0.25,
+          "timestamp_mae_sec": 5.0,
+          "timestamp_metric": "one_to_one_emitted_peaks_to_annotated_points"
+        },
+        "annotation_scope": "point_reference_metrics_not_verified_action_intervals",
+        "complete_positive_annotation_sources": 0
+      },
+      {
+        "precision": 0.5,
+        "recall": 1.0,
+        "macro_f1": 0.3333333333333333,
+        "confusion_matrix": [
+          [
+            0,
+            4
+          ],
+          [
+            0,
+            4
+          ]
+        ],
+        "source_count": 8,
+        "false_positive_videos_per_minute": 1.2392446846676282,
+        "false_positive_events_per_minute": 1.2392446846676282,
+        "event_tp": 3,
+        "event_fp": 5,
+        "event_fn": 1,
+        "event_recall_within_5_sec": 0.75,
+        "timestamp_mae_sec": 5.683333333333334,
+        "timestamp_metric": "one_to_one_emitted_peaks_to_annotated_points",
+        "positive_f1": 0.6666666666666666,
+        "excluded_ambiguous_temporal_sources": 0,
+        "unambiguous_point_metrics": {
+          "precision": 0.5,
+          "recall": 1.0,
+          "macro_f1": 0.3333333333333333,
+          "confusion_matrix": [
+            [
+              0,
+              4
+            ],
+            [
+              0,
+              4
+            ]
+          ],
+          "source_count": 8,
+          "false_positive_videos_per_minute": 1.2392446846676282,
+          "false_positive_events_per_minute": 1.2392446846676282,
+          "event_tp": 3,
+          "event_fp": 5,
+          "event_fn": 1,
+          "event_recall_within_5_sec": 0.75,
+          "timestamp_mae_sec": 5.683333333333334,
+          "timestamp_metric": "one_to_one_emitted_peaks_to_annotated_points"
+        },
+        "annotation_scope": "point_reference_metrics_not_verified_action_intervals",
+        "complete_positive_annotation_sources": 0
+      }
+    ]
+  },
+  "development_ablation_calibration_only": {
+    "weighted_objective": {
+      "metrics": {
+        "precision": 0.42857142857142855,
+        "recall": 1.0,
+        "macro_f1": 0.3,
+        "confusion_matrix": [
+          [
+            0,
+            4
+          ],
+          [
+            0,
+            3
+          ]
+        ],
+        "source_count": 7,
+        "false_positive_videos_per_minute": 2.5343272648075,
+        "false_positive_events_per_minute": 2.5343272648075,
+        "event_tp": 2,
+        "event_fp": 5,
+        "event_fn": 1,
+        "event_recall_within_5_sec": 0.6666666666666666,
+        "timestamp_mae_sec": 5.333333333333333,
+        "timestamp_metric": "one_to_one_emitted_peaks_to_annotated_points",
+        "positive_f1": 0.6,
+        "excluded_ambiguous_temporal_sources": 0,
+        "unambiguous_point_metrics": {
+          "precision": 0.42857142857142855,
+          "recall": 1.0,
+          "macro_f1": 0.3,
+          "confusion_matrix": [
+            [
+              0,
+              4
+            ],
+            [
+              0,
+              3
+            ]
+          ],
+          "source_count": 7,
+          "false_positive_videos_per_minute": 2.5343272648075,
+          "false_positive_events_per_minute": 2.5343272648075,
+          "event_tp": 2,
+          "event_fp": 5,
+          "event_fn": 1,
+          "event_recall_within_5_sec": 0.6666666666666666,
+          "timestamp_mae_sec": 5.333333333333333,
+          "timestamp_metric": "one_to_one_emitted_peaks_to_annotated_points"
+        },
+        "annotation_scope": "point_reference_metrics_not_verified_action_intervals",
+        "complete_positive_annotation_sources": 0
+      },
+      "scenario_cohorts": {
+        "paired": {
+          "precision": 0.5,
+          "recall": 1.0,
+          "macro_f1": 0.3333333333333333,
+          "confusion_matrix": [
+            [
+              0,
+              2
+            ],
+            [
+              0,
+              2
+            ]
+          ],
+          "source_count": 4,
+          "false_positive_videos_per_minute": 2.3391812865497075,
+          "false_positive_events_per_minute": 2.3391812865497075,
+          "event_tp": 2,
+          "event_fp": 2,
+          "event_fn": 0,
+          "event_recall_within_5_sec": 1.0,
+          "timestamp_mae_sec": 1.5,
+          "timestamp_metric": "one_to_one_emitted_peaks_to_annotated_points"
+        },
+        "single_source": {
+          "precision": 0.3333333333333333,
+          "recall": 1.0,
+          "macro_f1": 0.25,
+          "confusion_matrix": [
+            [
+              0,
+              2
+            ],
+            [
+              0,
+              1
+            ]
+          ],
+          "source_count": 3,
+          "false_positive_videos_per_minute": 2.764996867776986,
+          "false_positive_events_per_minute": 2.764996867776986,
+          "event_tp": 0,
+          "event_fp": 3,
+          "event_fn": 1,
+          "event_recall_within_5_sec": 0.0,
+          "timestamp_mae_sec": 13.0,
+          "timestamp_metric": "one_to_one_emitted_peaks_to_annotated_points"
+        }
+      },
+      "error_counts": {
+        "positive_source_with_missed_or_mislocalized_point": 1,
+        "false_positive_video": 4,
+        "classification_error_with_flat_window_scores_range_lt_0_02": 2,
+        "false_positive_event_at_video_boundary": 2
+      },
+      "calibration_is_test": false
+    },
+    "weighted_objective_30": {
+      "metrics": {
+        "precision": 0.42857142857142855,
+        "recall": 1.0,
+        "macro_f1": 0.3,
+        "confusion_matrix": [
+          [
+            0,
+            4
+          ],
+          [
+            0,
+            3
+          ]
+        ],
+        "source_count": 7,
+        "false_positive_videos_per_minute": 2.5343272648075,
+        "false_positive_events_per_minute": 2.5343272648075,
+        "event_tp": 2,
+        "event_fp": 5,
+        "event_fn": 1,
+        "event_recall_within_5_sec": 0.6666666666666666,
+        "timestamp_mae_sec": 5.333333333333333,
+        "timestamp_metric": "one_to_one_emitted_peaks_to_annotated_points",
+        "positive_f1": 0.6,
+        "excluded_ambiguous_temporal_sources": 0,
+        "unambiguous_point_metrics": {
+          "precision": 0.42857142857142855,
+          "recall": 1.0,
+          "macro_f1": 0.3,
+          "confusion_matrix": [
+            [
+              0,
+              4
+            ],
+            [
+              0,
+              3
+            ]
+          ],
+          "source_count": 7,
+          "false_positive_videos_per_minute": 2.5343272648075,
+          "false_positive_events_per_minute": 2.5343272648075,
+          "event_tp": 2,
+          "event_fp": 5,
+          "event_fn": 1,
+          "event_recall_within_5_sec": 0.6666666666666666,
+          "timestamp_mae_sec": 5.333333333333333,
+          "timestamp_metric": "one_to_one_emitted_peaks_to_annotated_points"
+        },
+        "annotation_scope": "point_reference_metrics_not_verified_action_intervals",
+        "complete_positive_annotation_sources": 0
+      },
+      "scenario_cohorts": {
+        "paired": {
+          "precision": 0.5,
+          "recall": 1.0,
+          "macro_f1": 0.3333333333333333,
+          "confusion_matrix": [
+            [
+              0,
+              2
+            ],
+            [
+              0,
+              2
+            ]
+          ],
+          "source_count": 4,
+          "false_positive_videos_per_minute": 2.3391812865497075,
+          "false_positive_events_per_minute": 2.3391812865497075,
+          "event_tp": 2,
+          "event_fp": 2,
+          "event_fn": 0,
+          "event_recall_within_5_sec": 1.0,
+          "timestamp_mae_sec": 1.5,
+          "timestamp_metric": "one_to_one_emitted_peaks_to_annotated_points"
+        },
+        "single_source": {
+          "precision": 0.3333333333333333,
+          "recall": 1.0,
+          "macro_f1": 0.25,
+          "confusion_matrix": [
+            [
+              0,
+              2
+            ],
+            [
+              0,
+              1
+            ]
+          ],
+          "source_count": 3,
+          "false_positive_videos_per_minute": 2.764996867776986,
+          "false_positive_events_per_minute": 2.764996867776986,
+          "event_tp": 0,
+          "event_fp": 3,
+          "event_fn": 1,
+          "event_recall_within_5_sec": 0.0,
+          "timestamp_mae_sec": 13.0,
+          "timestamp_metric": "one_to_one_emitted_peaks_to_annotated_points"
+        }
+      },
+      "error_counts": {
+        "positive_source_with_missed_or_mislocalized_point": 1,
+        "false_positive_video": 4,
+        "false_positive_event_at_video_boundary": 3
+      },
+      "calibration_is_test": false
+    },
+    "weighted_hard_negatives": {
+      "metrics": {
+        "precision": 0.42857142857142855,
+        "recall": 1.0,
+        "macro_f1": 0.3,
+        "confusion_matrix": [
+          [
+            0,
+            4
+          ],
+          [
+            0,
+            3
+          ]
+        ],
+        "source_count": 7,
+        "false_positive_videos_per_minute": 2.5343272648075,
+        "false_positive_events_per_minute": 2.5343272648075,
+        "event_tp": 2,
+        "event_fp": 5,
+        "event_fn": 1,
+        "event_recall_within_5_sec": 0.6666666666666666,
+        "timestamp_mae_sec": 5.333333333333333,
+        "timestamp_metric": "one_to_one_emitted_peaks_to_annotated_points",
+        "positive_f1": 0.6,
+        "excluded_ambiguous_temporal_sources": 0,
+        "unambiguous_point_metrics": {
+          "precision": 0.42857142857142855,
+          "recall": 1.0,
+          "macro_f1": 0.3,
+          "confusion_matrix": [
+            [
+              0,
+              4
+            ],
+            [
+              0,
+              3
+            ]
+          ],
+          "source_count": 7,
+          "false_positive_videos_per_minute": 2.5343272648075,
+          "false_positive_events_per_minute": 2.5343272648075,
+          "event_tp": 2,
+          "event_fp": 5,
+          "event_fn": 1,
+          "event_recall_within_5_sec": 0.6666666666666666,
+          "timestamp_mae_sec": 5.333333333333333,
+          "timestamp_metric": "one_to_one_emitted_peaks_to_annotated_points"
+        },
+        "annotation_scope": "point_reference_metrics_not_verified_action_intervals",
+        "complete_positive_annotation_sources": 0
+      },
+      "scenario_cohorts": {
+        "paired": {
+          "precision": 0.5,
+          "recall": 1.0,
+          "macro_f1": 0.3333333333333333,
+          "confusion_matrix": [
+            [
+              0,
+              2
+            ],
+            [
+              0,
+              2
+            ]
+          ],
+          "source_count": 4,
+          "false_positive_videos_per_minute": 2.3391812865497075,
+          "false_positive_events_per_minute": 2.3391812865497075,
+          "event_tp": 2,
+          "event_fp": 2,
+          "event_fn": 0,
+          "event_recall_within_5_sec": 1.0,
+          "timestamp_mae_sec": 1.5,
+          "timestamp_metric": "one_to_one_emitted_peaks_to_annotated_points"
+        },
+        "single_source": {
+          "precision": 0.3333333333333333,
+          "recall": 1.0,
+          "macro_f1": 0.25,
+          "confusion_matrix": [
+            [
+              0,
+              2
+            ],
+            [
+              0,
+              1
+            ]
+          ],
+          "source_count": 3,
+          "false_positive_videos_per_minute": 2.764996867776986,
+          "false_positive_events_per_minute": 2.764996867776986,
+          "event_tp": 0,
+          "event_fp": 3,
+          "event_fn": 1,
+          "event_recall_within_5_sec": 0.0,
+          "timestamp_mae_sec": 13.0,
+          "timestamp_metric": "one_to_one_emitted_peaks_to_annotated_points"
+        }
+      },
+      "error_counts": {
+        "positive_source_with_missed_or_mislocalized_point": 1,
+        "false_positive_video": 4,
+        "classification_error_with_flat_window_scores_range_lt_0_02": 3,
+        "false_positive_event_at_video_boundary": 2
+      },
+      "calibration_is_test": false
+    },
+    "weighted_objective_8frames": {
+      "metrics": {
+        "precision": 0.42857142857142855,
+        "recall": 1.0,
+        "macro_f1": 0.3,
+        "confusion_matrix": [
+          [
+            0,
+            4
+          ],
+          [
+            0,
+            3
+          ]
+        ],
+        "source_count": 7,
+        "false_positive_videos_per_minute": 2.5343272648075,
+        "false_positive_events_per_minute": 2.5343272648075,
+        "event_tp": 2,
+        "event_fp": 5,
+        "event_fn": 1,
+        "event_recall_within_5_sec": 0.6666666666666666,
+        "timestamp_mae_sec": 6.0,
+        "timestamp_metric": "one_to_one_emitted_peaks_to_annotated_points",
+        "positive_f1": 0.6,
+        "excluded_ambiguous_temporal_sources": 0,
+        "unambiguous_point_metrics": {
+          "precision": 0.42857142857142855,
+          "recall": 1.0,
+          "macro_f1": 0.3,
+          "confusion_matrix": [
+            [
+              0,
+              4
+            ],
+            [
+              0,
+              3
+            ]
+          ],
+          "source_count": 7,
+          "false_positive_videos_per_minute": 2.5343272648075,
+          "false_positive_events_per_minute": 2.5343272648075,
+          "event_tp": 2,
+          "event_fp": 5,
+          "event_fn": 1,
+          "event_recall_within_5_sec": 0.6666666666666666,
+          "timestamp_mae_sec": 6.0,
+          "timestamp_metric": "one_to_one_emitted_peaks_to_annotated_points"
+        },
+        "annotation_scope": "point_reference_metrics_not_verified_action_intervals",
+        "complete_positive_annotation_sources": 0
+      },
+      "scenario_cohorts": {
+        "paired": {
+          "precision": 0.5,
+          "recall": 1.0,
+          "macro_f1": 0.3333333333333333,
+          "confusion_matrix": [
+            [
+              0,
+              2
+            ],
+            [
+              0,
+              2
+            ]
+          ],
+          "source_count": 4,
+          "false_positive_videos_per_minute": 2.3391812865497075,
+          "false_positive_events_per_minute": 2.3391812865497075,
+          "event_tp": 2,
+          "event_fp": 2,
+          "event_fn": 0,
+          "event_recall_within_5_sec": 1.0,
+          "timestamp_mae_sec": 1.5,
+          "timestamp_metric": "one_to_one_emitted_peaks_to_annotated_points"
+        },
+        "single_source": {
+          "precision": 0.3333333333333333,
+          "recall": 1.0,
+          "macro_f1": 0.25,
+          "confusion_matrix": [
+            [
+              0,
+              2
+            ],
+            [
+              0,
+              1
+            ]
+          ],
+          "source_count": 3,
+          "false_positive_videos_per_minute": 2.764996867776986,
+          "false_positive_events_per_minute": 2.764996867776986,
+          "event_tp": 0,
+          "event_fp": 3,
+          "event_fn": 1,
+          "event_recall_within_5_sec": 0.0,
+          "timestamp_mae_sec": 15.0,
+          "timestamp_metric": "one_to_one_emitted_peaks_to_annotated_points"
+        }
+      },
+      "error_counts": {
+        "positive_source_with_missed_or_mislocalized_point": 1,
+        "false_positive_video": 4,
+        "classification_error_with_flat_window_scores_range_lt_0_02": 2,
+        "false_positive_event_at_video_boundary": 2
+      },
+      "calibration_is_test": false
+    }
+  },
+  "promotion_decision": {
+    "quality_passed": false,
+    "conditions": {
+      "macro_f1": false,
+      "recall": false,
+      "precision": false,
+      "false_positive_videos_per_minute": false,
+      "false_positive_events_per_minute": false,
+      "timestamp_mae_sec": false,
+      "event_recall_within_5_sec": false,
+      "fold_stability": false
+    },
+    "deployment_ready": false,
+    "remaining": [
+      "final_checkpoint_calibration",
+      "ONNX_parity",
+      "full_API_latency"
+    ]
+  },
+  "data_audit": {
+    "sources": 40,
+    "labels": {
+      "1": 21,
+      "0": 19
+    },
+    "scenario_groups": 27,
+    "confidence": {
+      "low": 6,
+      "high": 26,
+      "medium": 8
+    },
+    "confirmed_interval_sources": 0,
+    "duplicate_alias_groups": 2,
+    "review_queue_count": 21,
+    "checksum_and_split_checks": "passed"
+  },
+  "content_diagnostics": {
+    "sources": 8,
+    "positive_sources": 4,
+    "negative_sources": 4,
+    "windows": 143,
+    "unique_inputs_total": 143,
+    "collapsed_changed_inputs": 0,
+    "max_reorder_logit_error": 0.0,
+    "peak_range_sec": [
+      3.0,
+      37.0
+    ],
+    "role": "runtime diagnostics on calibration sources; not test metrics"
+  },
+  "tests": {
+    "focused_ml_passed": 52
+  },
+  "quality_passed": false,
+  "baseline_weights_changed": false,
+  "decoder_guard": {
+    "unknown_codec_native_crash_fixed": true,
+    "outer_metrics_unchanged_after_recalibration": true,
+    "pipeline_sha256": "c159ae7746ecd4d38c07cb5390868da4afea51cfcf3fc95e218a9343eff22045"
+  }
+}
