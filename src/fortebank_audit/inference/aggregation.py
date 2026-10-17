@@ -106,6 +106,7 @@ def aggregate_predictions(
                 peak_time_sec=peak.center_sec,
                 peak_score=peak.score,
                 supporting_windows=len(group),
+                supporting_window_indices=tuple(item.window_index for item in group),
             )
         )
     selected = sorted(events, key=lambda item: (-item.peak_score, item.peak_time_sec))[:max_events]

@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import cv2
+import numpy as np
 import pytest
 
 from fortebank_audit.inference.contracts import EvidenceExtractionError, PipelineConfig, PredictionError
@@ -25,6 +27,9 @@ def test_mock_pipeline_is_deterministic_on_generated_video(
     )
     assert result["verdict"] == "possible_violation"
     assert result["events"]
+    assert len(result["events"][0]["supporting_window_indices"]) == result["events"][0][
+        "supporting_windows"
+    ]
     assert result["window_summary"]["positive_fraction"] == 1.0
     assert result["runtime"]["windows"] > 0
     for evidence in result["events"][0]["evidence"]:
@@ -93,3 +98,24 @@ def test_existing_evidence_run_is_rejected(synthetic_video: Path, tmp_path: Path
     analyze_video(synthetic_video, MockPredictor([0.8]), config, evidence_root=tmp_path, run_id="a/b")
     with pytest.raises(EvidenceExtractionError, match="already exists"):
         analyze_video(synthetic_video, MockPredictor([0.8]), config, evidence_root=tmp_path, run_id="a/b")
+
+
+def test_evidence_is_written_and_readable_under_unicode_root(
+    synthetic_video: Path, tmp_path: Path
+) -> None:
+    evidence_root = tmp_path / "доказательства"
+    config = PipelineConfig(window_sec=8, stride_sec=2, num_frames=4, threshold=0.5)
+    result = analyze_video(
+        synthetic_video,
+        MockPredictor([0.8]),
+        config,
+        evidence_root=evidence_root,
+        run_id="unicode",
+    )
+    paths = [evidence_root / item["jpeg_path"] for item in result["events"][0]["evidence"]]
+    assert 1 <= len(paths) <= 3
+    assert all(
+        path.is_file()
+        and cv2.imdecode(np.fromfile(path, dtype=np.uint8), cv2.IMREAD_COLOR) is not None
+        for path in paths
+    )
