@@ -13,6 +13,8 @@
 - Inference progress callback commit: `5abf369`
 - API/runtime integration commit: `88e49dc`
 - Live frontend integration commit: `e5bf43e`
+- Structured evidence-chain API commit: `b170a2f`
+- Explicit file picker and evidence-chain UI commit: `9d9c9e9`
 - Expected ML bundle: `baseline-repair-v2.zip`
 - Expected archive SHA-256: `b9a8b2c809f7a6dc72e0bf655707fb9d2e430c906e573aa2f10ed4750d0ae90b`
 - The expected archive is intentionally not stored in Git and was not available locally during integration.
@@ -54,6 +56,8 @@ Observed results:
 - Real `baseline-repair-v2` quality/latency: not verified because the archive was unavailable.
 - Source-branch v3 ONNX weight: deliberately not imported; repository policy requires model weights to be transferred outside Git. ONNX execution fails closed unless an explicit canonical bundle is supplied.
 - Browser smoke on local `Х-10.mov`: passed at `http://127.0.0.1:8123`; upload returned `202`, public/progress polling returned `200`, one event at 10 seconds and three JPEG frames rendered, timecode navigation worked, browser console had zero errors.
+- Explicit picker smoke: the visible `Выбрать файл` button opened the native chooser by mouse and by keyboard (`Tab`, `Enter`); the selected MOV reached the same workspace as drag-and-drop.
+- Explanation smoke: every event rendered separate thesis, observations, reasoning, operational risk and rule-status sections. Unmatched events displayed `Нормативное основание не установлено` instead of a fabricated citation.
 - Cleanup after browser smoke: zero uploaded MOV files and zero generated evidence files remained in the configured temporary roots.
 - Mock-mode boundary: decode, temporal windows, aggregation, evidence and API/UI are real; only predictor scores are deterministic demo values and the UI labels them `Demo model`.
 

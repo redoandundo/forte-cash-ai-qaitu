@@ -1,7 +1,7 @@
 # Evidence chain and explicit file picker design
 
 Date: 2026-10-17
-Status: proposed for user review
+Status: implemented and browser-verified
 Owner: teamlead
 Target branch: `feature/teamlead-ml-inference-integration`
 

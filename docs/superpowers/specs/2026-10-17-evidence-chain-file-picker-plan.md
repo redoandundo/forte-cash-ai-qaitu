@@ -2,6 +2,7 @@
 
 Date: 2026-10-17
 Design: `2026-10-17-evidence-chain-file-picker-design.md`
+Status: completed
 
 ## Step 1: Runtime evidence-chain contract
 
