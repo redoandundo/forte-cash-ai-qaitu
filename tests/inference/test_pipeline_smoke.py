@@ -25,6 +25,7 @@ def test_mock_pipeline_is_deterministic_on_generated_video(
     )
     assert result["verdict"] == "possible_violation"
     assert result["events"]
+    assert result["window_summary"]["positive_fraction"] == 1.0
     assert result["runtime"]["windows"] > 0
     for evidence in result["events"][0]["evidence"]:
         assert (tmp_path / evidence["jpeg_path"]).is_file()

@@ -164,11 +164,28 @@ def analyze_video(
         (prediction.center_sec for prediction in predictions if prediction.score == peak_score),
         default=None,
     )
+    scores = np.asarray([prediction.score for prediction in predictions], dtype=np.float64)
+    positive_mask = scores >= config.threshold
+    longest_positive_run = 0
+    current_positive_run = 0
+    for is_positive in positive_mask:
+        current_positive_run = current_positive_run + 1 if is_positive else 0
+        longest_positive_run = max(longest_positive_run, current_positive_run)
+    event_coverage_sec = sum(event.end_sec - event.start_sec for event in events)
     return {
         "verdict": "possible_violation" if events else "no_violation",
         "score": peak_score,
         "timecode_sec": peak_time if events else None,
         "events": event_payload,
+        "window_summary": {
+            "minimum_score": float(scores.min()),
+            "mean_score": float(scores.mean()),
+            "maximum_score": float(scores.max()),
+            "score_std": float(scores.std()),
+            "positive_fraction": float(positive_mask.mean()),
+            "longest_positive_run": longest_positive_run,
+            "event_coverage_fraction": min(1.0, event_coverage_sec / metadata.duration_sec),
+        },
         "runtime": {
             "duration_sec": metadata.duration_sec,
             "processing_sec": processing_sec,

@@ -60,6 +60,28 @@ Use `--selection reference` when reproducing the published threshold report.
 The current dataset manifest contains a different validation split; the
 evaluator reports that mismatch explicitly instead of silently mixing results.
 
+## Run the contextual review layer
+
+The second layer does not rewrite model weights online. It stores privacy-safe
+run summaries in a local ignored SQLite database, routes uncertain or diffuse
+activations to human review, and uses only reviewed examples as context for
+future decisions.
+
+```powershell
+uv run python -m fortebank_audit.inference.meta_cli analyze `
+  --video data/raw/open/videos/X-1.mov
+uv run python -m fortebank_audit.inference.meta_cli review `
+  --run-id <run-id> `
+  --outcome confirmed_positive `
+  --corrected-timecode-sec 22 `
+  --error-type localization_error
+uv run python -m fortebank_audit.inference.meta_cli plan
+```
+
+The runtime database defaults to `data/raw/meta/experience.sqlite3` and is not
+committed. Repeated runs of the same physical video count as one context item,
+so replaying a file cannot manufacture experience.
+
 The current classifier is an experimental baseline for exercising the full pipeline. Its metrics are not yet strong enough for an autonomous decision system, and its event type is intentionally generic. Every positive result means only "possible observable violation" and requires human review.
 
 Generated data stays under `data/raw/` and `artifacts/`, which are excluded from Git.
