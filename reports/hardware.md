@@ -9,6 +9,7 @@
 - PyTorch: 2.5.1+cu121
 - Torchvision: 0.20.1+cu121
 - CUDA available to PyTorch: yes
-- FFmpeg CLI: not installed; clip extraction uses OpenCV locally
+- Decoder: PyAV 16.0.1 with real PTS; a separate FFmpeg CLI is not required
+- ONNX Runtime: 1.23.2 CPU, four intra-op threads
 
-The training environment is isolated from the service environment. Exact installed packages are in `requirements-ml-lock.txt`.
+The training environment is isolated from the service environment. Direct dependencies are pinned in `requirements-ml-repair.txt`; the installed environment is recorded in `requirements-ml-lock.txt`. Install CUDA-compatible torch/torchvision before the other dependencies, using the handoff commands.

@@ -40,6 +40,7 @@ data/raw/*
 !data/raw/.gitkeep
 analysis/*
 !analysis/README.md
+reports/*_full_video.json
 FORTEBANK_VIDEO_COMPLIANCE_KNOWLEDGE_BASE.md
 *.mov
 *.mp4
