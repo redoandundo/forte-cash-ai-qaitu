@@ -1,0 +1,27 @@
+seed: 42
+task: binary_violation_detection
+data:
+  raw_root: data/raw/open
+  clip_manifest: analysis/clip_manifest.json
+  clip_seconds: 6.0
+  frames: 16
+  image_size: 112
+  validation_fraction: 0.2
+training:
+  epochs: 12
+  batch_size: 2
+  learning_rate: 0.00005
+  weight_decay: 0.0001
+  num_workers: 0
+  early_stopping_patience: 5
+  decision_metric: f2
+  amp: true
+augmentation:
+  temporal_jitter: true
+  angle_degrees: 5
+  perspective: 0.04
+  lighting: true
+  jpeg_quality: [45, 95]
+export:
+  format: onnx
+  opset: 17

@@ -1,0 +1,40 @@
+seed: 42
+task: binary_violation_detection
+labels:
+  0: no_violation
+  1: violation
+data:
+  raw_root: data/raw/open
+  clip_manifest: analysis/clip_manifest.json
+  clip_seconds: 8.0
+  frames: 4
+  image_size: 160
+  validation_fraction: 0.2
+training:
+  epochs: 12
+  batch_size: 4
+  learning_rate: 0.001
+  weight_decay: 0.0001
+  num_workers: 0
+  early_stopping_patience: 8
+  decision_metric: f2
+  amp: true
+augmentation:
+  angle:
+    degrees: 7
+    translate: 0.06
+    scale: [0.92, 1.08]
+  lighting:
+    brightness: 0.25
+    contrast: 0.25
+    gamma: [0.8, 1.2]
+  compression:
+    jpeg_quality: [35, 90]
+models:
+  x3d:
+    name: x3d_xs
+    pretrained: true
+    train_backbone: false
+export:
+  format: onnx
+  opset: 17

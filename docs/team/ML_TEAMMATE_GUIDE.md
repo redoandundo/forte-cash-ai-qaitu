@@ -776,3 +776,33 @@ git diff --check
 - Hugging Face local downloads: https://huggingface.co/docs/huggingface_hub/en/guides/download
 - Official OpenAI skills repository: https://github.com/openai/skills
 - Codex prompting guide: https://developers.openai.com/cookbook/examples/gpt-5/codex_prompting_guide
+
+## 18. Уже реализованный прототип в репозитории
+
+После написания основного руководства в GitHub был добавлен первый ML/API/web-прототип. Перед созданием новых файлов сначала изучи существующие компоненты:
+
+- `reports/training_report.md` — фактический отчёт обучения;
+- `models/best_model.onnx` — текущий экспериментальный export;
+- `models/preprocessing.json` — preprocessing текущей модели;
+- `models/thresholds.json` — текущий threshold;
+- `models/checksums.sha256` — checksum;
+- `scripts/ml/` — audit, clips, training, evaluation, export и ONNX inference;
+- `src/fortebank_audit/ml/` — модельный Python-код;
+- `configs/` — конфигурации экспериментов.
+
+Текущий запуск одного видео:
+
+```powershell
+.\.venv-ml\Scripts\python.exe scripts\ml\infer_onnx.py "C:\path\to\video.mov"
+```
+
+Порядок воспроизведения текущего прототипа:
+
+1. Создать `.venv-ml` и установить `requirements-ml.txt` плюс согласованный CUDA build PyTorch.
+2. Запустить `scripts/ml/audit_annotations.py`.
+3. Запустить `scripts/ml/prepare_clips.py`.
+4. Запустить эксперименты через `scripts/ml/train_video.py`.
+5. Оценить полные validation-видео через `scripts/ml/evaluate_full_videos.py`.
+6. Экспортировать и проверить модель через `scripts/ml/export_model.py`.
+
+Не дублируй уже существующую реализацию. Сначала проверь её фактические метрики, contracts и ограничения. Описания сцен не являются официальными типами нарушения; grouping по SHA-256 должен сохраняться во всех будущих splits.

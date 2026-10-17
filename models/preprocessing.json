@@ -1,0 +1,14 @@
+{
+  "model": "mobilenet_v3_small_temporal",
+  "input_layout": "NCTHW",
+  "input_name": "video",
+  "output_name": "logits",
+  "dtype": "float32",
+  "color": "RGB",
+  "num_frames": 4,
+  "image_size": 160,
+  "normalization": "imagenet",
+  "window_sec": 8.0,
+  "temporal_span_fraction": 1.0,
+  "recommended_stride_sec": 2.0
+}

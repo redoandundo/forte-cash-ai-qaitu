@@ -1,5 +1,6 @@
 # Python
 .venv/
+.venv-ml/
 venv/
 __pycache__/
 *.py[cod]
@@ -8,6 +9,7 @@ __pycache__/
 .ruff_cache/
 .coverage
 htmlcov/
+.ipynb_checkpoints/
 
 # IDE and local agent state
 .idea/
@@ -32,8 +34,10 @@ evidence/
 logs/
 *.log
 
-# Raw competition data and generated media
+# Restricted Datathon26 data and generated media
 data/open/
+data/raw/*
+!data/raw/.gitkeep
 analysis/*
 !analysis/README.md
 FORTEBANK_VIDEO_COMPLIANCE_KNOWLEDGE_BASE.md
@@ -42,8 +46,18 @@ FORTEBANK_VIDEO_COMPLIANCE_KNOWLEDGE_BASE.md
 *.avi
 *.mkv
 
-# Model artifacts
-models/
+# Generated artifacts. Keep reviewed documentation and manifests only.
+artifacts/*
+!artifacts/.gitkeep
+!artifacts/README.md
+!artifacts/manifests/
+!artifacts/manifests/**
+data/processed/
+
+# Model artifacts and caches
+models/checkpoints/
+models/torch-cache/
+models/huggingface-cache/
 checkpoints/
 *.pt
 *.pth
