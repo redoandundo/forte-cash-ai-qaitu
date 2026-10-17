@@ -12,6 +12,8 @@ from .experience_store import ExperienceStore
 from .meta_analysis import MetaAnalyzer, MetaFeatures
 from .pipeline import analyze_video
 from .preprocessing import PreprocessingConfig
+from .reporting import build_report, save_report
+from .vlm_verifier import EventVerifier, QwenLocalBackend, load_signal_policy
 
 
 DEFAULT_DB = PROJECT_ROOT / "data" / "raw" / "meta" / "experience.sqlite3"
@@ -62,13 +64,44 @@ def analyze(args: argparse.Namespace) -> None:
         decision=decision,
         features=features,
     )
-    print(
-        json.dumps(
-            {"run_id": run_id, "first_layer": result, "second_layer": decision.as_dict()},
-            ensure_ascii=False,
-            indent=2,
+    payload: dict[str, object] = {
+        "run_id": run_id,
+        "first_layer": result,
+        "second_layer": decision.as_dict(),
+    }
+    if args.vlm_model is not None:
+        policy = load_signal_policy(args.signals)
+        verifier = EventVerifier(
+            QwenLocalBackend(args.vlm_model, max_image_side=args.max_image_side),
+            policy,
+            max_new_tokens=args.max_new_tokens,
         )
-    )
+        verifications = []
+        for event in result["events"][: args.max_vlm_events]:
+            evidence_paths = [
+                Path(args.evidence_root) / item["jpeg_path"] for item in event["evidence"]
+            ]
+            verifications.append(
+                verifier.verify(
+                    evidence_paths,
+                    score=float(event["score"]),
+                    peak_time_sec=float(event["peak_time_sec"]),
+                )
+            )
+        report = build_report(
+            run_id=run_id,
+            first_layer=result,
+            second_layer=decision.as_dict(),
+            verifications=verifications,
+            signals_version=str(policy["signals_version"]),
+        )
+        saved = save_report(report, args.report_root)
+        payload["visual_verifications"] = [item.as_dict() for item in verifications]
+        payload["report_paths"] = {
+            key: path.relative_to(PROJECT_ROOT).as_posix() if path.is_relative_to(PROJECT_ROOT) else str(path)
+            for key, path in saved.items()
+        }
+    print(json.dumps(payload, ensure_ascii=False, indent=2))
 
 
 def review(args: argparse.Namespace) -> None:
@@ -110,6 +143,24 @@ def main() -> None:
         "--evidence-root", type=Path, default=PROJECT_ROOT / "data" / "raw" / "evidence" / "meta"
     )
     analyze_parser.add_argument("--run-id")
+    analyze_parser.add_argument(
+        "--vlm-model",
+        type=Path,
+        help="Optional local Qwen3-VL model directory for visual verification",
+    )
+    analyze_parser.add_argument(
+        "--signals",
+        type=Path,
+        default=PROJECT_ROOT / "configs" / "inference" / "observable_signals.json",
+    )
+    analyze_parser.add_argument(
+        "--report-root",
+        type=Path,
+        default=PROJECT_ROOT / "data" / "raw" / "reports",
+    )
+    analyze_parser.add_argument("--max-vlm-events", type=int, default=5)
+    analyze_parser.add_argument("--max-image-side", type=int, default=448)
+    analyze_parser.add_argument("--max-new-tokens", type=int, default=192)
     analyze_parser.set_defaults(handler=analyze)
 
     review_parser = subparsers.add_parser("review")
