@@ -1,0 +1,21 @@
+{
+  "base_commit": "94fd1d6",
+  "change": "Runtime honors QAITU_MODEL_BUNDLE, explicit development-model permission and optional expected SHA-256. Invalid bundles fail instead of silently selecting another model.",
+  "tests_passed": 76,
+  "real_video_probe": {
+    "scope": "one development video; runtime check, not accuracy evaluation",
+    "model": "baseline-audited-v4-development",
+    "sha256": "00ae541eac23249dd4751093ce276bfa9c14afca2d5f15f4fec9719c009ae52d",
+    "qwen_enabled": false,
+    "events": 1,
+    "valid_jpegs": 3,
+    "seconds": 1.5366396000026725
+  },
+  "configuration": {
+    "QAITU_MODEL_BUNDLE": "absolute path to privately transferred baseline-audited-v4 bundle directory",
+    "QAITU_ALLOW_DEVELOPMENT_MODEL": "true only for explicitly authorized development/demo evaluation",
+    "QAITU_EXPECTED_MODEL_SHA256": "00ae541eac23249dd4751093ce276bfa9c14afca2d5f15f4fec9719c009ae52d"
+  },
+  "deployment": "Code does not switch a running service; restart and verify the selected model before use.",
+  "quality": "No retraining or accuracy gain is claimed. Whole-video Qwen adapter remains experimental and not promoted."
+}

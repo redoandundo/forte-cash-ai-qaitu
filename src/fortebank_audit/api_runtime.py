@@ -33,8 +33,17 @@ class Runtime:
     def __init__(self):
         from .inference.benchmark import build_predictor,load_pipeline_config
         from .inference.semantic_pipeline import build_semantic_verifier_from_env
-        _,self.config,_=load_pipeline_config()
-        self.predictor=build_predictor('onnx',prefer_cuda=False)
+        bundle_value = os.environ.get('QAITU_MODEL_BUNDLE', '').strip()
+        bundle = Path(bundle_value).resolve() if bundle_value else None
+        allow_value = os.environ.get('QAITU_ALLOW_DEVELOPMENT_MODEL', 'false').strip().lower()
+        if allow_value not in {'true', 'false', '1', '0', 'yes', 'no', 'on', 'off'}:
+            raise ValueError('QAITU_ALLOW_DEVELOPMENT_MODEL must be a boolean')
+        allow_development = allow_value in {'true', '1', 'yes', 'on'}
+        _,self.config,manifest=load_pipeline_config(bundle, allow_development_model=allow_development)
+        expected = os.environ.get('QAITU_EXPECTED_MODEL_SHA256', '').strip().lower()
+        if expected and expected != str(manifest.get('sha256', '')).lower():
+            raise ValueError('Configured model checksum does not match the selected bundle')
+        self.predictor=build_predictor('onnx',bundle,allow_development_model=allow_development,prefer_cuda=False)
         self.verifier=build_semantic_verifier_from_env()
         self.sequence=None
         adapter=os.environ.get('QAITU_SEQUENCE_ADAPTER')
