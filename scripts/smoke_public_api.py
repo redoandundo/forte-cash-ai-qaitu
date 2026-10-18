@@ -27,13 +27,13 @@ def generate_video(path: Path) -> None:
             container.mux(packet)
 
 
-def analyze(client: httpx.Client, name: str, content: bytes) -> tuple[dict, float]:
+def analyze(client: httpx.Client, name: str, content: bytes, api_root: str = "/api/v1") -> tuple[dict, float]:
     started = time.perf_counter()
-    accepted = client.post("/api/v1/analyze", files={"file": (name, content, "video/quicktime")})
+    accepted = client.post(f"{api_root}/analyze", files={"file": (name, content, "video/quicktime")})
     assert accepted.status_code == 202, f"Upload status {accepted.status_code}"
     job_id = accepted.json()["job_id"]
     while time.perf_counter() - started < 300:
-        response = client.get(f"/api/v1/jobs/{job_id}")
+        response = client.get(f"{api_root}/jobs/{job_id}")
         response.raise_for_status()
         job = response.json()
         assert job["status"] in {"processing", "done", "failed"}
@@ -71,7 +71,8 @@ def main() -> None:
         with tempfile.TemporaryDirectory(prefix="qaitu-public-smoke-") as directory:
             video = Path(directory) / "synthetic.mov"
             generate_video(video)
-            good, good_sec = analyze(client, "synthetic.mov", video.read_bytes())
+            content = video.read_bytes()
+            good, good_sec = analyze(client, "synthetic.mov", content)
         assert good["status"] == "done"
         assert good["verdict"] in {"violation", "no_violation"}
         assert bool(good["violations"]) == (good["verdict"] == "violation")
@@ -83,11 +84,24 @@ def main() -> None:
                 assert cv2.imdecode(np.frombuffer(jpeg, np.uint8), cv2.IMREAD_COLOR) is not None
         bad, bad_sec = analyze(client, "corrupt.mov", b"synthetic-corrupt-video")
         assert bad["status"] == "failed" and bad["verdict"] is None and bad["violations"] == []
+    with httpx.Client(base_url=args.base_url, headers={"X-Qaitu-Client": "web", "Origin": args.base_url.rstrip("/")}, timeout=30) as browser:
+        assert browser.post("/web/api/v1/session").status_code == 200
+        assert "id=\"api-key\"" not in browser.get("/").text
+        assert browser.get("/web/api/v1/rules").status_code == 200
+        web_job, web_sec = analyze(browser, "synthetic.mov", content, "/web/api/v1")
+        assert web_job["status"] == "done" and web_job["verdict"] in {"violation", "no_violation"}
+        assert browser.get(f"/web/api/v1/jobs/{web_job['job_id']}/progress").status_code == 200
+        assert browser.get(f"/api/v1/jobs/{web_job['job_id']}").status_code == 401
+        with httpx.Client(base_url=args.base_url, headers={"X-Qaitu-Client": "web"}, timeout=30) as other:
+            assert other.post("/web/api/v1/session").status_code == 200
+            assert other.get(f"/web/api/v1/jobs/{web_job['job_id']}").status_code == 404
     result = {"public_url": args.base_url, "status": "passed", "auth": "missing/wrong keys rejected",
               "model": health["model_version"], "synthetic_duration_sec": 9,
               "synthetic_verdict": good["verdict"], "synthetic_events": len(good["violations"]),
               "upload_to_result_sec": round(good_sec, 3), "corrupt_failed_sec": round(bad_sec, 3),
               "dataset_uploaded": False}
+    result.update(web_without_key="passed", web_upload_to_result_sec=round(web_sec, 3),
+                  web_job_isolation="passed", jury_key_still_required=True)
     if args.output:
         args.output.parent.mkdir(parents=True, exist_ok=True)
         args.output.write_text(json.dumps(result, ensure_ascii=False, indent=2), encoding="utf-8")

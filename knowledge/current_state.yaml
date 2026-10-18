@@ -31,7 +31,7 @@ components:
     status: verified_onnx_fail_closed_runtime
   frontend:
     owner: teamlead
-    status: synchronized_episodes_and_manual_rule_review_verified
+    status: keyless_web_flow_and_isolated_browser_results_verified
   rule_matching:
     owner: teamlead
     status: three_rules_automatic_condition_matching_contract_tested
@@ -47,7 +47,8 @@ components:
   public_access:
     owner: teamlead
     status: temporary_https_tunnel_verified_with_synthetic_video
-    authentication: X-API-Key
+    jury_authentication: X-API-Key
+    web_authentication: automatic_httponly_cookie_no_user_login
     session_record: tmp/public-demo/session.json
   end_to_end_integration:
     owner: teamlead

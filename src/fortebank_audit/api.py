@@ -4,12 +4,13 @@ import os
 import secrets
 import threading
 import uuid
+import time
 from copy import deepcopy
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Annotated, Literal
 
-from fastapi import BackgroundTasks, Depends, FastAPI, File, Header, HTTPException, UploadFile, status
+from fastapi import BackgroundTasks, Depends, FastAPI, File, Header, HTTPException, Request, Response, UploadFile, status
 from pydantic import BaseModel, Field
 from fastapi.staticfiles import StaticFiles
 
@@ -116,6 +117,12 @@ async def lifespan(_: FastAPI):
 app = FastAPI(title="ForteBank Video Audit API", version="0.1.0", lifespan=lifespan)
 _jobs: dict[str, dict[str, object]] = {}
 _jobs_lock = threading.Lock()
+_web_lock = threading.Lock()
+_web_sessions: dict[str, float] = {}
+_web_job_owners: dict[str, str] = {}
+_web_pending: dict[str, int] = {}
+WEB_COOKIE = "qaitu_web_session"
+WEB_SESSION_TTL = 8 * 60 * 60
 
 
 def require_api_key(x_api_key: Annotated[str | None, Header()] = None) -> None:
@@ -315,6 +322,105 @@ def get_job_progress(job_id: str) -> ProgressResponse:
     if not job:
         raise HTTPException(status_code=404, detail="Job not found")
     return ProgressResponse.model_validate(job)
+
+
+def _web_client(request: Request) -> None:
+    if request.headers.get("X-Qaitu-Client") != "web":
+        raise HTTPException(status_code=403, detail="Web client header required")
+    origin = request.headers.get("origin")
+    if origin and origin != str(request.base_url).rstrip("/"):
+        raise HTTPException(status_code=403, detail="Cross-origin web request denied")
+    if request.headers.get("sec-fetch-site") == "cross-site":
+        raise HTTPException(status_code=403, detail="Cross-site web request denied")
+
+
+def _web_session(request: Request) -> str:
+    _web_client(request)
+    session = request.cookies.get(WEB_COOKIE, "")
+    with _web_lock:
+        expires = _web_sessions.get(session, 0)
+    if expires <= time.monotonic():
+        raise HTTPException(status_code=401, detail="Web session expired")
+    return session
+
+
+def _web_owner(job_id: str, session: str) -> None:
+    with _web_lock:
+        if _web_job_owners.get(job_id) != session:
+            raise HTTPException(status_code=404, detail="Job not found")
+
+
+@app.post("/web/api/v1/session")
+def start_web_session(request: Request, response: Response) -> dict[str, bool]:
+    _web_client(request)
+    now = time.monotonic()
+    session = request.cookies.get(WEB_COOKIE, "")
+    with _web_lock:
+        expired = {token for token, expires in _web_sessions.items() if expires <= now}
+        for token in expired:
+            del _web_sessions[token]
+        for job_id, owner in list(_web_job_owners.items()):
+            if owner in expired:
+                del _web_job_owners[job_id]
+        if session not in _web_sessions:
+            if len(_web_sessions) >= 1024:
+                raise HTTPException(status_code=429, detail="Web session capacity reached")
+            session = secrets.token_urlsafe(32)
+        _web_sessions[session] = now + WEB_SESSION_TTL
+    response.set_cookie(WEB_COOKIE, session, max_age=WEB_SESSION_TTL, httponly=True,
+                        secure=request.url.scheme == "https", samesite="lax", path="/web")
+    response.headers["Cache-Control"] = "no-store"
+    return {"ready": True}
+
+
+@app.post("/web/api/v1/analyze", response_model=AnalyzeAccepted, status_code=202)
+def create_web_analysis(background_tasks: BackgroundTasks, file: Annotated[UploadFile, File()],
+                        session: str = Depends(_web_session)) -> AnalyzeAccepted:
+    with _web_lock:
+        with _jobs_lock:
+            active_owners = [owner for job_id, owner in _web_job_owners.items()
+                             if _jobs.get(job_id, {}).get("status") == "processing"]
+        if active_owners.count(session) + _web_pending.get(session, 0) >= 2:
+            raise HTTPException(status_code=429, detail="Finish the current analyses first")
+        if len(active_owners) + sum(_web_pending.values()) >= 16:
+            raise HTTPException(status_code=429, detail="Analysis queue is full; retry later")
+        _web_pending[session] = _web_pending.get(session, 0) + 1
+    try:
+        accepted = create_analysis(background_tasks, file)
+        with _web_lock:
+            _web_job_owners[accepted.job_id] = session
+        return accepted
+    finally:
+        with _web_lock:
+            _web_pending[session] -= 1
+            if not _web_pending[session]:
+                del _web_pending[session]
+
+
+@app.get("/web/api/v1/jobs/{job_id}", response_model=JobResponse)
+def get_web_job(job_id: str, response: Response, session: str = Depends(_web_session)) -> JobResponse:
+    _web_owner(job_id, session)
+    response.headers["Cache-Control"] = "no-store"
+    return get_job(job_id)
+
+
+@app.get("/web/api/v1/jobs/{job_id}/progress", response_model=ProgressResponse)
+def get_web_progress(job_id: str, response: Response, session: str = Depends(_web_session)) -> ProgressResponse:
+    _web_owner(job_id, session)
+    response.headers["Cache-Control"] = "no-store"
+    return get_job_progress(job_id)
+
+
+@app.get("/web/api/v1/rules", response_model=dict)
+def get_web_rules(session: str = Depends(_web_session)) -> dict:
+    return rule_catalog()
+
+
+@app.put("/web/api/v1/jobs/{job_id}/events/{event_index}/rule-review", response_model=AnalysisDetail)
+def review_web_rule(job_id: str, event_index: int, review: RuleReviewRequest,
+                    session: str = Depends(_web_session)) -> AnalysisDetail:
+    _web_owner(job_id, session)
+    return review_event_rule(job_id, event_index, review)
 
 
 app.mount("/", StaticFiles(directory=WEB_ROOT, html=True), name="web")

@@ -8,7 +8,7 @@ foreach ($Kind in @("tunnel", "api")) {
     $SavedStart = $State."${Kind}_started"
     $Process = Get-Process -Id $SavedId -ErrorAction SilentlyContinue
     if ($Process) {
-        if ($Process.StartTime.ToUniversalTime().ToString("o") -ne $SavedStart) {
+        if ($Process.StartTime.ToUniversalTime().Ticks -ne ([datetime]$SavedStart).ToUniversalTime().Ticks) {
             throw "PID was reused; refusing to stop an unrelated process."
         }
         Stop-Process -Id $SavedId
