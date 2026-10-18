@@ -3,7 +3,7 @@ import pytest
 import torch
 
 from fortebank_audit.ml.metrics import smooth_scores
-from fortebank_audit.ml.mil_training import smooth_probabilities, validate_features, video_loss
+from fortebank_audit.ml.mil_training import multi_view_loss, smooth_probabilities, validate_features, video_loss
 from fortebank_audit.ml.preprocessing import VideoSpec
 
 
@@ -30,6 +30,25 @@ def test_positive_context_is_not_invented_as_negative():
         video_loss(logits, 0, [1], .5)
     with pytest.raises(ValueError, match="anchors"):
         video_loss(logits, 1, [], .5)
+
+
+def test_single_view_training_keeps_the_previous_objective_and_gradient():
+    logits = torch.tensor([-2., 0., 2., 1.], requires_grad=True)
+    previous = video_loss(logits, 1, [2], .5)
+    current = multi_view_loss(logits[None], 1, [2], .5, 1.)
+    assert torch.equal(previous, current)
+    assert torch.equal(torch.autograd.grad(previous, logits, retain_graph=True)[0],
+                       torch.autograd.grad(current, logits)[0])
+
+
+def test_consistency_penalizes_changed_predictions_without_changing_timestamps():
+    logits = torch.tensor([[-2., 0., 2.], [2., 0., -2.]])
+    assert multi_view_loss(logits, 1, [1], .5, 1.) > multi_view_loss(logits, 1, [1], .5, 0.)
+    identical = logits[:1].repeat(2, 1)
+    assert torch.equal(multi_view_loss(identical, 1, [1], .5, 1.),
+                       multi_view_loss(identical, 1, [1], .5, 0.))
+    with pytest.raises(ValueError):
+        multi_view_loss(logits, 1, [1], .5, float("nan"))
 
 
 @pytest.mark.parametrize("fault", ["nan", "wrong_frames", "unordered_times", "missing_times", "wrong_encoder"])
@@ -127,3 +146,12 @@ def test_scoring_reuses_frozen_features_but_never_reuses_them_for_stress(tmp_pat
     changed, _, _ = evaluation.score_sources(checkpoint, [source], tmp_path / "cache", frame_transform=lambda x: x * 0)
     assert model.calls > calls
     assert changed[0]["raw_scores"] != warm[0]["raw_scores"]
+    digest = mil_training.encoder_hash(model)
+    clean_features = mil_training.encode_source(model, source, spec, tmp_path / "cache", "cpu", digest, 2)
+    dark_features = mil_training.encode_source(model, source, spec, tmp_path / "cache", "cpu", digest, 2, "dark")
+    assert clean_features["key"] != dark_features["key"]
+    assert not torch.equal(clean_features["features"], dark_features["features"])
+    assert torch.equal(clean_features["centers"], dark_features["centers"])
+    calls = model.calls
+    mil_training.encode_source(model, source, spec, tmp_path / "cache", "cpu", digest, 2, "dark")
+    assert model.calls == calls

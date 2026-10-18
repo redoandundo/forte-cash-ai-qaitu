@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import hashlib
+import inspect
 import math
 import time
 from collections import Counter
@@ -63,13 +64,20 @@ def validate_features(saved, key, spec, feature_dim):
         raise ValueError("Invalid feature cache")
 
 
-def encode_source(model, source, spec, cache, device, encoder_digest, batch_size):
+def encode_source(model, source, spec, cache, device, encoder_digest, batch_size, condition="clean"):
     path = Path(source["path"])
     if hashlib.sha256(path.read_bytes()).hexdigest() != source["sha256"]:
         raise ValueError("Source checksum changed before feature extraction")
-    key = fingerprint({"source": source["sha256"], "spec": spec.to_dict(),
-                       "encoder": encoder_digest, "pipeline": pipeline_hash(spec),
-                       "features": "class_and_spatial_2x2_v1"})
+    identity = {"source": source["sha256"], "spec": spec.to_dict(),
+                "encoder": encoder_digest, "pipeline": pipeline_hash(spec),
+                "features": "class_and_spatial_2x2_v1"}
+    if condition != "clean":
+        from .stress_audit import CONDITIONS, transform_frames
+        if condition not in CONDITIONS:
+            raise ValueError("Unknown encoder augmentation")
+        identity["augmentation"] = {"condition": condition,
+            "code_sha256": hashlib.sha256(inspect.getsource(transform_frames).encode()).hexdigest()}
+    key = fingerprint(identity)
     target = cache / "dino_features" / (key + ".pt")
     if target.exists():
         saved = torch.load(target, map_location="cpu", weights_only=True)
@@ -80,7 +88,10 @@ def encode_source(model, source, spec, cache, device, encoder_digest, batch_size
     encoded = []
     with torch.inference_mode():
         for start in range(0, len(samples.frames), batch_size):
-            inputs = np.stack([normalize_rgb(frames, spec.image_size) for frames in samples.frames[start:start + batch_size]])
+            frames_batch = samples.frames[start:start + batch_size]
+            if condition != "clean":
+                frames_batch = [transform_frames(frames.copy(), condition) for frames in frames_batch]
+            inputs = np.stack([normalize_rgb(frames, spec.image_size) for frames in frames_batch])
             values = model.encode(torch.from_numpy(inputs).to(device)).float().cpu()
             if not torch.isfinite(values).all():
                 raise ValueError("Non-finite pretrained features")
@@ -94,6 +105,14 @@ def encode_source(model, source, spec, cache, device, encoder_digest, batch_size
     return saved
 
 
+def multi_view_loss(logits, label, anchors, point_weight, consistency_weight):
+    if logits.ndim != 2 or not len(logits) or not math.isfinite(consistency_weight) or consistency_weight < 0:
+        raise ValueError("Invalid multi-view objective")
+    supervised = torch.stack([video_loss(view, label, anchors, point_weight) for view in logits]).mean()
+    consistency = logits.sigmoid().var(dim=0, unbiased=False).mean()
+    return supervised + consistency_weight * consistency
+
+
 def train_mil(sources, config, output, cache):
     if output.exists():
         raise FileExistsError("Refusing to overwrite an existing MIL run")
@@ -103,6 +122,14 @@ def train_mil(sources, config, output, cache):
     if {row["label"] for row in sources} != {0, 1}:
         raise ValueError("MIL training requires both classes")
     settings = config["training"]
+    views = settings.get("feature_views", ["clean"])
+    from .stress_audit import CONDITIONS
+    if (not isinstance(views, list) or not views or any(not isinstance(view, str) for view in views) or views[0] != "clean"
+            or len(views) != len(set(views)) or any(view not in CONDITIONS for view in views)):
+        raise ValueError("Feature views must be unique supported conditions beginning with clean")
+    consistency_weight = settings.get("consistency_weight", 0.)
+    if not math.isfinite(consistency_weight) or consistency_weight < 0:
+        raise ValueError("Invalid consistency weight")
     if settings["epochs"] < 1 or settings["encoder_batch_size"] < 1:
         raise ValueError("Invalid MIL training schedule")
     for name in ("learning_rate", "weight_decay", "feature_noise_std", "point_weight", "pair_weight", "pair_margin"):
@@ -121,13 +148,19 @@ def train_mil(sources, config, output, cache):
     totals = Counter()
     for source in sources:
         saved = encode_source(model, source, spec, cache, device, digest, settings["encoder_batch_size"])
+        variants = [saved["features"]]
+        for condition in views[1:]:
+            augmented = encode_source(model, source, spec, cache, device, digest, settings["encoder_batch_size"], condition)
+            if not torch.equal(augmented["centers"], saved["centers"]):
+                raise ValueError("Augmentation changed the annotation timeline")
+            variants.append(augmented["features"])
         points = source.get("events_sec", [])
         if source.get("events"):
             points = [(item["start_sec"] + item["end_sec"]) / 2 for item in source["events"]]
         anchors = sorted({int(torch.argmin((saved["centers"] - point).abs())) for point in points})
         weight = {"high": 1., "medium": .5, "low": .25}[source.get("annotation_confidence", "high")] if source["label"] else 1.
         totals[source["label"]] += weight
-        bags.append({"features": saved["features"].to(device), "anchors": anchors, "weight": weight,
+        bags.append({"features": torch.stack(variants).to(device), "anchors": anchors, "weight": weight,
                      "label": source["label"], "group": source["scenario_group"]})
         print({"encoded_training_sources": len(bags), "windows": len(saved["features"])}, flush=True)
     for bag in bags:
@@ -144,9 +177,11 @@ def train_mil(sources, config, output, cache):
             features = bag["features"]
             if settings["feature_noise_std"]:
                 features = features + torch.randn_like(features) * settings["feature_noise_std"]
-            logits = model.forward_encoded(features)
-            losses.append(bag["weight"] * video_loss(logits, bag["label"], bag["anchors"], settings["point_weight"]))
-            group_scores.setdefault(bag["group"], {}).setdefault(bag["label"], []).append(smooth_probabilities(logits).max())
+            logits = model.forward_encoded(features.flatten(0, 1)).reshape(features.shape[:2])
+            losses.append(bag["weight"] * multi_view_loss(logits, bag["label"], bag["anchors"],
+                                                         settings["point_weight"], consistency_weight))
+            peak = torch.stack([smooth_probabilities(view).max() for view in logits]).mean()
+            group_scores.setdefault(bag["group"], {}).setdefault(bag["label"], []).append(peak)
         pairs = [F.softplus((torch.stack(scores[0]).max() - torch.stack(scores[1]).max()) * 4 + settings["pair_margin"])
                  for scores in group_scores.values() if set(scores) == {0, 1}]
         loss = torch.stack(losses).sum()
@@ -170,7 +205,8 @@ def train_mil(sources, config, output, cache):
         "window_sec": spec.window_sec, "normalization": "imagenet", "spec": spec.to_dict(),
         "output_semantics": "logit", "config": config, "provenance": provenance, "checkpoint_policy": "fixed_last_epoch"}
     torch.save(checkpoint, output / "best.pt")
-    return {"model": config["model"], "sources": len(sources), "windows": sum(len(bag["features"]) for bag in bags),
-            "epochs": settings["epochs"], "training_sec": time.perf_counter() - started,
+    return {"model": config["model"], "sources": len(sources), "windows": sum(bag["features"].shape[1] for bag in bags),
+            "epochs": settings["epochs"], "feature_views": views, "consistency_weight": consistency_weight,
+            "training_sec": time.perf_counter() - started,
             "device": str(device), "history": history, "provenance": provenance,
             "objective": "all_negative_windows_video_peak_positive_point_and_train_pair_ranking"}
