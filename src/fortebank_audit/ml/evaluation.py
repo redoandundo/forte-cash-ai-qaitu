@@ -36,6 +36,8 @@ def assert_unseen(sources: list[dict], provenance: dict) -> None:
 
 
 def score_sources(checkpoint_path: Path, sources: list[dict], cache: Path, batch_size: int = 8, *, frame_transform=None):
+    if type(batch_size) is not int or batch_size <= 0:
+        raise ValueError("Scoring batch size must be a positive integer")
     checkpoint = torch.load(checkpoint_path, map_location="cpu", weights_only=True)
     assert_unseen(sources, checkpoint["provenance"])
     spec = VideoSpec(**checkpoint["spec"])
@@ -56,7 +58,8 @@ def score_sources(checkpoint_path: Path, sources: list[dict], cache: Path, batch
             for offset in range(0, len(samples.frames), batch_size):
                 frames_batch = samples.frames[offset:offset + batch_size]
                 if frame_transform is not None:
-                    frames_batch = [frame_transform(frames) for frames in frames_batch]
+                    # Copies prevent stress transforms from mutating cached clean data.
+                    frames_batch = [frame_transform(frames.copy()) for frames in frames_batch]
                 tensor = np.stack([normalize_rgb(frames, spec.image_size) for frames in frames_batch])
                 logits = model(torch.from_numpy(tensor).to(device)).float()
                 if not torch.isfinite(logits).all():
@@ -102,6 +105,9 @@ def calibration_report(checkpoint_path: Path, sources: list[dict], cache: Path, 
     return {
         "threshold": selected["threshold"], "metrics": selected,
         "diagnostics": calibration_diagnostics(rows, selected["threshold"], min_recall),
+        "scoring_backend": {"device": "cuda" if torch.cuda.is_available() else "cpu",
+                            "torch_version": str(torch.__version__), "batch_size": 8,
+                            "cudnn_allow_tf32": torch.backends.cudnn.allow_tf32},
         "min_recall": min_recall, "selection": "macro_f1_subject_to_recall",
         "checkpoint_sha256": file_hash(checkpoint_path), "pipeline_sha256": pipeline_hash(spec),
         "calibration_source_ids": [row["source_id"] for row in rows],

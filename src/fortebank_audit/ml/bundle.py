@@ -169,6 +169,8 @@ def export_bundle(checkpoint_path: Path, calibration: dict, output: Path, parity
         write_json(staging / "metrics.json", {
             "release_status": "development_only_not_promoted", "code_commit": code_commit,
             "calibration_metrics": calibration["metrics"], "calibration_is_test": False,
+            "calibration_diagnostics": calibration.get("diagnostics"),
+            "calibration_backend": calibration.get("scoring_backend"),
             "nested_oof_metrics": evaluation_metrics, "parity": parity,
             "config_sha256": checkpoint["provenance"]["config_sha256"],
             "training_dataset_sha256": checkpoint["provenance"]["dataset_sha256"],
