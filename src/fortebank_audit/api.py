@@ -82,7 +82,16 @@ def _run_analysis(job_id: str, video_path: Path) -> None:
 
 @app.get("/health")
 def health() -> dict[str, object]:
-    return {"status": "ok", "model_ready": MODEL_PATH.exists()}
+    from . import api_runtime
+    runtime = api_runtime._runtime
+    verifier = getattr(runtime, 'verifier', None)
+    backend = getattr(verifier, 'backend', None)
+    return {"status": "ok" if runtime is not None else "starting",
+            "model_ready": runtime is not None,
+            "semantic_mode": "qwen" if verifier is not None else "off",
+            "semantic_model_version": getattr(backend, 'model_version', None),
+            "semantic_model_sha256": getattr(backend, 'model_checksum', None),
+            "compute_location": "server", "browser_gpu_required": False}
 
 
 @app.post(
@@ -136,4 +145,5 @@ def get_job(job_id: str) -> JobResponse:
     return JobResponse.model_validate(job)
 
 
-app.mount("/", StaticFiles(directory=WEB_ROOT, html=True), name="web")
+if os.environ.get('QAITU_BACKEND_ONLY') != '1':
+    app.mount("/", StaticFiles(directory=WEB_ROOT, html=True), name="web")

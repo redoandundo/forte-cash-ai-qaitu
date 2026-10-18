@@ -60,3 +60,23 @@ def test_failed_upload_releases_slot(client,monkeypatch):
     assert result.status_code==413
     assert api._analysis_slot.acquire(blocking=False)
     api._analysis_slot.release()
+
+
+def test_health_does_not_claim_loaded_model_from_file_alone(client, monkeypatch):
+    from fortebank_audit import api_runtime
+    monkeypatch.setattr(api_runtime, '_runtime', None)
+    result = client.get('/health').json()
+    assert result['model_ready'] is False
+    assert result['status'] == 'starting'
+    assert result['browser_gpu_required'] is False
+
+
+def test_health_identifies_loaded_semantic_backend(client, monkeypatch):
+    from types import SimpleNamespace
+    from fortebank_audit import api_runtime
+    backend = SimpleNamespace(model_version='qwen-test', model_checksum='a' * 64)
+    monkeypatch.setattr(api_runtime, '_runtime', SimpleNamespace(verifier=SimpleNamespace(backend=backend)))
+    result = client.get('/health').json()
+    assert result['model_ready'] is True
+    assert result['semantic_mode'] == 'qwen'
+    assert result['semantic_model_sha256'] == 'a' * 64
