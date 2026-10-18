@@ -1,0 +1,67 @@
+{
+  "date": "2026-10-18",
+  "scope": "local_integration_validation_not_independent_accuracy_test",
+  "local_branch": "codex/scorecard-semantic",
+  "integration_commit": "277c387",
+  "qwen_upstream_commit": "6933204",
+  "teamlead_upstream_commit": "0334c25",
+  "ml_source_commit": "ea88857",
+  "ml_model": "baseline-audited-v4-development",
+  "ml_sha256": "00ae541eac23249dd4751093ce276bfa9c14afca2d5f15f4fec9719c009ae52d",
+  "qwen_revision": "89644892e4d85e24eaac8bacfd4f463576704203",
+  "qwen_sha256": "7de1838c87a5349b016c26a1c3f7d2bc400a3d485f95ef39a7059ffd734977a0",
+  "runtime": {
+    "gpu": "RTX 3050 Ti Laptop 4 GB",
+    "torch": "2.6.0+cu118",
+    "transformers": "5.20.1",
+    "quantization": "nf4_experimental",
+    "first_layer_provider": "CPUExecutionProvider"
+  },
+  "tests": {
+    "complete_suite_after_automatic_rules_merge": 255,
+    "api_integration_after_browser_session_merge": 96,
+    "browser_unit_tests_after_browser_session_merge": 15,
+    "failures": 0,
+    "existing_warning": "Starlette TestClient httpx deprecation"
+  },
+  "actual_api_probe": {
+    "source_videos": 1,
+    "source_scope": "development_video",
+    "tree_content": "68b3a20; final browser-session-only update tested separately",
+    "full_video": true,
+    "annotation_used_to_choose_candidate_interval": false,
+    "baseline_seconds": 1.1706390999970608,
+    "baseline_events": 1,
+    "semantic_startup_seconds": 27.07362980000471,
+    "semantic_analysis_seconds": 101.47959260000061,
+    "status": "done",
+    "retained_events": 1,
+    "verified_jpegs": 3,
+    "invalid_api_key_http_status": 401,
+    "within_300_seconds": true,
+    "automatic_rule_wrapper_enabled": true,
+    "optional_rule_candidate_prompt_enabled": false,
+    "proves_rule_accuracy": false
+  },
+  "annotation_context_component_probes": [
+    {"seconds": 107.7742, "peak_allocated_vram_gib": 2.10619, "json_repairs": 1},
+    {"seconds": 60.885142600003746, "peak_allocated_vram_gib": 2.484487533569336, "json_repairs": 0}
+  ],
+  "incomplete_paired_evaluation": {
+    "planned_videos": 8,
+    "completed_pairs": 0,
+    "optional_rule_candidate_prompt_enabled": true,
+    "outcome": "manually_stopped_after_first_semantic_stage_exceeded_300_seconds",
+    "accuracy_metrics": null
+  },
+  "release_decision": "not_promoted",
+  "limitations": [
+    "One successful end-to-end video does not establish dataset-wide latency or quality.",
+    "NF4 quality parity with full precision has not been established.",
+    "Generation time limit is cooperative between decoder steps, not a hard process deadline.",
+    "All 40 unique project videos have been used for development.",
+    "Event-class labels and independent test data are unavailable.",
+    "Qwen cannot recover intervals absent from first-layer candidates.",
+    "Rule matches are model-based hypotheses requiring human review."
+  ]
+}
