@@ -46,6 +46,10 @@ def score_sources(checkpoint_path: Path, sources: list[dict], cache: Path, batch
     model = build_model(checkpoint["model"], pretrained=False).to(device)
     model.load_state_dict(checkpoint["state_dict"])
     model.eval()
+    feature_cache = checkpoint["model"] == "dinov2_small_spatial_temporal" and frame_transform is None
+    if feature_cache:
+        from .mil_training import encode_source, encoder_hash
+        encoder_digest = encoder_hash(model)
     rows = []
     for source in sources:
         started = time.perf_counter()
@@ -53,15 +57,22 @@ def score_sources(checkpoint_path: Path, sources: list[dict], cache: Path, batch
         if file_hash(path) != source["sha256"]:
             raise ValueError("Source video checksum mismatch")
         samples = cached_video(path, spec, cache)
+        if feature_cache:
+            encoded = encode_source(model, source, spec, cache, device, encoder_digest, batch_size)
+            if not np.array_equal(encoded["centers"].numpy(), samples.centers):
+                raise ValueError("Feature cache and video timeline disagree")
         values = []
         with torch.inference_mode():
             for offset in range(0, len(samples.frames), batch_size):
-                frames_batch = samples.frames[offset:offset + batch_size]
-                if frame_transform is not None:
-                    # Copies prevent stress transforms from mutating cached clean data.
-                    frames_batch = [frame_transform(frames.copy()) for frames in frames_batch]
-                tensor = np.stack([normalize_rgb(frames, spec.image_size) for frames in frames_batch])
-                logits = model(torch.from_numpy(tensor).to(device)).float()
+                if feature_cache:
+                    logits = model.forward_encoded(encoded["features"][offset:offset + batch_size].to(device)).float()
+                else:
+                    frames_batch = samples.frames[offset:offset + batch_size]
+                    if frame_transform is not None:
+                        # Copies prevent stress transforms from mutating cached clean data.
+                        frames_batch = [frame_transform(frames.copy()) for frames in frames_batch]
+                    tensor = np.stack([normalize_rgb(frames, spec.image_size) for frames in frames_batch])
+                    logits = model(torch.from_numpy(tensor).to(device)).float()
                 if not torch.isfinite(logits).all():
                     raise ValueError("Non-finite model output")
                 values.extend(torch.sigmoid(logits).cpu().tolist())
@@ -107,6 +118,7 @@ def calibration_report(checkpoint_path: Path, sources: list[dict], cache: Path, 
         "diagnostics": calibration_diagnostics(rows, selected["threshold"], min_recall),
         "scoring_backend": {"device": "cuda" if torch.cuda.is_available() else "cpu",
                             "torch_version": str(torch.__version__), "batch_size": 8,
+                            "frozen_encoder_feature_cache": checkpoint["model"] == "dinov2_small_spatial_temporal",
                             "cudnn_allow_tf32": torch.backends.cudnn.allow_tf32},
         "min_recall": min_recall, "selection": "macro_f1_subject_to_recall",
         "checkpoint_sha256": file_hash(checkpoint_path), "pipeline_sha256": pipeline_hash(spec),

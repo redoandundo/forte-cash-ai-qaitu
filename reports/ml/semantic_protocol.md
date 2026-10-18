@@ -21,6 +21,13 @@ a ranking loss; no calibration or held-out source enters this loss. Frozen
 encoder features may be cached by video hash, encoder hash and preprocessing
 fingerprint. No labels enter feature extraction.
 
+Clean development evaluation reuses those frozen features as well; transformed
+stress inputs always run through the encoder again. Cache/direct agreement is
+checked on complete held-out timelines with unchanged verdicts and event times.
+Feature-cache timing is an experiment optimization, not deployment latency:
+ONNX and the application still encode every new video. The direct/cached CUDA
+comparison records its floating-point difference and tolerance explicitly.
+
 Config: `configs/ml/spatial_temporal_mil.yaml`, 80 fixed epochs. Development used
 training folds 2–4 and calibration fold 1. The five-fold audit trains on three
 folds, calibrates on the next fold and scores the remaining fold, keeping whole

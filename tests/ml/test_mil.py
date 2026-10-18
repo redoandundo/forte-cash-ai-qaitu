@@ -76,3 +76,54 @@ def test_exportable_spatial_regions_preserve_adaptive_pooling(size):
     features = torch.randn(3, 384, *size)
     expected = torch.nn.functional.adaptive_avg_pool2d(features, (2, 2)).flatten(1)
     assert torch.allclose(spatial_grid(features, *size), expected, atol=1e-6)
+
+
+def test_scoring_reuses_frozen_features_but_never_reuses_them_for_stress(tmp_path, monkeypatch):
+    from types import SimpleNamespace
+    from fortebank_audit.ml import evaluation, mil_training
+
+    class TinyEncoder(torch.nn.Module):
+        feature_dim = 3
+
+        def __init__(self):
+            super().__init__()
+            self.encoder = torch.nn.Linear(3, 3, bias=False)
+            self.encoder.weight.data.copy_(torch.eye(3))
+            self.calls = 0
+
+        def encode(self, video):
+            self.calls += 1
+            return self.encoder(video.mean((-2, -1)).transpose(1, 2))
+
+        def forward_encoded(self, features):
+            return features.mean((1, 2))
+
+        def forward(self, video):
+            return self.forward_encoded(self.encode(video))
+
+    model = TinyEncoder()
+    spec = VideoSpec(num_frames=2, image_size=16)
+    samples = SimpleNamespace(frames=np.full((3, 2, 16, 16, 3), 200, dtype=np.uint8),
+                              centers=np.array([1., 2., 3.]), starts=np.array([0., 1., 2.]),
+                              ends=np.array([2., 3., 4.]), duration=4.)
+    monkeypatch.setattr(torch.cuda, "is_available", lambda: False)
+    monkeypatch.setattr(evaluation, "build_model", lambda *args, **kwargs: model)
+    monkeypatch.setattr(evaluation, "cached_video", lambda *args: samples)
+    monkeypatch.setattr(mil_training, "cached_video", lambda *args: samples)
+    video = tmp_path / "source.mov"
+    video.write_bytes(b"synthetic sample supplied by test decoder")
+    source = {"path": str(video), "sha256": evaluation.file_hash(video), "source_id": "held-out",
+              "scenario_group": "held-out-group", "label": 0}
+    checkpoint = tmp_path / "model.pt"
+    torch.save({"model": "dinov2_small_spatial_temporal", "state_dict": model.state_dict(),
+                "spec": spec.to_dict(), "provenance": {"train_source_ids": [], "train_sha256": [],
+                                                      "train_scenario_groups": []}}, checkpoint)
+    cold, _, _ = evaluation.score_sources(checkpoint, [source], tmp_path / "cache")
+    calls = model.calls
+    warm, _, _ = evaluation.score_sources(checkpoint, [source], tmp_path / "cache")
+    assert model.calls == calls
+    direct, _, _ = evaluation.score_sources(checkpoint, [source], tmp_path / "cache", frame_transform=lambda x: x)
+    assert cold[0]["raw_scores"] == warm[0]["raw_scores"] == direct[0]["raw_scores"]
+    changed, _, _ = evaluation.score_sources(checkpoint, [source], tmp_path / "cache", frame_transform=lambda x: x * 0)
+    assert model.calls > calls
+    assert changed[0]["raw_scores"] != warm[0]["raw_scores"]
