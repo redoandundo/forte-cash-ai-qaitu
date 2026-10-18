@@ -65,7 +65,7 @@ next_actions:
   - accept compatible inference code and improved Qwen snapshot using docs/team/QWEN_INTEGRATION_RUNBOOK.md
   - keep the public tunnel and local API running; read the active URL from tmp/public-demo/session.json
   - give the jury the API key separately from the public URL
-  - resolve Git author identity and commit the staged teamlead changes
+  - review teamlead delivery commit 2bf2eaf and its feature-to-develop PR
   - review and merge the verified integration commits through the team process
   - present recognition errors as development-model limitations rather than integration failures
   - repeat performance verification on the final presentation laptop if its runtime providers differ

@@ -8,6 +8,25 @@ development-only и не проходит quality gate.
 
 ## Входные версии
 
+### Передача командной версии — 18.10.2026
+
+Изменения тимлида сохранены commit
+`2bf2eaf6e656447e6c7bfacfe9e8eb6ce465ee1c` и отправлены в
+`origin/feature/teamlead-ml-inference-integration`. Для коммита использована
+подтверждённая текущая GitHub identity; глобальные Git-настройки не менялись.
+Ранние записи ниже об отсутствии commit относятся к моменту выполнения этапов.
+
+Перед передачей повторно выполнены:
+
+- `python -m pytest -q` — 119 passed, одно предупреждение Starlette/httpx;
+- `python -m pytest tests/api tests/integration -q` — 50 passed;
+- `node --test tests/web/app.test.cjs` — 11 passed;
+- `git diff --cached --check` — passed.
+
+Передача в develop выполняется через PR. Это сохранение и review кода;
+публичный процесс не перезапускался, Qwen по-прежнему выключен. Дальнейшая
+интеграция модели: [руководство](../team/QWEN_INTEGRATION_RUNBOOK.md).
+
 ### Подготовка подключения улучшенного Qwen — 18.10.2026
 
 Teamlead adapter добавлен в рабочую копию; базовый commit остаётся
