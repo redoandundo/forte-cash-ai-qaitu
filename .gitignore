@@ -1,6 +1,7 @@
 # Python
 .venv/
 .venv-ml/
+.venv-run/
 .cache/
 venv/
 __pycache__/

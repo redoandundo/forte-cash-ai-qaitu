@@ -28,7 +28,9 @@ def main() -> None:
         revision=manifest["revision"],
         local_dir=target,
     )
-    weights = target / manifest["weights_file"]
+    if manifest.get("weights_files") != ["model.safetensors"]:
+        raise RuntimeError("Unsupported model snapshot layout")
+    weights = target / manifest["weights_files"][0]
     actual = sha256(weights)
     if actual.lower() != manifest["weights_sha256"].lower():
         raise RuntimeError(f"Qwen weights checksum mismatch: {actual}")
