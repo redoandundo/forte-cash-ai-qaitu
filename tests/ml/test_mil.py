@@ -68,3 +68,11 @@ def test_spatial_encoder_cache_and_temporal_head_agree():
     model.forward_encoded(encoded).sum().backward()
     assert all(parameter.grad is None for parameter in model.encoder.parameters())
     assert any(parameter.grad is not None for parameter in model.classifier.parameters())
+
+
+@pytest.mark.parametrize("size", [(2, 2), (16, 16), (5, 7)])
+def test_exportable_spatial_regions_preserve_adaptive_pooling(size):
+    from fortebank_audit.ml.spatial_mil import spatial_grid
+    features = torch.randn(3, 384, *size)
+    expected = torch.nn.functional.adaptive_avg_pool2d(features, (2, 2)).flatten(1)
+    assert torch.allclose(spatial_grid(features, *size), expected, atol=1e-6)

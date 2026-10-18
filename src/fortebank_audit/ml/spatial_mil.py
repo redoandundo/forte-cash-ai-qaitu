@@ -7,7 +7,15 @@ from pathlib import Path
 
 import torch
 from torch import nn
-from torch.nn import functional as F
+
+
+def spatial_grid(spatial: torch.Tensor, height: int, width: int) -> torch.Tensor:
+    # Equivalent to adaptive_avg_pool2d(..., (2, 2)), including odd grids.
+    # Explicit regions also export when ONNX cannot infer the token-grid shape.
+    regions = [spatial[:, :, row * height // 2:((row + 1) * height + 1) // 2,
+                       col * width // 2:((col + 1) * width + 1) // 2].mean((-2, -1))
+               for row in range(2) for col in range(2)]
+    return torch.stack(regions, dim=-1).flatten(1)
 
 
 class SpatialTemporalDino(nn.Module):
@@ -53,8 +61,10 @@ class SpatialTemporalDino(nn.Module):
         batch, channels, time, height, width = video.shape
         frames = video.permute(0, 2, 1, 3, 4).reshape(batch * time, channels, height, width)
         tokens = self.encoder(pixel_values=frames, return_dict=False)[0]
-        spatial = tokens[:, 1:].transpose(1, 2).reshape(batch * time, 384, height // 14, width // 14)
-        grid = F.adaptive_avg_pool2d(spatial, (2, 2)).flatten(1)
+        # Bundle spatial dimensions are fixed; only batch is dynamic.
+        patch_height, patch_width = int(height) // 14, int(width) // 14
+        spatial = tokens[:, 1:].transpose(1, 2).reshape(batch * time, 384, patch_height, patch_width)
+        grid = spatial_grid(spatial, patch_height, patch_width)
         return torch.cat([tokens[:, 0], grid], dim=1).reshape(batch, time, self.feature_dim)
 
     def forward_encoded(self, features: torch.Tensor) -> torch.Tensor:
