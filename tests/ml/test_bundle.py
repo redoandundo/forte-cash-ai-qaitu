@@ -140,3 +140,48 @@ def test_pipeline_fingerprint_survives_windows_checkout(tmp_path, monkeypatch):
     for name in ("video.py", "preprocessing.py", "metrics.py"):
         (tmp_path / name).write_bytes(b"first\r\nsecond\r\n")
     assert pipeline_hash(VideoSpec()) == unix
+
+
+@pytest.mark.parametrize("change", [{"smoothing_weights": [0., 1., 0.]}, {"short_sequence_rule": "edge_pad"},
+                                   {"event_merge": "overlapping_windows"}, {"max_events": 4},
+                                   {"checkpoint_sha256": "different"}, {"violation": .4}])
+def test_rehashed_postprocessing_or_threshold_change_is_rejected(exported, tmp_path, change):
+    bundle = tmp_path / "bundle"
+    shutil.copytree(exported[3], bundle)
+    thresholds = json.loads((bundle / "thresholds.json").read_text())
+    write_json(bundle / "thresholds.json", {**thresholds, **change})
+    rehash(bundle)
+    with pytest.raises(ValueError):
+        validate_bundle(bundle)
+
+
+def test_missing_compatibility_graph_is_rejected(exported, tmp_path):
+    bundle = tmp_path / "bundle"
+    shutil.copytree(exported[3], bundle)
+    (bundle / "compatibility/model_dynamic.onnx").unlink()
+    rehash(bundle)
+    with pytest.raises(ValueError, match="complete bundle"):
+        validate_bundle(bundle)
+
+
+def test_runtime_provides_private_timeline_and_propagates_decode_failure(exported, tmp_path):
+    import av
+    path = tmp_path / "short.mov"
+    with av.open(str(path), "w") as container:
+        stream = container.add_stream("mpeg4", rate=10)
+        stream.width, stream.height, stream.pix_fmt = 32, 32, "yuv420p"
+        for index in range(12):
+            frame = av.VideoFrame.from_ndarray(np.full((32, 32, 3), index * 20, dtype=np.uint8), format="rgb24")
+            for packet in stream.encode(frame):
+                container.mux(packet)
+        for packet in stream.encode():
+            container.mux(packet)
+    result = predict_video(path, exported[3], include_window_scores=True)
+    assert result["windows"] == len(result["window_scores"]) == 1
+    assert result["window_scores"][0]["center_sec"] == pytest.approx(.6)
+    for event in result["events"]:
+        assert event["supporting_windows"] == len(event["supporting_window_indices"]) == 1
+    broken = tmp_path / "broken.mov"
+    broken.write_bytes(b"not a video")
+    with pytest.raises(Exception):
+        predict_video(broken, exported[3])

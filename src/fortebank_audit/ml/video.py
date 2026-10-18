@@ -38,6 +38,9 @@ def sample_video(path: Path, spec: VideoSpec) -> VideoSamples:
         if not container.streams.video:
             raise ValueError("No video stream")
         stream = container.streams.video[0]
+        if stream.codec_context is None:
+            # PyAV can enter native decode with a null decoder and crash the process.
+            raise ValueError("Unsupported video codec: decoder is unavailable")
         duration = float(stream.duration * stream.time_base) if stream.duration is not None else float((container.duration or 0) / av.time_base)
         starts, ends = plan_windows(duration, spec)
         plans = np.stack([np.linspace(start, end, spec.num_frames, endpoint=False) for start, end in zip(starts, ends)])

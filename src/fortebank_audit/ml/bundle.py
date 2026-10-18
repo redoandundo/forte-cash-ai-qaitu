@@ -10,11 +10,23 @@ import onnxruntime as ort
 import torch
 
 from .evaluation import file_hash, pipeline_hash
+from .experiment_data import fingerprint
 from .models import build_model
 from .preprocessing import VideoSpec, preprocessing_payload
 
 ROOT = Path(__file__).resolve().parents[3]
 SCHEMA_PATH = ROOT / "configs" / "ml" / "model_manifest.v1.schema.json"
+POSTPROCESSING = {
+    "aggregation": "three_window_weighted_smoothing_then_peak",
+    "smoothing_weights": [0.25, 0.5, 0.25], "smoothing_edges": "replicate",
+    "short_sequence_rule": "identity_if_fewer_than_three",
+    "event_merge": "adjacent_centers_within_stride", "max_events": 3,
+}
+
+
+def scoring_fingerprint(thresholds: dict) -> str:
+    return fingerprint({key: thresholds[key] for key in
+                        ("checkpoint_sha256", "pipeline_sha256", "violation", *POSTPROCESSING)})
 
 
 def cpu_session(path: Path):
@@ -38,11 +50,11 @@ def safe_file(root: Path, name: str) -> Path:
 def validate_bundle(root: Path) -> dict:
     manifest = json.loads((root / "model_manifest.json").read_text(encoding="utf-8"))
     jsonschema.validate(manifest, json.loads(SCHEMA_PATH.read_text(encoding="utf-8")))
-    required = ["model_manifest.json", "ml-to-inference.md", manifest["artifact"], manifest["preprocessing_file"], manifest["thresholds_file"], manifest["labels_file"], manifest["metrics_file"]]
+    required = ["model_manifest.json", "ml-to-inference.md", manifest["artifact"], manifest["preprocessing_file"], manifest["thresholds_file"], manifest["labels_file"], manifest["metrics_file"], "compatibility/model_dynamic.onnx", "compatibility/inference/model_manifest.json"]
     entries = {}
     for line in (root / "SHA256SUMS.txt").read_text(encoding="ascii").splitlines():
         digest, name = line.split("  ", 1)
-        if name in entries or len(digest) != 64:
+        if name in entries or len(digest) != 64 or any(char not in "0123456789abcdef" for char in digest):
             raise ValueError("Invalid checksum inventory")
         entries[name] = digest
         if file_hash(safe_file(root, name)) != digest:
@@ -54,6 +66,7 @@ def validate_bundle(root: Path) -> dict:
     pre = json.loads(safe_file(root, manifest["preprocessing_file"]).read_text(encoding="utf-8"))
     thresholds = json.loads(safe_file(root, manifest["thresholds_file"]).read_text(encoding="utf-8"))
     labels = json.loads(safe_file(root, manifest["labels_file"]).read_text(encoding="utf-8"))
+    metrics = json.loads(safe_file(root, manifest["metrics_file"]).read_text(encoding="utf-8"))
     if pre["input_layout"] != "NCTHW" or pre["dtype"] != "float32" or pre["color"] != "RGB" or pre["normalization"] != "imagenet":
         raise ValueError("Unsupported preprocessing")
     spec = VideoSpec(pre["num_frames"], pre["image_size"], pre["window_sec"], pre["recommended_stride_sec"], pre["include_tail_window"])
@@ -62,12 +75,30 @@ def validate_bundle(root: Path) -> dict:
     expected = [1, 3, pre["num_frames"], pre["image_size"], pre["image_size"]]
     if manifest["input"]["shape"] != expected or manifest["input"]["layout"] != pre["input_layout"] or manifest["input"]["dtype"] != pre["dtype"] or manifest["input"]["color"] != pre["color"]:
         raise ValueError("Manifest and preprocessing disagree")
-    if manifest["output"]["activation"] != "logit" or labels.get("1") != manifest["output"]["positive_label"]:
+    if manifest["output"]["activation"] != "logit" or labels != {"0": "no_violation", "1": "possible_violation"} or labels["1"] != manifest["output"]["positive_label"]:
         raise ValueError("Invalid output semantics or labels")
     if not np.isfinite(thresholds["violation"]) or not 0 <= thresholds["violation"] <= 1:
         raise ValueError("Invalid threshold")
     if thresholds["pipeline_sha256"] != pipeline_hash(spec):
         raise ValueError("Bundle was calibrated for another scoring pipeline")
+    if any(thresholds.get(key) != value for key, value in POSTPROCESSING.items()):
+        raise ValueError("Bundle postprocessing differs from the calibrated pipeline")
+    if metrics.get("checkpoint_sha256") != thresholds.get("checkpoint_sha256"):
+        raise ValueError("Threshold and metrics refer to different checkpoints")
+    if metrics.get("calibration_is_test") is not False:
+        raise ValueError("Calibration cannot be described as independent test")
+    if metrics["calibration_metrics"].get("threshold", thresholds["violation"]) != thresholds["violation"]:
+        raise ValueError("Threshold disagrees with calibration metrics")
+    if "scoring_sha256" in thresholds and thresholds["scoring_sha256"] != scoring_fingerprint(thresholds):
+        raise ValueError("Checkpoint/threshold/pipeline fingerprint mismatch")
+    compatibility = json.loads((root / "compatibility/inference/model_manifest.json").read_text(encoding="utf-8"))
+    if (compatibility.get("sha256") != entries["compatibility/model_dynamic.onnx"]
+            or compatibility.get("input_shape") != [None, *expected[1:]]
+            or compatibility.get("model_version") != manifest["model_version"]
+            or compatibility.get("output_semantics") != "logit"
+            or compatibility.get("preprocessing_sha256") != entries[manifest["preprocessing_file"]]
+            or compatibility.get("threshold_sha256") != entries[manifest["thresholds_file"]]):
+        raise ValueError("Compatibility graph metadata disagree with canonical bundle")
     session = cpu_session(safe_file(root, manifest["artifact"]))
     inputs, outputs = session.get_inputs(), session.get_outputs()
     if len(inputs) != 1 or inputs[0].name != manifest["input"]["name"] or inputs[0].name != pre["input_name"] or inputs[0].shape != expected or inputs[0].type != "tensor(float)":
@@ -124,21 +155,22 @@ def export_bundle(checkpoint_path: Path, calibration: dict, output: Path, parity
             raise ValueError("Export parity or threshold decisions failed")
         parity = {"max_absolute_logit_error": error, "tolerance": 1e-4, "decision_agreement": agrees, "input_count": len(parity_inputs), "batch_sizes": [1, len(parity_inputs)], "provider": "CPUExecutionProvider"}
         write_json(staging / "preprocessing.json", preprocessing_payload(spec))
-        write_json(staging / "thresholds.json", {
+        thresholds = {
             "violation": threshold, "selected_on": "disjoint_calibration_sources",
             "min_recall": calibration["min_recall"], "metric": calibration["selection"],
-            "aggregation": "three_window_weighted_smoothing_then_peak",
-            "smoothing_weights": [0.25, 0.5, 0.25], "smoothing_edges": "replicate",
-            "short_sequence_rule": "identity_if_fewer_than_three",
-            "event_merge": "adjacent_centers_within_stride", "max_events": 3,
+            **POSTPROCESSING,
             "checkpoint_sha256": calibration["checkpoint_sha256"],
             "pipeline_sha256": calibration["pipeline_sha256"],
             "calibration_source_count": calibration["source_count"],
-        })
+        }
+        thresholds["scoring_sha256"] = scoring_fingerprint(thresholds)
+        write_json(staging / "thresholds.json", thresholds)
         write_json(staging / "labels.json", {"0": "no_violation", "1": "possible_violation"})
         write_json(staging / "metrics.json", {
             "release_status": "development_only_not_promoted", "code_commit": code_commit,
             "calibration_metrics": calibration["metrics"], "calibration_is_test": False,
+            "calibration_diagnostics": calibration.get("diagnostics"),
+            "calibration_backend": calibration.get("scoring_backend"),
             "nested_oof_metrics": evaluation_metrics, "parity": parity,
             "config_sha256": checkpoint["provenance"]["config_sha256"],
             "training_dataset_sha256": checkpoint["provenance"]["dataset_sha256"],
@@ -170,7 +202,8 @@ def export_bundle(checkpoint_path: Path, calibration: dict, output: Path, parity
             f"Model: {model_version}. Branch: feature/ml-model. Code commit: {code_commit}.\n\n"
             "Status: development only; numerical parity does not establish recognition quality.\n\n"
             "Canonical model.onnx uses fixed batch 1 and the team's nested manifest v1. "
-            "The existing inference predictor uses compatibility/model_dynamic.onnx and "
+            "The current inference bundle adapter reads the canonical directory with explicit development opt-in. "
+            "Legacy flat-manifest adapters may use compatibility/model_dynamic.onnx and "
             "compatibility/inference/model_manifest.json together. Both graphs use the same checkpoint.\n\n"
             f"Input: float32 RGB NCTHW, [N,3,{spec.num_frames},{spec.image_size},{spec.image_size}]. "
             f"Window {spec.window_sec}s, stride {spec.stride_sec}s, PTS sampling, tail enabled.\n\n"

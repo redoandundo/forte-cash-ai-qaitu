@@ -1,0 +1,106 @@
+{
+  "model_version": "baseline-audited-v4-development",
+  "bundle": "artifacts/ml/bundles/baseline-audited-v4",
+  "archive": "artifacts/ml/bundles/baseline-audited-v4.zip",
+  "archive_sha256": "c387bdea9bd80a124c5587fccfcec3243d2550658ee09ca6834acaa9e54a1241",
+  "archive_bytes": 7425647,
+  "onnx_sha256": "00ae541eac23249dd4751093ce276bfa9c14afca2d5f15f4fec9719c009ae52d",
+  "inventory_verified_files": 9,
+  "archive_members": 10,
+  "code_commit": "aba56d31030aa9830fe2770e4aa9d54d2879ef24",
+  "parity": {
+    "max_absolute_logit_error": 3.5762786865234375e-07,
+    "tolerance": 0.0001,
+    "decision_agreement": true,
+    "input_count": 16,
+    "batch_sizes": [
+      1,
+      16
+    ],
+    "provider": "CPUExecutionProvider"
+  },
+  "quality_passed": false,
+  "weights_changed": false,
+  "release_status": "development_only_not_promoted",
+  "focused_ml_tests_passed": 52,
+  "cpu_benchmark": {
+    "model_version": "baseline-audited-v4-development",
+    "sources": 40,
+    "failures": 0,
+    "total_video_sec": 1299.8632291666665,
+    "longest_video_sec": 142.53302083333332,
+    "total_wall_sec": 86.0702807000007,
+    "mean_sec": 2.1517570175000174,
+    "p95_sec": 4.481839679999847,
+    "max_sec": 10.300244300000031,
+    "device": "CPU",
+    "cache": false,
+    "scope": "bundle_validation_decode_preprocess_CPU_ONNX_events_no_API_or_JPEG",
+    "all_observed_under_300_sec": true,
+    "full_service_under_300_sec_verified": false,
+    "accuracy_evaluation": false
+  },
+  "prior_same_weights_benchmark_max_sec": 24.94072110000002,
+  "timing_caveat": "Shared workstation; runtime variation is not an architecture speed improvement. API SLA not verified.",
+  "temporal_shift": [
+    {
+      "offset_sec": 4,
+      "original_peak_sec": 19.0,
+      "shifted_peak_sec": 23.0,
+      "peak_shift_error_sec": 0.0,
+      "tolerance_sec": 2.0,
+      "peak_shift_passed": true,
+      "matched_windows": 11,
+      "identical_matched_tensors": 11,
+      "input_translation_passed": true,
+      "max_matched_logit_error": 0.0,
+      "event_present_original": true,
+      "event_present_shifted": true
+    },
+    {
+      "offset_sec": -4,
+      "original_peak_sec": 19.0,
+      "shifted_peak_sec": 15.0,
+      "peak_shift_error_sec": 0.0,
+      "tolerance_sec": 2.0,
+      "peak_shift_passed": true,
+      "matched_windows": 9,
+      "identical_matched_tensors": 9,
+      "input_translation_passed": true,
+      "max_matched_logit_error": 0.0,
+      "event_present_original": true,
+      "event_present_shifted": true
+    }
+  ],
+  "edge_checks": {
+    "short_duration_sec": 1.2,
+    "short_windows": 1,
+    "failures": {
+      "unknown-codec.mov": "ValueError",
+      "corrupt.mov": "InvalidDataError"
+    },
+    "unsupported_codec_is_synthetic_fixture": true
+  },
+  "checkpoint_sha256": "fd6f8938a9de7f689628c68ac98c0fd4e79de2b14a5290319078cb56b81c675c",
+  "pipeline_sha256": "c159ae7746ecd4d38c07cb5390868da4afea51cfcf3fc95e218a9343eff22045",
+  "scoring_sha256": "038266d3f1f197d1ce690d1fdb4d02eabc4829b52a2acee195af5f143bde66c3",
+  "full_video_diagnostics": {
+    "source_count": 11,
+    "positive_count": 6,
+    "negative_count": 5,
+    "windows": 257,
+    "role": "runtime_not_quality_evaluation"
+  },
+  "inference_adapter": {
+    "reference_commit": "2f53ce18a91bcddae5135f2cac0a03aa36c7e7d4",
+    "videos": 11,
+    "device": "CPU",
+    "score_max_error": 0.0,
+    "timestamp_max_error": 0.0,
+    "pipeline_with_JPEG_max_sec": 21.874203099999704,
+    "corrupt_video_exception": "VideoOpenError",
+    "evidence_output": "ASCII path required pending inference Unicode writer fix",
+    "unsupported_codec_metadata_exception": "AttributeError; inference owner should raise structured UnsupportedVideoError",
+    "includes_API": false
+  }
+}

@@ -99,8 +99,50 @@ class R3DBinary(nn.Module):
         super().__init__()
         self.model = model
 
+    def set_trainable_blocks(self, count: int) -> None:
+        if type(count) is not int or not 0 <= count <= 4:
+            raise ValueError("R3D trainable stages must be an integer from 0 to 4")
+        for parameter in self.model.parameters():
+            parameter.requires_grad_(False)
+        for stage in range(5 - count, 5):
+            for parameter in getattr(self.model, f"layer{stage}").parameters():
+                parameter.requires_grad_(True)
+        for parameter in self.model.fc.parameters():
+            parameter.requires_grad_(True)
+        self.train(self.training)
+
+    def train(self, mode: bool = True):
+        super().train(mode)
+        # Updating pretrained statistics with tiny video batches corrupts the
+        # supposedly frozen feature extractor, even without backbone gradients.
+        for module in self.model.modules():
+            if isinstance(module, nn.modules.batchnorm._BatchNorm):
+                module.eval()
+        return self
+
     def forward(self, video: torch.Tensor) -> torch.Tensor:
         return self.model(video).flatten()
+
+
+class KineticsR3DBinary(R3DBinary):
+    """Keep the public ImageNet input contract; adapt inside the ONNX graph.
+
+    A separate architecture name preserves legacy r3d_18 checkpoint semantics.
+    Spatial sampling remains the project's full-frame stretch, not center crop.
+    """
+
+    def __init__(self, model: nn.Module):
+        super().__init__(model)
+        mean = torch.tensor([0.485, 0.456, 0.406]).view(1, 3, 1, 1, 1)
+        std = torch.tensor([0.229, 0.224, 0.225]).view(1, 3, 1, 1, 1)
+        transform = R3D_18_Weights.KINETICS400_V1.transforms()
+        video_mean = torch.tensor(transform.mean).view(1, 3, 1, 1, 1)
+        video_std = torch.tensor(transform.std).view(1, 3, 1, 1, 1)
+        self.register_buffer("input_scale", std / video_std)
+        self.register_buffer("input_shift", (mean - video_mean) / video_std)
+
+    def forward(self, video: torch.Tensor) -> torch.Tensor:
+        return self.model(video * self.input_scale + self.input_shift).flatten()
 
 
 class X3DBinary(nn.Module):
@@ -113,6 +155,11 @@ class X3DBinary(nn.Module):
 
 
 def build_model(name: str, pretrained: bool = True, train_backbone: bool = False) -> nn.Module:
+    if name == "dinov2_small_spatial_temporal":
+        if train_backbone:
+            raise ValueError("Cached MIL requires a frozen DINO encoder")
+        from .spatial_mil import SpatialTemporalDino
+        return SpatialTemporalDino(pretrained)
     if name == "mobilenet_v3_small_temporal":
         return TemporalMobileNet(pretrained, train_backbone)
     if name == "mobilenet_v3_small_temporal_conv1d":
@@ -121,4 +168,6 @@ def build_model(name: str, pretrained: bool = True, train_backbone: bool = False
         return build_x3d(pretrained, train_backbone)
     if name == "r3d_18":
         return build_r3d18(pretrained, train_backbone)
+    if name == "r3d_18_kinetics":
+        return KineticsR3DBinary(build_r3d18(pretrained, train_backbone).model)
     raise ValueError(f"Unknown model: {name}")

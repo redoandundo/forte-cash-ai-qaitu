@@ -1,0 +1,18 @@
+seed: 42
+model: dinov2_small_spatial_temporal
+data:
+  num_frames: 8
+  image_size: 224
+  window_sec: 6.0
+  stride_sec: 2.0
+  include_tail: true
+training:
+  objective: temporal_mil
+  epochs: 80
+  learning_rate: 0.001
+  weight_decay: 0.02
+  feature_noise_std: 0.02
+  point_weight: 0.5
+  pair_weight: 0.2
+  pair_margin: 0.5
+  encoder_batch_size: 2

@@ -1,0 +1,13 @@
+# Optional local DINO experiment dependencies, in addition to requirements-ml-repair.txt.
+# They are not required by existing MobileNet/R3D inference bundles.
+transformers==4.46.3
+huggingface-hub==0.26.2
+tokenizers==0.20.3
+safetensors==0.4.5
+requests==2.34.2
+tqdm==4.70.1
+regex==2026.9.29
+urllib3==2.8.0
+charset-normalizer==3.5.2
+certifi==2026.7.22
+idna==3.20
