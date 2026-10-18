@@ -11,6 +11,8 @@ const dropzone = document.querySelector("#dropzone");
 const uploadError = document.querySelector("#upload-error");
 const chooseFileButton = document.querySelector("#choose-file");
 const apiKeyInput = document.querySelector("#api-key");
+const apiAccess = document.querySelector("#api-access");
+const apiKeyError = document.querySelector("#api-key-error");
 const videoPreview = document.querySelector("#video-preview");
 const videoEmpty = document.querySelector("#video-empty");
 const previewWarning = document.querySelector("#preview-warning");
@@ -94,6 +96,12 @@ let currentRuleCatalog = null;
 let runtimeIdentity = { badge: "Local", caption: "проверяем runtime" };
 
 apiKeyInput.value = sessionStorage.getItem("fortebank-api-key") || "";
+apiAccess.open = !apiKeyInput.value;
+apiKeyInput.addEventListener("input", () => {
+  sessionStorage.setItem("fortebank-api-key", apiKeyInput.value.trim());
+  apiKeyError.hidden = true;
+  apiKeyInput.setAttribute("aria-invalid", "false");
+});
 apiKeyInput.addEventListener("change", () => {
   sessionStorage.setItem("fortebank-api-key", apiKeyInput.value.trim());
 });
@@ -498,7 +506,7 @@ async function responseJson(response) {
 }
 
 function errorMessage(status, payload) {
-  if (status === 401) return "API-ключ не принят. Проверьте ключ в технических настройках.";
+  if (status === 401) return "Ключ не принят. Вставьте актуальный ключ команды Qaitu в поле доступа выше.";
   if (status === 413) return "Файл превышает лимит 100 МБ.";
   if (status === 415) return "Сервис принимает только видео в формате MOV.";
   return typeof payload.detail === "string" ? payload.detail : "Локальный сервис не вернул результат.";
@@ -507,7 +515,11 @@ function errorMessage(status, payload) {
 async function getJson(url, apiKey, signal) {
   const response = await fetch(url, { headers: { "X-API-Key": apiKey }, signal });
   const payload = await responseJson(response);
-  if (!response.ok) throw new Error(errorMessage(response.status, payload));
+  if (!response.ok) {
+    const error = new Error(errorMessage(response.status, payload));
+    error.status = response.status;
+    throw error;
+  }
   return payload;
 }
 
@@ -530,12 +542,21 @@ async function pollJob(jobId, apiKey, signal) {
   throw new Error("Превышен лимит обработки 5 минут. Результат не сформирован.");
 }
 
+function showAccessError(message) {
+  apiAccess.open = true;
+  apiKeyError.textContent = message;
+  apiKeyError.hidden = false;
+  apiKeyInput.setAttribute("aria-invalid", "true");
+  setUiState("ready");
+  apiAccess.scrollIntoView({ behavior: "smooth", block: "center" });
+  apiKeyInput.focus({ preventScroll: true });
+}
+
 async function startAnalysis() {
   if (!selectedFile) return;
   const apiKey = apiKeyInput.value.trim();
   if (!apiKey) {
-    errorDetail.textContent = "Укажите API-ключ в технических настройках.";
-    setUiState("failed");
+    showAccessError("Вставьте ключ доступа команды Qaitu. После этого можно запустить проверку — видео уже выбрано.");
     return;
   }
 
@@ -556,6 +577,8 @@ async function startAnalysis() {
   try {
     sessionStorage.setItem("fortebank-api-key", apiKey);
     currentRuleCatalog = await getJson("/internal/api/v1/rules", apiKey, signal);
+    apiKeyError.hidden = true;
+    apiKeyInput.setAttribute("aria-invalid", "false");
     const formData = new FormData();
     formData.append("file", selectedFile, selectedFile.name);
     const response = await fetch("/api/v1/analyze", {
@@ -572,6 +595,10 @@ async function startAnalysis() {
     await pollJob(payload.job_id, apiKey, signal);
   } catch (error) {
     if (error.name === "AbortError") return;
+    if (error.status === 401) {
+      showAccessError(error.message);
+      return;
+    }
     errorDetail.textContent = error instanceof Error ? error.message : "Не удалось обработать файл.";
     setUiState("failed");
   } finally {
@@ -599,7 +626,7 @@ function openWorkspace(file) {
   uploadView.hidden = true;
   workspace.hidden = false;
   setUiState("ready");
-  workspace.scrollIntoView({ behavior: "smooth", block: "start" });
+  (apiKeyInput.value.trim() ? workspace : apiAccess).scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
 function acceptFile(file) {
