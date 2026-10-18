@@ -35,21 +35,21 @@ components:
   rule_matching:
     owner: teamlead
     status: three_rules_automatic_condition_matching_contract_tested
-    automatic_semantic_matching: implemented_pending_real_qwen_validation
-    enabled_in_public_demo: false
+    automatic_semantic_matching: enabled_in_semantic_runtime_quality_validation_pending
+    enabled_in_public_demo: true
     contract: docs/contracts/automatic_rules_contract.md
   qwen_api_adapter:
     owner: teamlead
-    status: semantic_code_integrated_remote_worker_tested_gpu_access_pending
+    status: semantic_qwen_remote_gpu_connected_and_actual_inference_verified
     compatible_interface_ref: 94fd1d6
-    enabled_in_public_demo: false
+    enabled_in_public_demo: true
     runbook: docs/team/QWEN_INTEGRATION_RUNBOOK.md
   gpu_worker_bridge:
     owner: teamlead
-    status: compatible_worker_and_keyless_web_verified_with_real_http_and_onnx_cpu
-    enabled_in_public_demo: false
+    status: remote_gpu_connected_actual_qwen_preflight_passed
+    enabled_in_public_demo: true
     trained_adapter: experimental_binary_advisory_quality_gate_failed
-    real_qwen_executed_by_teamlead: false
+    real_qwen_executed_by_teamlead: true
     runbook: docs/team/GPU_WORKER_RUNBOOK.md
   public_access:
     owner: teamlead
@@ -72,7 +72,7 @@ requirements:
   cloud_ai_allowed: false
 
 next_actions:
-  - obtain actual GPU worker address and private key, then validate real Qwen using docs/team/GPU_WORKER_RUNBOOK.md
+  - keep the team GPU worker online and evaluate positive, negative and multiple-event videos locally
   - keep the public tunnel and local API running; read the active URL from tmp/public-demo/session.json
   - give the jury the API key separately from the public URL
   - review teamlead delivery commit 2bf2eaf and its feature-to-develop PR
@@ -81,7 +81,6 @@ next_actions:
   - repeat performance verification on the final presentation laptop if its runtime providers differ
 
 blockers:
-  - actual GPU worker address and key have not been provided; current site host has no CUDA
   - trained Qwen binary adapter failed quality gate and is not an event explanation model
   - development-only model quality gates are not sufficient for promotion
   - automatic rule matching requires real Qwen visual-fact quality and latency validation before public activation

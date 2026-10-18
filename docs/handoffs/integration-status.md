@@ -8,6 +8,22 @@ development-only и не проходит quality gate.
 
 ## Входные версии
 
+### Включение team GPU worker — 18.10.2026
+
+Получены и сохранены вне Git адрес и отдельный ключ worker. Проверены protocol,
+auth, ONNX v4 SHA и semantic Qwen base SHA. Прямой реальный inference через bridge
+завершился за 37.784 сек.: одно событие, одно досье, qwen_called=true, rejected=0.
+Использовался только синтетический ролик 9 сек.; качество банковских сцен не проверено.
+Первый preflight оборвался generic request error; повтор завершился успешно.
+
+Публичный API перезапущен с WorkerConfigPath и VlmMode=qwen с сохранением tunnel
+URL и jury key. Публичный /health: 200, semantic_mode=qwen, execution_location=remote,
+sequence_mode=off. Это базовый semantic Qwen, не обученный бинарный LoRA.
+Результат дополнительной public keyless проверки читать из игнорируемого
+`tmp/public-demo/public-gpu-smoke.json`, если файл создан. GPU-компьютер и
+текущий сервер/туннель необходимо держать включёнными. Не публиковать ключ worker.
+
+
 ### Исправление переносимого GPU-архива — 18.10.2026
 
 Первый архив ошибочно включал только верхний уровень ONNX bundle. Отсутствовали
