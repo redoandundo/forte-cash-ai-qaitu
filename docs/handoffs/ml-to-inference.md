@@ -2,6 +2,8 @@
 
 ## Дополнение 2026-10-18: scorecard
 
+Код оценки и экспериментов: commit `20209ec` в `feature/ml-model`.
+
 Проверка критериев обнаружения/классификации/устойчивости:
 [scorecard_followup.md](../../reports/ml/scorecard_followup.md).
 Проведены два запуска fine-tuning и 200 full-video source-condition оценок

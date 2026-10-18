@@ -17,4 +17,3 @@ training:
   unfreeze_epoch: 3
   unfreeze_blocks: 2
   loss_normalization: dataset_mean
-
