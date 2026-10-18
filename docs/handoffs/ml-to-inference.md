@@ -155,7 +155,19 @@ OOF macro F1 0.510, recall 0.667, temporal MAE 4.474 s; ложных событ�
 `artifacts/ml/bundles/dino-spatial-mil-fold0` прошёл PyTorch/ONNX parity и
 smoke через adapter `2f53ce1`, но CPU pipeline занимает 30–36 s на двух
 проверенных видео. Частичный stress-аудит выявил чувствительность к смещению
-кадра. Текущий baseline и API этой работой не переключаются.
+кадра. Текущий baseline не заменён.
+
+Последующий рецепт `spatial_temporal_mil_consistent.yaml` обучает согласованные
+оценки исходных и смещённых окон. Итог в `semantic_consistency_results.md`:
+OOF recall 0.762, macro F1 0.520, temporal MAE 3.700 s; gates всё ещё не пройдены.
+Comparison bundle `artifacts/ml/bundles/dino-consistent-fold0` имеет ONNX max
+logit error 0.00003284. 91 ML-тест пройден. Для воспроизведения подставить новый
+config в development/OOF команды и выбрать новые output directories.
+
+Совместимая API-интеграция выполняется отдельно в локальном checkout/ветке
+`codex/ml-bundle-integration`: там исправлены создание job, загрузка bundle,
+Unicode JPEG и отказ при недоступном decoder. Она сохраняет текущий bundle и
+требует явного development opt-in; см. её `docs/handoffs/bundle-api-integration.md`.
 
 Дополнительные зависимости из `configs/ml/requirements-semantic.txt` можно
 установить в отдельное ML-окружение поверх `requirements-ml-repair.txt`.
