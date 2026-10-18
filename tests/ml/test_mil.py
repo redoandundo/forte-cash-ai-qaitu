@@ -32,6 +32,20 @@ def test_positive_context_is_not_invented_as_negative():
         video_loss(logits, 1, [], .5)
 
 
+def test_hard_negative_mining_adds_pressure_only_to_top_quarter():
+    logits = torch.tensor([-3., -2., -1., 0., 1., 2., 3., 4.], requires_grad=True)
+    base = video_loss(logits, 0, [], .5)
+    mined = video_loss(logits, 0, [], .5, 1.)
+    extra_gradient = torch.autograd.grad(mined - base, logits)[0]
+    assert torch.equal(extra_gradient[:6], torch.zeros(6))
+    assert torch.all(extra_gradient[6:] > 0)
+    assert torch.equal(video_loss(logits, 1, [3], .5), video_loss(logits, 1, [3], .5, 1.))
+    assert torch.isfinite(video_loss(logits[:1], 0, [], .5, 1.))
+    for invalid in (-1., float("nan"), float("inf")):
+        with pytest.raises(ValueError, match="hard negative"):
+            video_loss(logits, 0, [], .5, invalid)
+
+
 def test_single_view_training_keeps_the_previous_objective_and_gradient():
     logits = torch.tensor([-2., 0., 2., 1.], requires_grad=True)
     previous = video_loss(logits, 1, [2], .5)

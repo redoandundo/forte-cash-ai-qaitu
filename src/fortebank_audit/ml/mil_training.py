@@ -29,7 +29,10 @@ def smooth_probabilities(logits):
     return F.conv1d(padded, kernel).flatten()
 
 
-def video_loss(logits, label: int, anchors: list[int], point_weight: float):
+def video_loss(logits, label: int, anchors: list[int], point_weight: float,
+               hard_negative_weight: float = 0.):
+    if not math.isfinite(hard_negative_weight) or hard_negative_weight < 0:
+        raise ValueError("Invalid hard negative weight")
     if logits.ndim != 1 or logits.numel() == 0 or not torch.isfinite(logits).all():
         raise ValueError("MIL expects a nonempty finite video timeline")
     peak = smooth_probabilities(logits).max().clamp(1e-6, 1 - 1e-6)
@@ -41,7 +44,12 @@ def video_loss(logits, label: int, anchors: list[int], point_weight: float):
     if label != 0 or anchors:
         raise ValueError("Negative videos cannot contain positive point anchors")
     # The full negative timeline contributes, with additional pressure on its peak.
-    return -(1 - peak).log() + .5 * F.softplus(logits).mean()
+    loss = -(1 - peak).log() + .5 * F.softplus(logits).mean()
+    if hard_negative_weight:
+        # Mine only inside labelled-normal training videos, never held-out errors.
+        hardest = logits.topk(max(1, math.ceil(len(logits) / 4))).values
+        loss = loss + hard_negative_weight * F.softplus(hardest).mean()
+    return loss
 
 
 def encoder_hash(model) -> str:
@@ -105,10 +113,12 @@ def encode_source(model, source, spec, cache, device, encoder_digest, batch_size
     return saved
 
 
-def multi_view_loss(logits, label, anchors, point_weight, consistency_weight):
+def multi_view_loss(logits, label, anchors, point_weight, consistency_weight,
+                    hard_negative_weight=0.):
     if logits.ndim != 2 or not len(logits) or not math.isfinite(consistency_weight) or consistency_weight < 0:
         raise ValueError("Invalid multi-view objective")
-    supervised = torch.stack([video_loss(view, label, anchors, point_weight) for view in logits]).mean()
+    supervised = torch.stack([video_loss(view, label, anchors, point_weight, hard_negative_weight)
+                              for view in logits]).mean()
     consistency = logits.sigmoid().var(dim=0, unbiased=False).mean()
     return supervised + consistency_weight * consistency
 
@@ -128,6 +138,9 @@ def train_mil(sources, config, output, cache):
             or len(views) != len(set(views)) or any(view not in CONDITIONS for view in views)):
         raise ValueError("Feature views must be unique supported conditions beginning with clean")
     consistency_weight = settings.get("consistency_weight", 0.)
+    hard_negative_weight = settings.get("hard_negative_weight", 0.)
+    if not math.isfinite(hard_negative_weight) or hard_negative_weight < 0:
+        raise ValueError("Invalid hard negative weight")
     if not math.isfinite(consistency_weight) or consistency_weight < 0:
         raise ValueError("Invalid consistency weight")
     if settings["epochs"] < 1 or settings["encoder_batch_size"] < 1:
@@ -179,7 +192,8 @@ def train_mil(sources, config, output, cache):
                 features = features + torch.randn_like(features) * settings["feature_noise_std"]
             logits = model.forward_encoded(features.flatten(0, 1)).reshape(features.shape[:2])
             losses.append(bag["weight"] * multi_view_loss(logits, bag["label"], bag["anchors"],
-                                                         settings["point_weight"], consistency_weight))
+                                                         settings["point_weight"], consistency_weight,
+                                                         hard_negative_weight))
             peak = torch.stack([smooth_probabilities(view).max() for view in logits]).mean()
             group_scores.setdefault(bag["group"], {}).setdefault(bag["label"], []).append(peak)
         pairs = [F.softplus((torch.stack(scores[0]).max() - torch.stack(scores[1]).max()) * 4 + settings["pair_margin"])
@@ -207,6 +221,8 @@ def train_mil(sources, config, output, cache):
     torch.save(checkpoint, output / "best.pt")
     return {"model": config["model"], "sources": len(sources), "windows": sum(bag["features"].shape[1] for bag in bags),
             "epochs": settings["epochs"], "feature_views": views, "consistency_weight": consistency_weight,
+            "hard_negative_weight": hard_negative_weight,
             "training_sec": time.perf_counter() - started,
             "device": str(device), "history": history, "provenance": provenance,
-            "objective": "all_negative_windows_video_peak_positive_point_and_train_pair_ranking"}
+            "objective": "all_negative_windows_video_peak_positive_point_and_train_pair_ranking",
+            "hard_negative_fraction": .25 if hard_negative_weight else None}
