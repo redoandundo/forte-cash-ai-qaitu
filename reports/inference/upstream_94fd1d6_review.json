@@ -1,0 +1,19 @@
+{
+  "reviewed_commit": "94fd1d6",
+  "previous_review": "48c1739",
+  "upstream_api_inference_ml_tests_passed": 72,
+  "local_semantic_api_rules_contract_tests_passed": 102,
+  "test_failures": 0,
+  "semantic_verifier_code_and_base_manifest_changed": false,
+  "missing_sequence_module_resolved": true,
+  "adapter_sha256_verified": "9d519f34dc7a900ede428a81af63f08ee58f030483a417c1309fba8d2ef380c3",
+  "adapter_task": "experimental whole-video binary classification; not event localization or semantic dossier generation",
+  "adapter_quality_gate_passed": false,
+  "upstream_reported_diagnostic_test": {"videos": 9, "tp": 3, "tn": 1, "fp": 4, "fn": 1},
+  "diagnostic_metrics_reproduced_locally": false,
+  "real_adapter_inference_run": false,
+  "local_adapter_runtime_limitation": "Isolated semantic runtime lacks peft==0.21.2 and uses bitsandbytes==0.46.1; new upstream requirements pin bitsandbytes==0.50.2. Existing runtime was not modified during this quick review.",
+  "remaining_integration_issue": "Upstream api_runtime still hardcodes the bundled ONNX predictor and does not consume QAITU_MODEL_BUNDLE.",
+  "decision": "Keep existing tested semantic integration; do not automatically activate failed-gate whole-video adapter or replace canonical API.",
+  "publication": "local_only"
+}
