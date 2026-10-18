@@ -37,7 +37,7 @@ function setup() {
     document, sessionStorage: { getItem: () => null, setItem() {} },
     window: { addEventListener() {}, setTimeout }, HTMLMediaElement: { HAVE_METADATA: 1 },
     fetch: async () => ({ ok: true, json: async () => ({status: 'ok', model_ready: false}) }),
-    URL, AbortController, setTimeout,
+    URL, AbortController, setTimeout, FormData: class { append() {} },
   });
   vm.runInContext(fs.readFileSync(path.join(__dirname, '../../web/app.js'), 'utf8'), context);
   const video = elements.get('#video-preview');
@@ -162,42 +162,44 @@ test('a cancelled request cannot paint its completed result onto a different vid
     return {ok: true, json: async () => ({status: 'done', verdict: 'no_violation', violations: []})};
   };
   s.run('setUiState("ready")');
-  await assert.rejects(s.run('pollJob("old-job", "test-key", controller.signal)'), {name: 'AbortError'});
+  await assert.rejects(s.run('pollJob("old-job", controller.signal)'), {name: 'AbortError'});
   assert.equal(s.context.document.body.dataset.demoState, 'ready');
 });
 
-test('missing key focuses access field without a video-processing failure or network request', async () => {
+test('website starts analysis through an automatic session without a jury key', async () => {
   const s = setup();
-  let requests = 0;
-  s.context.fetch = async () => { requests++; throw new Error('must not send'); };
+  const requests = [];
+  s.context.fetch = async (url, options) => {
+    requests.push({url, options});
+    return {ok: true, json: async () => url.endsWith('/session') ? {ready:true}
+      : url.endsWith('/rules') ? {rules:[]} : {job_id:'new-web-job'}};
+  };
   s.run('selectedFile = {name: "synthetic.mov"}; setUiState("ready")');
+  s.run('pollJob = async (jobId, signal) => { if (jobId !== "new-web-job") throw new Error("job mismatch"); }');
   await s.run('startAnalysis()');
-  assert.equal(requests, 0);
-  assert.equal(s.context.document.body.dataset.demoState, 'ready');
-  assert.equal(s.elements.get('#api-key').focused, true);
-  assert.equal(s.elements.get('#api-access').open, true);
-  assert.equal(s.elements.get('#api-key-error').hidden, false);
+  assert.deepEqual(requests.map(r => r.url), ['/web/api/v1/session', '/web/api/v1/rules', '/web/api/v1/analyze']);
+  for (const {options} of requests) {
+    assert.equal(options.headers['X-API-Key'], undefined);
+    assert.equal(options.credentials, 'same-origin');
+    assert.equal(options.headers['X-Qaitu-Client'], 'web');
+  }
 });
 
-test('pasted key is remembered immediately without requiring blur', () => {
-  const s = setup();
-  let saved;
-  s.context.sessionStorage.setItem = (key, value) => { saved = [key, value]; };
-  s.run('apiKeyInput.value = " fixture-key "; apiKeyInput.handlers.input()');
-  assert.deepEqual(saved, ['fortebank-api-key', 'fixture-key']);
+test('website markup contains no API key access field or prompt', () => {
+  const html = fs.readFileSync(path.join(__dirname, '../../web/index.html'), 'utf8');
+  assert.doesNotMatch(html, /id="api-key"|id="api-access"|Ключ доступа к сервису/);
 });
 
-test('wrong key returns to access field before uploading the video', async () => {
+test('failed automatic session prevents uploading the video', async () => {
   const s = setup();
   const requests = [];
   s.context.fetch = async (url) => {
     requests.push(url);
-    return {ok: false, status: 401, json: async () => ({detail: 'Invalid API key'})};
+    return {ok: false, status: 503, json: async () => ({detail: 'unavailable'})};
   };
-  s.run('selectedFile = {name: "synthetic.mov"}; apiKeyInput.value = "wrong-key"; setUiState("ready")');
+  s.run('selectedFile = {name: "synthetic.mov"}; setUiState("ready")');
   await s.run('startAnalysis()');
-  assert.deepEqual(requests, ['/internal/api/v1/rules']);
-  assert.equal(s.context.document.body.dataset.demoState, 'ready');
-  assert.equal(s.elements.get('#api-key').focused, true);
-  assert.match(s.elements.get('#api-key-error').textContent, /Ключ не принят/);
+  assert.deepEqual(requests, ['/web/api/v1/session']);
+  assert.equal(s.context.document.body.dataset.demoState, 'failed');
+  assert.doesNotMatch(s.elements.get('#error-detail').textContent, /API-ключ|ключ доступа|Введите ключ/i);
 });

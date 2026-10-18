@@ -10,9 +10,6 @@ const fileInput = document.querySelector("#video-file");
 const dropzone = document.querySelector("#dropzone");
 const uploadError = document.querySelector("#upload-error");
 const chooseFileButton = document.querySelector("#choose-file");
-const apiKeyInput = document.querySelector("#api-key");
-const apiAccess = document.querySelector("#api-access");
-const apiKeyError = document.querySelector("#api-key-error");
 const videoPreview = document.querySelector("#video-preview");
 const videoEmpty = document.querySelector("#video-empty");
 const previewWarning = document.querySelector("#preview-warning");
@@ -95,16 +92,8 @@ let currentJobId = null;
 let currentRuleCatalog = null;
 let runtimeIdentity = { badge: "Local", caption: "проверяем runtime" };
 
-apiKeyInput.value = sessionStorage.getItem("fortebank-api-key") || "";
-apiAccess.open = !apiKeyInput.value;
-apiKeyInput.addEventListener("input", () => {
-  sessionStorage.setItem("fortebank-api-key", apiKeyInput.value.trim());
-  apiKeyError.hidden = true;
-  apiKeyInput.setAttribute("aria-invalid", "false");
-});
-apiKeyInput.addEventListener("change", () => {
-  sessionStorage.setItem("fortebank-api-key", apiKeyInput.value.trim());
-});
+// Remove credentials saved by older versions; the website now uses an HttpOnly session.
+try { sessionStorage.removeItem("fortebank-api-key"); } catch { }
 
 function formatBytes(bytes) {
   if (!Number.isFinite(bytes) || bytes <= 0) return "0 Б";
@@ -395,8 +384,8 @@ function makeRuleReview(article, violation, detail, eventIndex) {
     save.disabled = true; reset.disabled = true; select.disabled = true;
     boxes.forEach(box => { box.disabled = true; });
     try {
-      const response = await fetch(`/internal/api/v1/jobs/${encodeURIComponent(jobId)}/events/${eventIndex}/rule-review`, {
-        method: "PUT", headers: {"X-API-Key": apiKeyInput.value.trim(), "Content-Type": "application/json"},
+      const response = await fetch(`/web/api/v1/jobs/${encodeURIComponent(jobId)}/events/${eventIndex}/rule-review`, {
+        method: "PUT", credentials: "same-origin", headers: {"X-Qaitu-Client": "web", "Content-Type": "application/json"},
         body: JSON.stringify({rule_id: resetReview ? null : select.value,
           confirmed_facts: resetReview ? [] : boxes.filter(box => box.checked).map(box => box.value)}),
       });
@@ -506,14 +495,15 @@ async function responseJson(response) {
 }
 
 function errorMessage(status, payload) {
-  if (status === 401) return "Ключ не принят. Вставьте актуальный ключ команды Qaitu в поле доступа выше.";
+  if (status === 401) return "Сессия истекла. Запустите проверку ещё раз.";
+  if (status === 429) return "Сервис занят. Дождитесь завершения текущей проверки и повторите попытку.";
   if (status === 413) return "Файл превышает лимит 100 МБ.";
   if (status === 415) return "Сервис принимает только видео в формате MOV.";
   return typeof payload.detail === "string" ? payload.detail : "Локальный сервис не вернул результат.";
 }
 
-async function getJson(url, apiKey, signal) {
-  const response = await fetch(url, { headers: { "X-API-Key": apiKey }, signal });
+async function getJson(url, signal) {
+  const response = await fetch(url, { credentials: "same-origin", headers: { "X-Qaitu-Client": "web" }, signal });
   const payload = await responseJson(response);
   if (!response.ok) {
     const error = new Error(errorMessage(response.status, payload));
@@ -523,12 +513,12 @@ async function getJson(url, apiKey, signal) {
   return payload;
 }
 
-async function pollJob(jobId, apiKey, signal) {
+async function pollJob(jobId, signal) {
   const startedAt = Date.now();
   while (Date.now() - startedAt < JOB_TIMEOUT_MS) {
     const [job, progress] = await Promise.all([
-      getJson(`/api/v1/jobs/${encodeURIComponent(jobId)}`, apiKey, signal),
-      getJson(`/internal/api/v1/jobs/${encodeURIComponent(jobId)}/progress`, apiKey, signal),
+      getJson(`/web/api/v1/jobs/${encodeURIComponent(jobId)}`, signal),
+      getJson(`/web/api/v1/jobs/${encodeURIComponent(jobId)}/progress`, signal),
     ]);
     signal.throwIfAborted();
     updateProgress(progress);
@@ -542,23 +532,8 @@ async function pollJob(jobId, apiKey, signal) {
   throw new Error("Превышен лимит обработки 5 минут. Результат не сформирован.");
 }
 
-function showAccessError(message) {
-  apiAccess.open = true;
-  apiKeyError.textContent = message;
-  apiKeyError.hidden = false;
-  apiKeyInput.setAttribute("aria-invalid", "true");
-  setUiState("ready");
-  apiAccess.scrollIntoView({ behavior: "smooth", block: "center" });
-  apiKeyInput.focus({ preventScroll: true });
-}
-
 async function startAnalysis() {
   if (!selectedFile) return;
-  const apiKey = apiKeyInput.value.trim();
-  if (!apiKey) {
-    showAccessError("Вставьте ключ доступа команды Qaitu. После этого можно запустить проверку — видео уже выбрано.");
-    return;
-  }
 
   cancelActiveRequest();
   currentJobId = null;
@@ -575,15 +550,19 @@ async function startAnalysis() {
   setUiState("processing");
 
   try {
-    sessionStorage.setItem("fortebank-api-key", apiKey);
-    currentRuleCatalog = await getJson("/internal/api/v1/rules", apiKey, signal);
-    apiKeyError.hidden = true;
-    apiKeyInput.setAttribute("aria-invalid", "false");
+    const sessionResponse = await fetch("/web/api/v1/session", {
+      method: "POST", credentials: "same-origin", headers: {"X-Qaitu-Client": "web"}, signal,
+    });
+    const session = await responseJson(sessionResponse);
+    if (!sessionResponse.ok || !session.ready) throw new Error("Не удалось подключиться к сервису. Повторите попытку.");
+    signal.throwIfAborted();
+    currentRuleCatalog = await getJson("/web/api/v1/rules", signal);
     const formData = new FormData();
     formData.append("file", selectedFile, selectedFile.name);
-    const response = await fetch("/api/v1/analyze", {
+    const response = await fetch("/web/api/v1/analyze", {
       method: "POST",
-      headers: { "X-API-Key": apiKey },
+      credentials: "same-origin",
+      headers: { "X-Qaitu-Client": "web" },
       body: formData,
       signal,
     });
@@ -592,13 +571,9 @@ async function startAnalysis() {
     signal.throwIfAborted();
     currentJobId = payload.job_id;
     jobCaption.textContent = `job ${payload.job_id.slice(0, 8)}`;
-    await pollJob(payload.job_id, apiKey, signal);
+    await pollJob(payload.job_id, signal);
   } catch (error) {
     if (error.name === "AbortError") return;
-    if (error.status === 401) {
-      showAccessError(error.message);
-      return;
-    }
     errorDetail.textContent = error instanceof Error ? error.message : "Не удалось обработать файл.";
     setUiState("failed");
   } finally {
@@ -626,7 +601,7 @@ function openWorkspace(file) {
   uploadView.hidden = true;
   workspace.hidden = false;
   setUiState("ready");
-  (apiKeyInput.value.trim() ? workspace : apiAccess).scrollIntoView({ behavior: "smooth", block: "start" });
+  workspace.scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
 function acceptFile(file) {
