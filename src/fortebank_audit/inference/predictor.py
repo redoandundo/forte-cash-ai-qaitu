@@ -207,7 +207,9 @@ class OnnxPredictor:
                 providers.append("CUDAExecutionProvider")
             providers.append("CPUExecutionProvider")
             try:
-                session = ort.InferenceSession(str(self.model_path), providers=providers)
+                options = ort.SessionOptions()
+                options.intra_op_num_threads = 4
+                session = ort.InferenceSession(str(self.model_path), sess_options=options, providers=providers)
             except Exception as exc:  # onnxruntime exposes multiple exception types
                 raise PredictorLoadError("Could not load ONNX model") from exc
         self.session = session

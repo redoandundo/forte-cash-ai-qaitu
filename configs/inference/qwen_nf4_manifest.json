@@ -1,0 +1,19 @@
+{
+  "model_id": "Qwen/Qwen3-VL-2B-Instruct",
+  "revision": "89644892e4d85e24eaac8bacfd4f463576704203",
+  "local_dir": "models/pretrained/qwen3-vl-2b-instruct",
+  "snapshot_layout": "single_safetensors",
+  "weights_files": [
+    "model.safetensors"
+  ],
+  "weights_bytes": 4255140312,
+  "weights_sha256": "7de1838c87a5349b016c26a1c3f7d2bc400a3d485f95ef39a7059ffd734977a0",
+  "license": "apache-2.0",
+  "max_image_side": 448,
+  "max_new_tokens": 768,
+  "cuda_required": true,
+  "transformers_min_version": "5.20.0",
+  "transformers_max_exclusive": "5.21.0",
+  "quantization": "nf4",
+  "status": "experimental_unvalidated"
+}

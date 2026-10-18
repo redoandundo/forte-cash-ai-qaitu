@@ -14,6 +14,21 @@ from fortebank_audit.inference.predictor import MockPredictor
 ROOT = Path(__file__).resolve().parents[2]
 
 
+def test_temporal_context_and_progress_coexist(synthetic_video, tmp_path):
+    stages = []
+    result = analyze_video(synthetic_video, MockPredictor([.8]),
+                           PipelineConfig(window_sec=8, stride_sec=2, num_frames=4, threshold=.5),
+                           evidence_root=tmp_path, run_id="semantic-context", progress=stages.append,
+                           include_temporal_context=True)
+    assert stages == ["video_decode", "temporal_windows", "model_inference", "aggregation", "evidence"]
+    for event in result["events"]:
+        assert 1 <= len(event["evidence"]) <= 3
+        context = event["_temporal_context"]
+        assert 1 <= len(context) <= 5
+        assert [f["timestamp_sec"] for f in context] == sorted(f["timestamp_sec"] for f in context)
+        assert all((tmp_path / f["jpeg_path"]).is_file() for f in context)
+
+
 def test_mock_pipeline_is_deterministic_on_generated_video(
     tmp_path: Path, synthetic_video: Path
 ) -> None:

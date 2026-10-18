@@ -59,6 +59,7 @@ data/processed/
 models/checkpoints/
 models/torch-cache/
 models/huggingface-cache/
+models/pretrained/
 checkpoints/
 *.pt
 *.pth

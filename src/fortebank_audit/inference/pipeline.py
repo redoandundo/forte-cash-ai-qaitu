@@ -156,6 +156,7 @@ def analyze_video(
     evidence_root: str | Path = "data/raw/evidence",
     run_id: str | None = None,
     progress: ProgressCallback | None = None,
+    include_temporal_context: bool = False,
 ) -> InferenceResult:
     started = time.perf_counter()
     reader = VideoReader(video_path)
@@ -209,6 +210,15 @@ def analyze_video(
                 ],
             }
         )
+        if include_temporal_context:
+            context = extractor.extract_temporal_context(
+                reader, event, event_index=index, run_id=actual_run_id,
+            )
+            event_payload[-1]["_temporal_context"] = [
+                {**item, "jpeg_path": item["jpeg_path"].relative_to(
+                    extractor.output_root.resolve()).as_posix()}
+                for item in context
+            ]
 
     processing_sec = time.perf_counter() - started
     peak_score = max((prediction.score for prediction in scored_predictions), default=0.0)
