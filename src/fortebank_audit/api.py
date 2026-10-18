@@ -186,6 +186,9 @@ def _set_stage(job_id: str, stage: str) -> None:
 
 
 def _public_error(exc: Exception) -> str:
+    from .remote_runtime import RemoteWorkerError
+    if isinstance(exc, RemoteWorkerError):
+        return "GPU-сервер недоступен или не завершил анализ. Проверьте подключение сервера."
     if isinstance(exc, SemanticIntegrationError):
         return "Локальная проверка Qwen не завершена: проверьте модель и совместимость inference"
     if isinstance(exc, RuntimeConfigurationError):
@@ -249,6 +252,7 @@ def health() -> dict[str, object]:
         "status": "ok",
         "model_ready": True,
         "runtime_mode": runtime.mode_label,
+        "worker_protocol": "qaitu-worker-v1",
         **runtime.model_diagnostics,
     }
 

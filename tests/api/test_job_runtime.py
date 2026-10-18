@@ -123,3 +123,28 @@ def test_injected_predictor_and_config_must_be_provided_together(tmp_path: Path)
 
     with pytest.raises(RuntimeConfigurationError, match="injected together"):
         InferenceRuntime(settings, predictor=MockPredictor([0.5]))
+
+
+@pytest.mark.parametrize('onnx_score,qwen_decision', [(0.9,'normal_activity'), (0.1,'possible_violation')])
+def test_trained_qwen_advisory_never_replaces_localized_detector(tmp_path, onnx_score, qwen_decision):
+    class Sequence:
+        manifest = {'adapter_sha256': 'a' * 64, 'quality_gate_passed': False}
+        def predict(self, path):
+            return {'decision': qwen_decision, 'ranking_score': .8, 'quality_gate_passed': False}
+    runtime = InferenceRuntime(
+        RuntimeSettings('onnx', None, True, tmp_path / 'evidence'),
+        predictor=MockPredictor([onnx_score]),
+        config=PipelineConfig(1., 1., 4, .5), sequence_classifier=Sequence(),
+    )
+    result = runtime.analyze(_video(tmp_path / 'synthetic.mov'), job_id='sequence-check')
+    assert result.verdict == ('violation' if onnx_score > .5 else 'no_violation')
+    assert result.runtime['sequence_mode'] == 'experimental_advisory'
+    assert result.runtime['semantic_mode'] == 'off'
+    assert 'Экспериментальный' in result.summary
+    assert all(d['rule']['status'] == 'not_established' for d in result.analysis_details)
+
+
+def test_sequence_and_semantic_models_cannot_be_loaded_together(tmp_path):
+    with pytest.raises(RuntimeConfigurationError, match='cannot share'):
+        InferenceRuntime(RuntimeSettings('onnx', None, True, tmp_path, vlm_mode='qwen'),
+                         sequence_classifier=object())

@@ -94,6 +94,10 @@ def test_health_exposes_active_predictor_without_sensitive_paths(client: TestCli
         "semantic_mode": "off",
         "semantic_model_version": None,
         "semantic_model_sha256": None,
+        "worker_protocol": "qaitu-worker-v1",
+        "sequence_mode": "off",
+        "sequence_adapter_sha256": None,
+        "sequence_quality_gate_passed": None,
     }
     assert str(api.UPLOAD_ROOT) not in response.text
 

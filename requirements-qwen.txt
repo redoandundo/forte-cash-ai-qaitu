@@ -1,0 +1,8 @@
+# Use the participant's tested Python 3.12 / CUDA torch environment.
+# Install the base project and ONNX Runtime dependencies separately.
+transformers==5.20.1
+accelerate>=1.15,<2
+peft==0.21.2
+bitsandbytes==0.50.2
+safetensors>=0.6
+pillow>=11

@@ -7,6 +7,7 @@ import os
 import re
 import shutil
 import threading
+import time
 from dataclasses import dataclass
 from functools import lru_cache
 from pathlib import Path
@@ -130,8 +131,12 @@ class InferenceRuntime:
         predictor: Predictor | None = None,
         config: PipelineConfig | None = None,
         semantic_adapter: SemanticAdapter | None = None,
+        sequence_classifier: object | None = None,
     ) -> None:
         self.settings = settings
+        sequence_path = os.environ.get("QAITU_SEQUENCE_ADAPTER", "").strip()
+        if (sequence_path or sequence_classifier) and (settings.vlm_mode != "off" or settings.mode != "onnx"):
+            raise RuntimeConfigurationError("Sequence adapter requires ONNX and cannot share a GPU with semantic Qwen")
         if semantic_adapter is not None and settings.vlm_mode != "qwen":
             raise RuntimeConfigurationError("Semantic adapter requires qwen mode")
         self._analysis_slots = threading.BoundedSemaphore(settings.max_concurrent_jobs)
@@ -184,6 +189,14 @@ class InferenceRuntime:
             semantic_adapter or SemanticAdapter.from_environment()
             if settings.vlm_mode == "qwen" else None
         )
+        self.sequence = sequence_classifier
+        if sequence_path and self.sequence is None:
+            from .inference.qwen_sequence import SequenceClassifier
+            self.sequence = SequenceClassifier(
+                os.environ.get("QAITU_VLM_MODEL_PATH", "models/pretrained/qwen3-vl-2b-instruct"),
+                sequence_path,
+                allow_experimental=_environment_bool("QAITU_ALLOW_EXPERIMENTAL_ADAPTER", default=False),
+            )
         LOGGER.info(
             "inference_runtime_ready mode=%s predictor_class=%s model_version=%s "
             "model_sha256=%s providers=%s release_status=%s",
@@ -200,6 +213,8 @@ class InferenceRuntime:
         if self.settings.mode == "mock":
             return "Demo predictor"
         suffix = f" + Qwen · {self.semantic.model_version}" if self.semantic else ""
+        if self.sequence is not None:
+            suffix += " + Qwen LoRA · experimental whole-video review"
         return f"ONNX · {self.predictor.model_version} · {self.predictor.device}{suffix}"
 
     @property
@@ -214,6 +229,9 @@ class InferenceRuntime:
             "semantic_mode": self.settings.vlm_mode,
             "semantic_model_version": self.semantic.model_version if self.semantic else None,
             "semantic_model_sha256": self.semantic.model_checksum if self.semantic else None,
+            "sequence_mode": "experimental_advisory" if self.sequence is not None else "off",
+            "sequence_adapter_sha256": self.sequence.manifest["adapter_sha256"] if self.sequence is not None else None,
+            "sequence_quality_gate_passed": bool(self.sequence.manifest.get("quality_gate_passed")) if self.sequence is not None else None,
         }
 
     def analyze(
@@ -223,6 +241,8 @@ class InferenceRuntime:
         job_id: str,
         progress: ProgressCallback | None = None,
     ) -> RuntimeResult:
+        started = time.perf_counter()
+        sequence_result = None
         try:
             with self._analysis_slots:
                 self.settings.evidence_root.mkdir(parents=True, exist_ok=True)
@@ -239,9 +259,28 @@ class InferenceRuntime:
                         video_path, self.predictor, self.config,
                         evidence_root=self.settings.evidence_root, run_id=job_id,
                     )
+                if self.sequence is not None:
+                    if progress:
+                        progress("model_inference")
+                    try:
+                        sequence_result = self.sequence.predict(video_path)
+                    except Exception as exc:
+                        raise InferenceError("Trained Qwen adapter analysis failed") from exc
+                    result["runtime"]["total_processing_sec"] = time.perf_counter() - started
             if progress is not None:
                 progress("summary")
             violations, analysis_details = self._map_violations(result)
+            advisory = ""
+            if sequence_result is not None:
+                if sequence_result.get("decision") not in {"possible_violation", "normal_activity"}:
+                    raise InferenceError("Trained Qwen adapter returned an invalid decision")
+                label = ("отметил признаки возможного нарушения" if sequence_result["decision"] == "possible_violation"
+                         else "оценил запись как обычную активность")
+                advisory = (f" Экспериментальный обученный Qwen по всему ролику {label}. "
+                            "Его проверка качества не пройдена; этот ответ не подтверждает конкретный эпизод или правило.")
+                for violation, detail in zip(violations, analysis_details, strict=True):
+                    violation["description"] += advisory
+                    detail["reasoning"] += advisory
             verdict: Literal["no_violation", "violation"] = (
                 "violation" if violations else "no_violation"
             )
@@ -249,13 +288,14 @@ class InferenceRuntime:
                 verdict=verdict,
                 violations=violations,
                 analysis_details=analysis_details,
-                summary=_build_summary(verdict, violations),
+                summary=_build_summary(verdict, violations) + advisory,
                 runtime={
                     **dict(result.get("runtime", {})),
                     "mode": self.settings.mode,
                     "mode_label": self.mode_label,
                     **self.model_diagnostics,
                     "diagnostics": self._internal_diagnostics(result),
+                    "sequence_review": sequence_result,
                 },
             )
         finally:
@@ -434,4 +474,7 @@ def _build_summary(
 
 @lru_cache(maxsize=1)
 def get_runtime() -> InferenceRuntime:
+    if os.environ.get("QAITU_WORKER_URL") or os.environ.get("QAITU_WORKER_KEY_FILE"):
+        from .remote_runtime import build_remote_runtime
+        return build_remote_runtime()
     return InferenceRuntime(RuntimeSettings.from_environment())

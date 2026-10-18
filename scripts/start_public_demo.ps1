@@ -6,6 +6,7 @@ param(
     [ValidateSet('off', 'qwen')][string]$VlmMode = 'off',
     [string]$QwenModelPath,
     [string]$QwenManifestPath,
+    [string]$WorkerConfigPath,
     [switch]$RestartApiOnly
 )
 $ErrorActionPreference = "Stop"
@@ -16,7 +17,16 @@ $ModelRoot = Join-Path $RepoRoot "artifacts/ml/bundles/baseline-audited-v4"
 $ExpectedSha = "00ae541eac23249dd4751093ce276bfa9c14afca2d5f15f4fec9719c009ae52d"
 $PythonPath = (Get-Command $PythonExecutable -ErrorAction Stop).Source
 $TunnelPath = (Get-Command $CloudflaredExecutable -ErrorAction Stop).Source
-if ($VlmMode -eq 'qwen') {
+if ($WorkerConfigPath) {
+    $WorkerConfig = Get-Content -LiteralPath $WorkerConfigPath -Raw | ConvertFrom-Json
+    if (-not $WorkerConfig.url -or -not $WorkerConfig.key_file) { throw 'Worker config requires url and key_file.' }
+    $env:QAITU_WORKER_URL = $WorkerConfig.url
+    $env:QAITU_WORKER_KEY_FILE = (Resolve-Path -LiteralPath $WorkerConfig.key_file).Path
+} else {
+    Remove-Item Env:QAITU_WORKER_URL -ErrorAction SilentlyContinue
+    Remove-Item Env:QAITU_WORKER_KEY_FILE -ErrorAction SilentlyContinue
+}
+if ($VlmMode -eq 'qwen' -and -not $WorkerConfigPath) {
     if (-not $QwenModelPath -or -not (Test-Path -LiteralPath $QwenModelPath -PathType Container)) {
         throw 'Qwen mode requires -QwenModelPath pointing to a local snapshot directory.'
     }

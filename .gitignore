@@ -59,6 +59,10 @@ data/processed/
 models/checkpoints/
 models/torch-cache/
 models/huggingface-cache/
+models/pretrained/
+models/qwen-sequence-adapter/
+*.safetensors
+.venv-run/
 checkpoints/
 *.pt
 *.pth
