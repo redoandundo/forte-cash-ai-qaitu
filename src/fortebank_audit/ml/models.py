@@ -155,6 +155,11 @@ class X3DBinary(nn.Module):
 
 
 def build_model(name: str, pretrained: bool = True, train_backbone: bool = False) -> nn.Module:
+    if name == "dinov2_small_spatial_temporal":
+        if train_backbone:
+            raise ValueError("Cached MIL requires a frozen DINO encoder")
+        from .spatial_mil import SpatialTemporalDino
+        return SpatialTemporalDino(pretrained)
     if name == "mobilenet_v3_small_temporal":
         return TemporalMobileNet(pretrained, train_backbone)
     if name == "mobilenet_v3_small_temporal_conv1d":

@@ -141,6 +141,38 @@ $bundle = "artifacts/ml/bundles/baseline-audited-v4"
 
 ## Воспроизведение обучения и оценки
 
+### Эксперимент DINOv2 + temporal MIL (2026-10-18)
+
+Новый эксперимент не переключает текущий bundle. Протокол и ограничения:
+`reports/ml/semantic_protocol.md`. Используется замороженный DINOv2-small и
+обучаемая временная голова; 8 кадров, 224×224, окно 6 s, stride 2 s. На обучении
+проверяются все отрицательные окна; неразмеченные окна положительных видео
+не получают искусственную отрицательную метку. Типы событий в Excel отсутствуют.
+
+Дополнительные зависимости из `configs/ml/requirements-semantic.txt` можно
+установить в отдельное ML-окружение поверх `requirements-ml-repair.txt`.
+Для текущего локального эксперимента они изолированы в
+`artifacts/ml/semantic-vendor`; старым MobileNet/R3D bundle они не нужны.
+
+```powershell
+$env:PYTHONPATH = "artifacts/ml/semantic-vendor;src"
+$env:HF_HUB_DISABLE_TELEMETRY = "1"
+& $py -c "from huggingface_hub import snapshot_download; snapshot_download('facebook/dinov2-small', revision='ed25f3a31f01632728cabb09d1542f84ab7b0056', allow_patterns=['config.json','model.safetensors'], local_dir='artifacts/ml/pretrained/dinov2-small')"
+$env:HF_HUB_OFFLINE = "1"
+& $py -m fortebank_audit.ml.experiments --stage development --manifest "$env:QAITU_DATASET_MANIFEST" --plan "$env:QAITU_FROZEN_PLAN" --config configs/ml/spatial_temporal_mil.yaml --output artifacts/ml/repro-dino-dev
+& $py -m fortebank_audit.ml.experiments --stage oof --manifest "$env:QAITU_DATASET_MANIFEST" --plan "$env:QAITU_FROZEN_PLAN" --config configs/ml/spatial_temporal_mil.yaml --output artifacts/ml/repro-dino-oof
+```
+
+Скачивание касается только публичных весов; проектные видео никуда не отправляются.
+Обучение проверяет SHA-256 файлов предобученного энкодера из
+`configs/ml/dinov2_pretrained.json`; загрузка только local safetensors. Можно
+задать `QAITU_DINO_WEIGHTS` для другого локального каталога с теми же файлами.
+Короткий development-ablation использует `spatial_temporal_mil_20.yaml` и новый
+output directory. Для экспорта применима та же команда `export_model.py` ниже;
+численная совместимость сама по себе не разрешает замену основной модели.
+
+### Воспроизведение baseline
+
 `QAITU_DATASET_MANIFEST` — локальный нормализованный manifest,
 `QAITU_VIDEO_ROOT` — каталог исходных видео. Они не публикуются.
 Чтобы заново получить baseline checkpoints и frozen folds:

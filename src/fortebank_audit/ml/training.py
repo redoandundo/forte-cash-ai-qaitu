@@ -62,6 +62,9 @@ def mine_training_negatives(model, sources, spec, cache, device) -> dict:
 
 
 def train_model(sources: list[dict], config: dict, output: Path, cache: Path) -> dict:
+    if config["training"].get("objective") == "temporal_mil":
+        from .mil_training import train_mil
+        return train_mil(sources, config, output, cache)
     if output.exists():
         raise FileExistsError(f"Refusing to overwrite an existing run: {output.name}")
     settings, data = config["training"], config["data"]
