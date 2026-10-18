@@ -35,7 +35,7 @@ def assert_unseen(sources: list[dict], provenance: dict) -> None:
             raise ValueError(f"Evaluation overlaps training: {field}")
 
 
-def score_sources(checkpoint_path: Path, sources: list[dict], cache: Path, batch_size: int = 8):
+def score_sources(checkpoint_path: Path, sources: list[dict], cache: Path, batch_size: int = 8, *, frame_transform=None):
     checkpoint = torch.load(checkpoint_path, map_location="cpu", weights_only=True)
     assert_unseen(sources, checkpoint["provenance"])
     spec = VideoSpec(**checkpoint["spec"])
@@ -54,7 +54,10 @@ def score_sources(checkpoint_path: Path, sources: list[dict], cache: Path, batch
         values = []
         with torch.inference_mode():
             for offset in range(0, len(samples.frames), batch_size):
-                tensor = np.stack([normalize_rgb(frames, spec.image_size) for frames in samples.frames[offset:offset + batch_size]])
+                frames_batch = samples.frames[offset:offset + batch_size]
+                if frame_transform is not None:
+                    frames_batch = [frame_transform(frames) for frames in frames_batch]
+                tensor = np.stack([normalize_rgb(frames, spec.image_size) for frames in frames_batch])
                 logits = model(torch.from_numpy(tensor).to(device)).float()
                 if not torch.isfinite(logits).all():
                     raise ValueError("Non-finite model output")
@@ -76,11 +79,29 @@ def score_sources(checkpoint_path: Path, sources: list[dict], cache: Path, batch
     return rows, checkpoint, spec
 
 
+def calibration_diagnostics(rows: list[dict], threshold: float, min_recall: float) -> dict:
+    positives = sum(row["label"] == 1 for row in rows)
+    negatives = len(rows) - positives
+    if not positives or not negatives:
+        raise ValueError("Calibration diagnostics require both classes")
+    predicted = sum(row["score"] >= threshold for row in rows)
+    warnings = []
+    if predicted == len(rows):
+        warnings.append("all_calibration_videos_positive_no_negative_discrimination")
+    if positives < 10 or negatives < 10:
+        warnings.append("small_calibration_support_threshold_is_uncertain")
+    return {"positive_sources": positives, "negative_sources": negatives,
+            "recall_resolution": 1 / positives,
+            "required_positive_hits": int(np.ceil(min_recall * positives)),
+            "predicted_positive_sources": predicted, "warnings": warnings}
+
+
 def calibration_report(checkpoint_path: Path, sources: list[dict], cache: Path, min_recall: float = 0.75) -> dict:
     rows, checkpoint, spec = score_sources(checkpoint_path, sources, cache)
     selected = calibrate_threshold([row["label"] for row in rows], [row["score"] for row in rows], min_recall)
     return {
         "threshold": selected["threshold"], "metrics": selected,
+        "diagnostics": calibration_diagnostics(rows, selected["threshold"], min_recall),
         "min_recall": min_recall, "selection": "macro_f1_subject_to_recall",
         "checkpoint_sha256": file_hash(checkpoint_path), "pipeline_sha256": pipeline_hash(spec),
         "calibration_source_ids": [row["source_id"] for row in rows],
