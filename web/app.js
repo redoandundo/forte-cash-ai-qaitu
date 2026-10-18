@@ -63,8 +63,8 @@ const stateCopy = {
   },
   no_violation: {
     kicker: "Проверка завершена",
-    title: "Дополнительных эпизодов нет",
-    detail: "Анализ завершён без эпизодов, требующих дополнительной проверки.",
+    title: "Эпизоды автоматически не выделены",
+    detail: "Модель может пропустить проблему. Просмотрите запись перед окончательным выводом.",
   },
   failed: {
     kicker: "Проверка остановлена",
@@ -482,7 +482,11 @@ function renderCompleted(job, progress) {
   activeEventIndex = -1;
   eventList.replaceChildren();
   eventMarkers.replaceChildren();
-  clearSummary.textContent = progress.summary || "Автоматический анализ не обнаружил в этой записи признаков возможного нарушения.";
+  const qwenSkipped = progress.runtime?.semantic_mode === "qwen"
+    && progress.runtime?.diagnostics?.semantic?.qwen_called === false;
+  clearSummary.textContent = qwenSkipped
+    ? "ONNX не выделил эпизоды, поэтому Qwen не запускался. Это не подтверждает отсутствие нарушений: нужна ручная проверка записи."
+    : (progress.summary || "Эпизоды автоматически не выделены. Модель может пропустить проблему; нужна ручная проверка.");
   setUiState("no_violation");
 }
 

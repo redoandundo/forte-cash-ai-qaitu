@@ -203,3 +203,12 @@ test('failed automatic session prevents uploading the video', async () => {
   assert.equal(s.context.document.body.dataset.demoState, 'failed');
   assert.doesNotMatch(s.elements.get('#error-detail').textContent, /API-ключ|ключ доступа|Введите ключ/i);
 });
+
+
+test('zero ONNX candidates explicitly say that Qwen did not inspect the video', () => {
+  const s = setup();
+  s.run(`renderCompleted({status: 'done', verdict: 'no_violation', violations: []},
+    {runtime: {semantic_mode: 'qwen', diagnostics: {semantic: {qwen_called: false}}}, summary: 'old reassuring summary'});`);
+  assert.match(s.elements.get('#clear-summary').textContent, /Qwen не запускался/);
+  assert.match(s.elements.get('#clear-summary').textContent, /ручная проверка/);
+});
