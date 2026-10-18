@@ -60,6 +60,14 @@ smokes do not establish semantic dossier accuracy. See
 
 ## Storage and next step
 
+GPU hosting update: `START_GPU_SERVER.cmd` starts an API-only Qwen server and
+an HTTPS tunnel. See `docs/team/GPU_SERVER.md`. Actual external checks returned
+health ok, semantic_mode=qwen and the pinned base SHA; missing key 401, valid
+key with unknown job 404, old website root 404. Final API suite: 10 passed,
+one Starlette deprecation warning. This verifies hosting/auth/startup, not
+recognition accuracy. Public website routing remains pending on its own host.
+The temporary address and API key are local-only in `secrets/gpu-backend.env`.
+
 Jobs are in process memory, evidence is in ignored local files, weights are model
 files; this is not a database-backed training service. Training annotations and
 split configuration remain private JSON files under `data/processed/qwen_sft/`.

@@ -1,5 +1,6 @@
 """One-click host for an already installed local ONNX + Qwen server."""
 import os
+import argparse
 from pathlib import Path
 import secrets
 import socket
@@ -37,6 +38,10 @@ def access_key(directory):
 
 
 def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--backend-only', action='store_true')
+    parser.add_argument('--port', type=int)
+    args = parser.parse_args()
     os.chdir(ROOT)
     if not (ROOT / 'models/pretrained/qwen3-vl-2b-instruct/model.safetensors').exists():
         raise RuntimeError('Qwen is missing on this server. Run scripts/setup_local.py --qwen once.')
@@ -45,16 +50,19 @@ def main():
     os.environ['QAITU_VLM_MODE'] = 'qwen'
     os.environ['QAITU_VLM_MODEL_PATH'] = str(ROOT / 'models/pretrained/qwen3-vl-2b-instruct')
     os.environ.pop('QAITU_SEQUENCE_ADAPTER', None)
-    port = choose_port()
+    if args.backend_only:
+        os.environ['QAITU_BACKEND_ONLY'] = '1'
+    port = args.port or choose_port()
     local = f'http://127.0.0.1:{port}/#key={key}'
     addresses = sorted({item[4][0] for item in socket.getaddrinfo(socket.gethostname(), None, socket.AF_INET)
                         if not item[4][0].startswith('127.')})
     links = [local] + [f'http://{address}:{port}/#key={key}' for address in addresses]
     private = ROOT / 'secrets'
     private.mkdir(exist_ok=True)
-    (private / 'tester-access.txt').write_text(
-        'Local browser (first link); same-network tester (other links).\n'
-        'These links grant access. Share only with your tester.\n' + '\n'.join(links), encoding='utf-8')
+    if not args.backend_only:
+        (private / 'tester-access.txt').write_text(
+            'Local browser (first link); same-network tester (other links).\n'
+            'These links grant access. Share only with your tester.\n' + '\n'.join(links), encoding='utf-8')
     print('Loading ONNX + Qwen already on this server; no model download.', flush=True)
     from fortebank_audit import api_runtime
     api_runtime._runtime = api_runtime.Runtime()
@@ -67,11 +75,13 @@ def main():
                         return
             except OSError:
                 time.sleep(1)
-    threading.Thread(target=open_when_ready, daemon=True).start()
-    print(f'Site port: {port}. Tester links saved to secrets/tester-access.txt', flush=True)
+    if not args.backend_only:
+        threading.Thread(target=open_when_ready, daemon=True).start()
+    print(f'Server port: {port}. Backend-only: {args.backend_only}', flush=True)
     print('Keep this process running. The tester only needs a browser.', flush=True)
     import uvicorn
-    uvicorn.run('fortebank_audit.api:app', host='0.0.0.0', port=port, workers=1)
+    uvicorn.run('fortebank_audit.api:app', host='127.0.0.1' if args.backend_only else '0.0.0.0',
+                port=port, workers=1)
 
 
 if __name__ == '__main__':
