@@ -25,7 +25,7 @@
       "aliases": [
         "X-1.mov"
       ],
-      "path": "C:\\Users\\royze\\Documents\\ChatGPT\\дататон\\data\\raw\\open\\videos\\X-1.mov",
+      "path": "data/raw/open/videos/X-1.mov",
       "label": 1,
       "events_sec": [
         22.0
@@ -48,7 +48,7 @@
       "aliases": [
         "X-2.mov"
       ],
-      "path": "C:\\Users\\royze\\Documents\\ChatGPT\\дататон\\data\\raw\\open\\videos\\X-2.mov",
+      "path": "data/raw/open/videos/X-2.mov",
       "label": 1,
       "events_sec": [
         10.0
@@ -71,7 +71,7 @@
       "aliases": [
         "Х-3.mov"
       ],
-      "path": "C:\\Users\\royze\\Documents\\ChatGPT\\дататон\\data\\raw\\open\\videos\\Х-3.mov",
+      "path": "data/raw/open/videos/Х-3.mov",
       "label": 0,
       "events_sec": [],
       "duration_sec": 20.033,
@@ -94,7 +94,7 @@
         "Х-4.mov",
         "Х-47.mov"
       ],
-      "path": "C:\\Users\\royze\\Documents\\ChatGPT\\дататон\\data\\raw\\open\\videos\\Х-4.mov",
+      "path": "data/raw/open/videos/Х-4.mov",
       "label": 1,
       "events_sec": [
         57.0,
@@ -120,7 +120,7 @@
         "Х-48.mov",
         "Х-5.mov"
       ],
-      "path": "C:\\Users\\royze\\Documents\\ChatGPT\\дататон\\data\\raw\\open\\videos\\Х-5.mov",
+      "path": "data/raw/open/videos/Х-5.mov",
       "label": 0,
       "events_sec": [],
       "duration_sec": 71.6,
@@ -141,7 +141,7 @@
       "aliases": [
         "Х-8.mov"
       ],
-      "path": "C:\\Users\\royze\\Documents\\ChatGPT\\дататон\\data\\raw\\open\\videos\\Х-8.mov",
+      "path": "data/raw/open/videos/Х-8.mov",
       "label": 0,
       "events_sec": [],
       "duration_sec": 38.033,
@@ -162,7 +162,7 @@
       "aliases": [
         "Х-10.mov"
       ],
-      "path": "C:\\Users\\royze\\Documents\\ChatGPT\\дататон\\data\\raw\\open\\videos\\Х-10.mov",
+      "path": "data/raw/open/videos/Х-10.mov",
       "label": 0,
       "events_sec": [],
       "duration_sec": 15.567,
@@ -183,7 +183,7 @@
       "aliases": [
         "Х-11.mov"
       ],
-      "path": "C:\\Users\\royze\\Documents\\ChatGPT\\дататон\\data\\raw\\open\\videos\\Х-11.mov",
+      "path": "data/raw/open/videos/Х-11.mov",
       "label": 1,
       "events_sec": [
         18.0
@@ -206,7 +206,7 @@
       "aliases": [
         "Х-12.mov"
       ],
-      "path": "C:\\Users\\royze\\Documents\\ChatGPT\\дататон\\data\\raw\\open\\videos\\Х-12.mov",
+      "path": "data/raw/open/videos/Х-12.mov",
       "label": 0,
       "events_sec": [],
       "duration_sec": 42.3,
@@ -227,7 +227,7 @@
       "aliases": [
         "Х-13.mov"
       ],
-      "path": "C:\\Users\\royze\\Documents\\ChatGPT\\дататон\\data\\raw\\open\\videos\\Х-13.mov",
+      "path": "data/raw/open/videos/Х-13.mov",
       "label": 1,
       "events_sec": [
         47.0
@@ -250,7 +250,7 @@
       "aliases": [
         "Х-14.mov"
       ],
-      "path": "C:\\Users\\royze\\Documents\\ChatGPT\\дататон\\data\\raw\\open\\videos\\Х-14.mov",
+      "path": "data/raw/open/videos/Х-14.mov",
       "label": 0,
       "events_sec": [],
       "duration_sec": 142.533,
@@ -271,7 +271,7 @@
       "aliases": [
         "Х-15.mov"
       ],
-      "path": "C:\\Users\\royze\\Documents\\ChatGPT\\дататон\\data\\raw\\open\\videos\\Х-15.mov",
+      "path": "data/raw/open/videos/Х-15.mov",
       "label": 1,
       "events_sec": [
         15.0
@@ -294,7 +294,7 @@
       "aliases": [
         "Х-16.mov"
       ],
-      "path": "C:\\Users\\royze\\Documents\\ChatGPT\\дататон\\data\\raw\\open\\videos\\Х-16.mov",
+      "path": "data/raw/open/videos/Х-16.mov",
       "label": 0,
       "events_sec": [],
       "duration_sec": 22.733,
@@ -315,7 +315,7 @@
       "aliases": [
         "Х-17.mov"
       ],
-      "path": "C:\\Users\\royze\\Documents\\ChatGPT\\дататон\\data\\raw\\open\\videos\\Х-17.mov",
+      "path": "data/raw/open/videos/Х-17.mov",
       "label": 1,
       "events_sec": [
         7.0
@@ -338,7 +338,7 @@
       "aliases": [
         "Х-18.mov"
       ],
-      "path": "C:\\Users\\royze\\Documents\\ChatGPT\\дататон\\data\\raw\\open\\videos\\Х-18.mov",
+      "path": "data/raw/open/videos/Х-18.mov",
       "label": 1,
       "events_sec": [
         20.0
@@ -361,7 +361,7 @@
       "aliases": [
         "Х-19.mov"
       ],
-      "path": "C:\\Users\\royze\\Documents\\ChatGPT\\дататон\\data\\raw\\open\\videos\\Х-19.mov",
+      "path": "data/raw/open/videos/Х-19.mov",
       "label": 0,
       "events_sec": [],
       "duration_sec": 57.433,
@@ -382,7 +382,7 @@
       "aliases": [
         "Х-20.mov"
       ],
-      "path": "C:\\Users\\royze\\Documents\\ChatGPT\\дататон\\data\\raw\\open\\videos\\Х-20.mov",
+      "path": "data/raw/open/videos/Х-20.mov",
       "label": 1,
       "events_sec": [
         5.0
@@ -405,7 +405,7 @@
       "aliases": [
         "Х-21.mov"
       ],
-      "path": "C:\\Users\\royze\\Documents\\ChatGPT\\дататон\\data\\raw\\open\\videos\\Х-21.mov",
+      "path": "data/raw/open/videos/Х-21.mov",
       "label": 0,
       "events_sec": [],
       "duration_sec": 19.6,
@@ -426,7 +426,7 @@
       "aliases": [
         "Х-22.mov"
       ],
-      "path": "C:\\Users\\royze\\Documents\\ChatGPT\\дататон\\data\\raw\\open\\videos\\Х-22.mov",
+      "path": "data/raw/open/videos/Х-22.mov",
       "label": 1,
       "events_sec": [
         14.0
@@ -449,7 +449,7 @@
       "aliases": [
         "Х-23.mov"
       ],
-      "path": "C:\\Users\\royze\\Documents\\ChatGPT\\дататон\\data\\raw\\open\\videos\\Х-23.mov",
+      "path": "data/raw/open/videos/Х-23.mov",
       "label": 0,
       "events_sec": [],
       "duration_sec": 18.267,
@@ -470,7 +470,7 @@
       "aliases": [
         "Х-24.mov"
       ],
-      "path": "C:\\Users\\royze\\Documents\\ChatGPT\\дататон\\data\\raw\\open\\videos\\Х-24.mov",
+      "path": "data/raw/open/videos/Х-24.mov",
       "label": 1,
       "events_sec": [
         8.0
@@ -493,7 +493,7 @@
       "aliases": [
         "Х-25.mov"
       ],
-      "path": "C:\\Users\\royze\\Documents\\ChatGPT\\дататон\\data\\raw\\open\\videos\\Х-25.mov",
+      "path": "data/raw/open/videos/Х-25.mov",
       "label": 0,
       "events_sec": [],
       "duration_sec": 31.7,
@@ -514,7 +514,7 @@
       "aliases": [
         "Х-26.mov"
       ],
-      "path": "C:\\Users\\royze\\Documents\\ChatGPT\\дататон\\data\\raw\\open\\videos\\Х-26.mov",
+      "path": "data/raw/open/videos/Х-26.mov",
       "label": 1,
       "events_sec": [
         9.0
@@ -537,7 +537,7 @@
       "aliases": [
         "Х-27.mov"
       ],
-      "path": "C:\\Users\\royze\\Documents\\ChatGPT\\дататон\\data\\raw\\open\\videos\\Х-27.mov",
+      "path": "data/raw/open/videos/Х-27.mov",
       "label": 0,
       "events_sec": [],
       "duration_sec": 26.433,
@@ -558,7 +558,7 @@
       "aliases": [
         "Х-28.mov"
       ],
-      "path": "C:\\Users\\royze\\Documents\\ChatGPT\\дататон\\data\\raw\\open\\videos\\Х-28.mov",
+      "path": "data/raw/open/videos/Х-28.mov",
       "label": 1,
       "events_sec": [
         7.0
@@ -581,7 +581,7 @@
       "aliases": [
         "Х-29.mov"
       ],
-      "path": "C:\\Users\\royze\\Documents\\ChatGPT\\дататон\\data\\raw\\open\\videos\\Х-29.mov",
+      "path": "data/raw/open/videos/Х-29.mov",
       "label": 0,
       "events_sec": [],
       "duration_sec": 17.3,
@@ -602,7 +602,7 @@
       "aliases": [
         "Х-30.mov"
       ],
-      "path": "C:\\Users\\royze\\Documents\\ChatGPT\\дататон\\data\\raw\\open\\videos\\Х-30.mov",
+      "path": "data/raw/open/videos/Х-30.mov",
       "label": 1,
       "events_sec": [
         13.0
@@ -625,7 +625,7 @@
       "aliases": [
         "Х-31.mov"
       ],
-      "path": "C:\\Users\\royze\\Documents\\ChatGPT\\дататон\\data\\raw\\open\\videos\\Х-31.mov",
+      "path": "data/raw/open/videos/Х-31.mov",
       "label": 0,
       "events_sec": [],
       "duration_sec": 23.8,
@@ -646,7 +646,7 @@
       "aliases": [
         "Х-32.mov"
       ],
-      "path": "C:\\Users\\royze\\Documents\\ChatGPT\\дататон\\data\\raw\\open\\videos\\Х-32.mov",
+      "path": "data/raw/open/videos/Х-32.mov",
       "label": 1,
       "events_sec": [
         5.0
@@ -669,7 +669,7 @@
       "aliases": [
         "Х-33.mov"
       ],
-      "path": "C:\\Users\\royze\\Documents\\ChatGPT\\дататон\\data\\raw\\open\\videos\\Х-33.mov",
+      "path": "data/raw/open/videos/Х-33.mov",
       "label": 1,
       "events_sec": [
         6.0
@@ -692,7 +692,7 @@
       "aliases": [
         "Х-34.mov"
       ],
-      "path": "C:\\Users\\royze\\Documents\\ChatGPT\\дататон\\data\\raw\\open\\videos\\Х-34.mov",
+      "path": "data/raw/open/videos/Х-34.mov",
       "label": 1,
       "events_sec": [
         13.0
@@ -715,7 +715,7 @@
       "aliases": [
         "Х-35.mov"
       ],
-      "path": "C:\\Users\\royze\\Documents\\ChatGPT\\дататон\\data\\raw\\open\\videos\\Х-35.mov",
+      "path": "data/raw/open/videos/Х-35.mov",
       "label": 0,
       "events_sec": [],
       "duration_sec": 56.767,
@@ -736,7 +736,7 @@
       "aliases": [
         "Х-37.mov"
       ],
-      "path": "C:\\Users\\royze\\Documents\\ChatGPT\\дататон\\data\\raw\\open\\videos\\Х-37.mov",
+      "path": "data/raw/open/videos/Х-37.mov",
       "label": 0,
       "events_sec": [],
       "duration_sec": 15.867,
@@ -757,7 +757,7 @@
       "aliases": [
         "Х-38.mov"
       ],
-      "path": "C:\\Users\\royze\\Documents\\ChatGPT\\дататон\\data\\raw\\open\\videos\\Х-38.mov",
+      "path": "data/raw/open/videos/Х-38.mov",
       "label": 1,
       "events_sec": [
         33.0
@@ -780,7 +780,7 @@
       "aliases": [
         "Х-39.mov"
       ],
-      "path": "C:\\Users\\royze\\Documents\\ChatGPT\\дататон\\data\\raw\\open\\videos\\Х-39.mov",
+      "path": "data/raw/open/videos/Х-39.mov",
       "label": 0,
       "events_sec": [],
       "duration_sec": 78.733,
@@ -801,7 +801,7 @@
       "aliases": [
         "Х-40.mov"
       ],
-      "path": "C:\\Users\\royze\\Documents\\ChatGPT\\дататон\\data\\raw\\open\\videos\\Х-40.mov",
+      "path": "data/raw/open/videos/Х-40.mov",
       "label": 1,
       "events_sec": [
         17.0
@@ -824,7 +824,7 @@
       "aliases": [
         "Х-43.mov"
       ],
-      "path": "C:\\Users\\royze\\Documents\\ChatGPT\\дататон\\data\\raw\\open\\videos\\Х-43.mov",
+      "path": "data/raw/open/videos/Х-43.mov",
       "label": 0,
       "events_sec": [],
       "duration_sec": 23.367,
@@ -845,7 +845,7 @@
       "aliases": [
         "Х-44.mov"
       ],
-      "path": "C:\\Users\\royze\\Documents\\ChatGPT\\дататон\\data\\raw\\open\\videos\\Х-44.mov",
+      "path": "data/raw/open/videos/Х-44.mov",
       "label": 1,
       "events_sec": [
         16.0
@@ -868,7 +868,7 @@
       "aliases": [
         "Х-45.mov"
       ],
-      "path": "C:\\Users\\royze\\Documents\\ChatGPT\\дататон\\data\\raw\\open\\videos\\Х-45.mov",
+      "path": "data/raw/open/videos/Х-45.mov",
       "label": 0,
       "events_sec": [],
       "duration_sec": 33.333,
@@ -889,7 +889,7 @@
       "aliases": [
         "Х-46.mov"
       ],
-      "path": "C:\\Users\\royze\\Documents\\ChatGPT\\дататон\\data\\raw\\open\\videos\\Х-46.mov",
+      "path": "data/raw/open/videos/Х-46.mov",
       "label": 1,
       "events_sec": [
         11.0

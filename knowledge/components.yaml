@@ -1,0 +1,35 @@
+schema_version: 1
+
+components:
+  api:
+    owner: teamlead
+    path: src/api
+    depends_on: [jobs]
+  jobs:
+    owner: teamlead
+    path: src/jobs
+    depends_on: [inference_pipeline]
+  ml_training:
+    owner: ml_engineer
+    path: src/ml
+    produces:
+      - model artifact
+      - model manifest
+      - preprocessing config
+      - thresholds
+      - metrics
+  inference_pipeline:
+    owner: inference_engineer
+    path: src/inference
+    depends_on:
+      - model inference contract
+      - local model artifact
+    produces:
+      - events
+      - timecodes
+      - evidence
+      - benchmark
+  integration_tests:
+    owner: teamlead
+    path: tests/integration
+    depends_on: [api, jobs, inference_pipeline]

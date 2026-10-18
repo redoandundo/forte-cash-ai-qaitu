@@ -8,7 +8,7 @@
   "num_frames": 4,
   "image_size": 160,
   "normalization": "imagenet",
-  "window_sec": 8.0,
+  "window_sec": 6.0,
   "temporal_span_fraction": 1.0,
   "recommended_stride_sec": 2.0
 }

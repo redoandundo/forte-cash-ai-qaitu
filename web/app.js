@@ -10,7 +10,19 @@ const statusDetail = document.querySelector("#status-detail");
 const spinner = document.querySelector("#spinner");
 const result = document.querySelector("#result");
 
+const inviteKey = new URLSearchParams(location.hash.slice(1)).get("key");
+if (inviteKey) {
+  sessionStorage.setItem("fortebank-api-key", inviteKey);
+  history.replaceState(null, "", location.pathname + location.search);
+}
 apiKeyInput.value = sessionStorage.getItem("fortebank-api-key") || "";
+if (apiKeyInput.value) apiKeyInput.closest("label").hidden = true;
+
+function escapeHtml(value) {
+  return String(value).replace(/[&<>"']/g, character => ({
+    "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+  }[character]));
+}
 
 fileInput.addEventListener("change", () => {
   fileLabel.textContent = fileInput.files[0]?.name || "Выберите файл или перетащите его сюда";
@@ -43,9 +55,9 @@ function renderResult(job) {
         <img src="data:image/jpeg;base64,${frame.image_base64}" alt="Кадр-доказательство на ${frame.timestamp_sec.toFixed(1)} секунде" />
         <div class="event-copy">
           <span class="timecode">${event.timecode_sec.toFixed(1)} сек</span>
-          <h3>${event.type}</h3>
-          <p>${event.description}</p>
-          <p class="confidence">Оценка baseline: ${(event.confidence * 100).toFixed(1)}%</p>
+          <h3>${escapeHtml(event.type)}</h3>
+          <p style="white-space: pre-line">${escapeHtml(event.description)}</p>
+          <p class="confidence">Результат требует проверки сотрудником</p>
         </div>
       </article>`;
   }).join("");
@@ -95,6 +107,7 @@ form.addEventListener("submit", async (event) => {
     showStatus("done", "Анализ завершён", `Задание ${jobId} обработано.`);
     renderResult(job);
   } catch (error) {
+    apiKeyInput.closest("label").hidden = false;
     showStatus("failed", "Не удалось завершить анализ", error.message);
   } finally {
     submitButton.disabled = false;

@@ -1,0 +1,7 @@
+-r requirements-runtime.txt
+# Install torch/torchvision CUDA wheels first, using scripts/setup_local.py.
+transformers==5.20.1
+accelerate>=1.15,<2
+peft==0.21.2
+bitsandbytes==0.50.2
+safetensors>=0.6

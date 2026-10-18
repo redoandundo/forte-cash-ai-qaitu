@@ -1,0 +1,67 @@
+{
+  "task": "whole-video binary screening; not event localization or semantic JSON generation",
+  "quality_gate_passed": false,
+  "base_sha256": "7de1838c87a5349b016c26a1c3f7d2bc400a3d485f95ef39a7059ffd734977a0",
+  "adapter_sha256": "9d519f34dc7a900ede428a81af63f08ee58f030483a417c1309fba8d2ef380c3",
+  "base_model_id": "Qwen/Qwen3-VL-2B-Instruct",
+  "base_revision": "89644892e4d85e24eaac8bacfd4f463576704203",
+  "split_counts": {
+    "train": 24,
+    "test": 9,
+    "validation": 7
+  },
+  "epochs": 6,
+  "selected_epoch": 4,
+  "optimizer_steps": 36,
+  "frame_count": 16,
+  "max_pixels": 65536,
+  "prompt": "These are chronological frames sampled uniformly across one cashier video. Classify the visible sequence for human review. A = ordinary activity; B = signs of a possible procedure violation. Cash handling, an ordinary entry, or another person alone is not enough to establish a violation. Consider the order of document checks, cash handling, securing cash and equipment, and leaving the workspace. This is a screening decision, not a legal conclusion. Reply with exactly one letter, A or B.",
+  "token_ids": [
+    32,
+    33
+  ],
+  "base_validation": {
+    "tp": 0,
+    "tn": 3,
+    "fp": 0,
+    "fn": 4,
+    "macro_f1": 0.3,
+    "recall": 0.0,
+    "count": 7
+  },
+  "selected_validation": {
+    "tp": 4,
+    "tn": 0,
+    "fp": 3,
+    "fn": 0,
+    "macro_f1": 0.36363636363636365,
+    "recall": 1.0,
+    "count": 7
+  },
+  "base_test": {
+    "tp": 0,
+    "tn": 5,
+    "fp": 0,
+    "fn": 4,
+    "macro_f1": 0.35714285714285715,
+    "recall": 0.0,
+    "count": 9
+  },
+  "selected_test": {
+    "tp": 3,
+    "tn": 1,
+    "fp": 4,
+    "fn": 1,
+    "macro_f1": 0.41558441558441556,
+    "recall": 0.75,
+    "count": 9
+  },
+  "max_weight_change": 0.0006351716001518071,
+  "peak_allocated_vram_gib": 3.133638381958008,
+  "total_elapsed_sec": 249.2022420000003,
+  "seed": 42,
+  "learning_rate": 2e-05,
+  "gradient_accumulation": 4,
+  "evaluation_warning": "Small development holdout, not untouched external evaluation. No per-frame grounding learned. The diagnostic test was also evaluated for an earlier experiment; it is not a blind test.",
+  "training_examples_processed": 144
+}

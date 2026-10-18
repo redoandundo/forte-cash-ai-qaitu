@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import logging
 import secrets
 import threading
 import uuid
@@ -11,11 +12,11 @@ from fastapi import BackgroundTasks, Depends, FastAPI, File, Header, HTTPExcepti
 from pydantic import BaseModel, Field
 from fastapi.staticfiles import StaticFiles
 
-from .analyzer import analyze
+from .api_runtime import analyze
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
-MODEL_PATH = Path(os.environ.get("FORTEBANK_MODEL_PATH", PROJECT_ROOT / "artifacts" / "baseline.joblib"))
+MODEL_PATH = PROJECT_ROOT / "models" / "best_model.onnx"
 UPLOAD_ROOT = Path(os.environ.get("FORTEBANK_UPLOAD_ROOT", PROJECT_ROOT / "artifacts" / "uploads"))
 WEB_ROOT = PROJECT_ROOT / "web"
 MAX_UPLOAD_BYTES = 100 * 1024 * 1024
@@ -34,7 +35,6 @@ class Violation(BaseModel):
     type: str
     timecode_sec: float
     description: str
-    confidence: float = Field(ge=0, le=1)
     evidence_frames: list[EvidenceFrame]
 
 
@@ -49,6 +49,8 @@ class JobResponse(BaseModel):
 app = FastAPI(title="ForteBank Video Audit API", version="0.1.0")
 _jobs: dict[str, dict[str, object]] = {}
 _jobs_lock = threading.Lock()
+_analysis_slot = threading.BoundedSemaphore(1)
+LOGGER = logging.getLogger(__name__)
 
 
 def require_api_key(x_api_key: Annotated[str | None, Header()] = None) -> None:
@@ -59,26 +61,37 @@ def require_api_key(x_api_key: Annotated[str | None, Header()] = None) -> None:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid API key")
 
 
-def _set_job(job_id: str, **values: object) -> None:
+def _set_job(job_key: str, **values: object) -> None:
     with _jobs_lock:
-        _jobs.setdefault(job_id, {}).update(values)
+        _jobs.setdefault(job_key, {}).update(values)
 
 
 def _run_analysis(job_id: str, video_path: Path) -> None:
     try:
-        if not MODEL_PATH.exists():
-            raise FileNotFoundError(f"Model not found: {MODEL_PATH}")
         result = analyze(video_path, MODEL_PATH)
         _set_job(job_id, status="done", **result)
     except Exception as exc:
-        _set_job(job_id, status="failed", error=str(exc))
+        LOGGER.error("Analysis failed: %s", type(exc).__name__)
+        _set_job(job_id, status="failed", error="Не удалось выполнить локальный анализ видео")
     finally:
-        video_path.unlink(missing_ok=True)
+        try:
+            video_path.unlink(missing_ok=True)
+        finally:
+            _analysis_slot.release()
 
 
 @app.get("/health")
 def health() -> dict[str, object]:
-    return {"status": "ok", "model_ready": MODEL_PATH.exists()}
+    from . import api_runtime
+    runtime = api_runtime._runtime
+    verifier = getattr(runtime, 'verifier', None)
+    backend = getattr(verifier, 'backend', None)
+    return {"status": "ok" if runtime is not None else "starting",
+            "model_ready": runtime is not None,
+            "semantic_mode": "qwen" if verifier is not None else "off",
+            "semantic_model_version": getattr(backend, 'model_version', None),
+            "semantic_model_sha256": getattr(backend, 'model_checksum', None),
+            "compute_location": "server", "browser_gpu_required": False}
 
 
 @app.post(
@@ -91,25 +104,31 @@ def create_analysis(background_tasks: BackgroundTasks, file: Annotated[UploadFil
     if Path(file.filename or "").suffix.lower() != ".mov":
         raise HTTPException(status_code=415, detail="Only .mov files are accepted")
 
-    UPLOAD_ROOT.mkdir(parents=True, exist_ok=True)
+    if not _analysis_slot.acquire(blocking=False):
+        raise HTTPException(status_code=429, detail="Another video is being processed; retry later")
+
     job_id = uuid.uuid4().hex[:12]
     target = UPLOAD_ROOT / f"{job_id}.mov"
     size = 0
     try:
+        UPLOAD_ROOT.mkdir(parents=True, exist_ok=True)
         with target.open("wb") as output:
             while chunk := file.file.read(1024 * 1024):
                 size += len(chunk)
                 if size > MAX_UPLOAD_BYTES:
                     raise HTTPException(status_code=413, detail="Video exceeds 100 MB")
                 output.write(chunk)
+        _set_job(job_id, job_id=job_id, status="processing", verdict=None, violations=[], error=None)
+        background_tasks.add_task(_run_analysis, job_id, target)
     except Exception:
-        target.unlink(missing_ok=True)
+        try:
+            target.unlink(missing_ok=True)
+        finally:
+            _analysis_slot.release()
         raise
     finally:
         file.file.close()
 
-    _set_job(job_id, job_id=job_id, status="processing", verdict=None, violations=[], error=None)
-    background_tasks.add_task(_run_analysis, job_id, target)
     return AnalyzeAccepted(job_id=job_id)
 
 
@@ -126,5 +145,5 @@ def get_job(job_id: str) -> JobResponse:
     return JobResponse.model_validate(job)
 
 
-app.mount("/", StaticFiles(directory=WEB_ROOT, html=True), name="web")
-
+if os.environ.get('QAITU_BACKEND_ONLY') != '1':
+    app.mount("/", StaticFiles(directory=WEB_ROOT, html=True), name="web")

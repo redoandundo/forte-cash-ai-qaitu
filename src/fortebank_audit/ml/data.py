@@ -95,19 +95,32 @@ def preprocess(frames: np.ndarray, image_size: int, augment: bool, normalization
 
 class ClipDataset(Dataset):
     def __init__(self, manifest: str | Path, split: str, frames: int, image_size: int, augment: bool = False, normalization: str = "kinetics", temporal_span: float = 1.0):
-        payload = json.loads(Path(manifest).read_text(encoding="utf-8"))
+        manifest_path = Path(manifest).resolve()
+        payload = json.loads(manifest_path.read_text(encoding="utf-8"))
         self.items = [item for item in payload["clips"] if item["split"] == split]
+        self.project_root = manifest_path.parent.parent
+        missing = [str(self._path(item["path"])) for item in self.items if not self._path(item["path"]).is_file()]
+        if missing:
+            preview = "\n".join(missing[:3])
+            raise FileNotFoundError(
+                f"{len(missing)} clip files for split={split!r} are missing. "
+                f"Rebuild the local manifests and clips before training. First paths:\n{preview}"
+            )
         self.frames = frames
         self.image_size = image_size
         self.augment = augment
         self.normalization = normalization
         self.temporal_span = temporal_span
 
+    def _path(self, value: str | Path) -> Path:
+        path = Path(value)
+        return path if path.is_absolute() else self.project_root / path
+
     def __len__(self) -> int:
         return len(self.items)
 
     def __getitem__(self, index: int):
         item = self.items[index]
-        video = preprocess(read_clip(item["path"], self.frames, self.temporal_span, self.augment), self.image_size, self.augment, self.normalization)
+        video = preprocess(read_clip(self._path(item["path"]), self.frames, self.temporal_span, self.augment), self.image_size, self.augment, self.normalization)
         weight = float(item.get("sample_weight", 1.0))
         return video, torch.tensor(float(item["label"])), torch.tensor(weight), item["source_id"], item["clip_id"]

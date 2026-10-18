@@ -45,12 +45,20 @@ def main() -> None:
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--stride", type=float, default=2.0)
     parser.add_argument("--window", type=float, default=8.0)
+    parser.add_argument("--batch-size", type=int, default=8)
     args = parser.parse_args()
 
     checkpoint = torch.load(args.checkpoint, map_location="cpu", weights_only=True)
     clip_threshold = json.loads(args.metrics.read_text(encoding="utf-8"))["source_metrics"]["threshold"]
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    model = build_model(checkpoint["model"], pretrained=False, train_backbone=False)
+    configured_path = checkpoint.get("pretrained_path")
+    pretrained_path = PROJECT_ROOT / configured_path if configured_path else None
+    model = build_model(
+        checkpoint["model"],
+        pretrained=False,
+        train_backbone=False,
+        pretrained_path=pretrained_path,
+    )
     model.load_state_dict(checkpoint["state_dict"])
     model.to(device).eval()
     payload = json.loads(args.manifest.read_text(encoding="utf-8"))
@@ -63,10 +71,13 @@ def main() -> None:
         if len(centers) == 0:
             centers = np.array([source["duration_sec"] / 2])
         scores = []
-        for offset in range(0, len(centers), 8):
+        source_path = Path(source["path"])
+        if not source_path.is_absolute():
+            source_path = PROJECT_ROOT / source_path
+        for offset in range(0, len(centers), args.batch_size):
             batch = torch.stack([
-                preprocess(sample_window(Path(source["path"]), float(center), args.window * checkpoint.get("temporal_span", 1.0), checkpoint["frames"]), checkpoint["image_size"], False, checkpoint["normalization"])
-                for center in centers[offset : offset + 8]
+                preprocess(sample_window(source_path, float(center), args.window * checkpoint.get("temporal_span", 1.0), checkpoint["frames"]), checkpoint["image_size"], False, checkpoint["normalization"])
+                for center in centers[offset : offset + args.batch_size]
             ]).to(device)
             with torch.inference_mode():
                 scores.extend(torch.sigmoid(model(batch)).cpu().tolist())

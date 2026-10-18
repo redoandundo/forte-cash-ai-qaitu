@@ -9,6 +9,11 @@ import cv2
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
 
+def project_path(value: str | Path) -> Path:
+    path = Path(value)
+    return path if path.is_absolute() else PROJECT_ROOT / path
+
+
 def extract_clip(source: Path, target: Path, center: float, seconds: float, output_fps: float, max_width: int) -> dict:
     capture = cv2.VideoCapture(str(source))
     source_fps = float(capture.get(cv2.CAP_PROP_FPS) or 25.0)
@@ -72,13 +77,13 @@ def main() -> None:
         for event_index, center in enumerate(centers):
             clip_id = f"{source['source_id']}_{event_index}_{source['label']}"
             target = args.output_dir / source["split"] / f"{clip_id}.mp4"
-            extraction = extract_clip(Path(source["path"]), target, center, args.seconds, args.fps, args.max_width)
+            extraction = extract_clip(project_path(source["path"]), target, center, args.seconds, args.fps, args.max_width)
             clips.append(
                 {
                     "clip_id": clip_id,
                     "source_id": source["source_id"],
                     "source_video_ids": source["video_ids"],
-                    "path": str(target.resolve()),
+                    "path": target.resolve().relative_to(PROJECT_ROOT).as_posix(),
                     "label": source["label"],
                     "split": source["split"],
                     "event_center_sec": round(center, 3) if source["label"] else None,

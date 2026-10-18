@@ -78,4 +78,3 @@ def analyze(video_path: str | Path, model_path: str | Path) -> dict[str, object]
         "verdict": "violation" if violations else "no_violation",
         "violations": violations,
     }
-
