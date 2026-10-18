@@ -4,6 +4,7 @@ import os
 import secrets
 import threading
 import uuid
+from copy import deepcopy
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Annotated, Literal
@@ -83,6 +84,7 @@ class AnalysisDetail(BaseModel):
     reasoning: str
     risk: str
     rule: RuleReference
+    rules: list[RuleReference] = Field(default_factory=list)
 
 
 class RuleReviewRequest(BaseModel):
@@ -151,9 +153,13 @@ def review_event_rule(job_id: str, event_index: int, review: RuleReviewRequest) 
         originals = job.setdefault("rule_review_original_descriptions", {})
         violation = job["violations"][event_index - 1]
         original = originals.setdefault(event_index, violation["description"])
-        updated_detail = {**detail, "rule": rule}
+        original_rules = job.setdefault("rule_review_original_rules", {}).setdefault(
+            event_index, deepcopy({"rule": detail["rule"], "rules": detail.get("rules", [])})
+        )
+        rules_update = original_rules if review.rule_id is None else {"rule": rule, "rules": [rule]}
+        updated_detail = {**detail, **rules_update}
         response = AnalysisDetail.model_validate(updated_detail)
-        detail["rule"] = rule
+        detail.update(deepcopy(rules_update))
         violation["description"] = original if review.rule_id is None else (
             f"{original} Ручная проверка: {rule['label']}; {rule['document_name']}, "
             f"{rule['section']}. {rule['applicability']} Источник: {rule['source_url']}"

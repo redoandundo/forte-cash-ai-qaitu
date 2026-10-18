@@ -65,6 +65,22 @@ test('runtime badge shows Qwen only when the API confirms it is enabled', async 
   assert.equal(s.elements.get('#runtime-badge').textContent, 'ONNX');
 });
 
+test('one episode renders all matched rules with their official sources', () => {
+  const s = setup();
+  s.context.detail = { thesis: 'Тестовый тезис', observations: ['Тестовый факт'], reasoning: 'Тест', risk: 'Тест',
+    rules: [20, 22].map(section => ({status: 'matched', label: `Правило ${section}`, section: `пункт ${section}`,
+      document_name: 'Проверенный каталог', applicability: 'Автоматическое сопоставление. Кадр: 15 сек.',
+      source_url: 'https://adilet.zan.kz/rus/docs/V1900019680'})) };
+  s.context.violation = event(15);
+  const chain = s.run('makeEvidenceChain(detail, violation)');
+  assert.equal(chain.children.length, 6);
+  for (const section of chain.children.slice(4)) {
+    const link = section.children.at(-1);
+    assert.equal(link.href, 'https://adilet.zan.kz/rus/docs/V1900019680');
+    assert.equal(link.textContent, 'Открыть нормативный источник');
+  }
+});
+
 test('one episode has three chronological context frames, not three event markers', () => {
   const s = setup();
   s.context.job = { verdict: 'violation', violations: [event(10, [11, 9, 10])] };

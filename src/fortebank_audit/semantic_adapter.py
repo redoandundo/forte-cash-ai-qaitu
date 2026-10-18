@@ -9,6 +9,7 @@ from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
 from .inference.contracts import InferenceError
 from .rules import rule_catalog, unmatched_rule
+from .automatic_rules import RuleAssessment, RuleAwareVerifier, automatic_matches
 
 
 class SemanticIntegrationError(InferenceError):
@@ -53,6 +54,7 @@ class SemanticEvent(BaseModel):
     rule_candidate: RuleCandidate | None
     model_version: Text
     model_checksum: Annotated[str, Field(pattern=r"^[a-f0-9]{64}$")]
+    rule_assessment: RuleAssessment | None = None
 
 
 class SemanticAdapter:
@@ -85,7 +87,7 @@ class SemanticAdapter:
             verifier = build()  # Backend validates local assets and preloads once at startup.
             if verifier is None:
                 raise SemanticIntegrationError("Qwen was requested but verifier is disabled")
-            return cls(module, verifier)
+            return cls(module, RuleAwareVerifier(verifier))
         except SemanticIntegrationError:
             raise
         except Exception as exc:
@@ -124,6 +126,12 @@ class SemanticAdapter:
                 if (parsed.model_version != self.model_version
                         or parsed.model_checksum != self.model_checksum):
                     raise SemanticIntegrationError("Semantic output model identity changed")
+                assessment = parsed.rule_assessment
+                if assessment is not None and (
+                    assessment.event_start_sec != event.get("start_sec")
+                    or assessment.event_end_sec != event.get("end_sec")
+                ):
+                    raise SemanticIntegrationError("Rule observations belong to another event")
             return result
         except SemanticIntegrationError:
             raise
@@ -133,7 +141,13 @@ class SemanticAdapter:
 
 def parse_semantic_event(payload: object) -> SemanticEvent:
     try:
-        return SemanticEvent.model_validate(payload)
+        parsed = SemanticEvent.model_validate(payload)
+        if parsed.rule_assessment is not None and (
+            parsed.rule_assessment.model_version != parsed.model_version
+            or parsed.rule_assessment.model_checksum != parsed.model_checksum
+        ):
+            raise SemanticIntegrationError("Rule observations model identity changed")
+        return parsed
     except ValidationError as exc:
         raise SemanticIntegrationError("Semantic event does not match the handoff contract") from exc
 
@@ -147,6 +161,8 @@ def map_semantic_event(payload: object, event_index: int) -> tuple[str, str, dic
         reasoning = "Недостаточно данных для уверенного вывода; эпизод сохранён для проверки. " + reasoning
     if semantic.limitations:
         reasoning += " Ограничения: " + "; ".join(semantic.limitations)
+    if semantic.rule_assessment is not None and semantic.rule_assessment.limitations:
+        reasoning += " Ограничения проверки правил: " + "; ".join(semantic.rule_assessment.limitations)
     rule = unmatched_rule()
     if semantic.rule_candidate is not None:
         candidate = semantic.rule_candidate
@@ -160,9 +176,19 @@ def map_semantic_event(payload: object, event_index: int) -> tuple[str, str, dic
                     document_name=catalog["document_name"], section=canonical["section"],
                     source_url=catalog["source_url"],
                     applicability=f"Требуется подтверждение наблюдений проверяющим. {candidate.applicability_reason}")
+    matches = automatic_matches(semantic.rule_assessment, decision=semantic.decision,
+                                confidence=semantic.confidence, limitations=semantic.limitations)
+    if matches:
+        rule = matches[0]
+    elif semantic.rule_assessment is not None:
+        rule["applicability"] += " Автоматическая проверка не подтвердила полный набор условий."
     detail = dict(event_index=event_index, thesis=semantic.thesis, observations=observations,
-                  reasoning=reasoning, risk=semantic.risk, rule=rule)
+                  reasoning=reasoning, risk=semantic.risk, rule=rule, rules=matches)
     description = (f"{semantic.thesis} Наблюдения: {'; '.join(observations)} "
                    f"Обоснование: {reasoning} Риск: {semantic.risk} "
                    "Вывод локальной модели требует проверки человеком.")
-    return semantic.thesis, description, detail
+    for match in matches:
+        description += (f" Нормативное основание: {match['label']}; {match['document_name']}, "
+                        f"{match['section']}. {match['applicability']} Источник: {match['source_url']}")
+    title = "Признаки: " + "; ".join(match["label"] for match in matches) if matches else semantic.thesis
+    return title, description, detail

@@ -319,23 +319,26 @@ function makeEvidenceChain(detail, violation) {
     makeChainSection("4 · Почему это важно", chain.risk, { className: "chain-risk" }),
   );
 
-  const rule = chain.rule || fallback.rule;
-  const ruleSection = makeChainSection(
-    "5 · Предполагаемое правило",
-    rule.status === "matched"
-      ? `${rule.label}. ${rule.document_name || ""} ${rule.section || ""}. ${rule.applicability || ""}`.trim()
-      : `${rule.label}. ${rule.applicability || ""}`.trim(),
-    { className: rule.status === "matched" ? "chain-rule matched" : "chain-rule unmatched" },
-  );
-  if (rule.status === "matched" && /^https?:\/\//.test(rule.source_url || "")) {
-    const link = document.createElement("a");
-    link.href = rule.source_url;
-    link.target = "_blank";
-    link.rel = "noreferrer";
-    link.textContent = "Открыть нормативный источник";
-    ruleSection.append(link);
+  const rules = Array.isArray(chain.rules) && chain.rules.length
+    ? chain.rules : [chain.rule || fallback.rule];
+  for (const [index, rule] of rules.entries()) {
+    const ruleSection = makeChainSection(
+      rules.length > 1 ? `5.${index + 1} · Предполагаемое правило` : "5 · Предполагаемое правило",
+      rule.status === "matched"
+        ? `${rule.label}. ${rule.document_name || ""} ${rule.section || ""}. ${rule.applicability || ""}`.trim()
+        : `${rule.label}. ${rule.applicability || ""}`.trim(),
+      { className: rule.status === "matched" ? "chain-rule matched" : "chain-rule unmatched" },
+    );
+    if (rule.status === "matched" && /^https?:\/\//.test(rule.source_url || "")) {
+      const link = document.createElement("a");
+      link.href = rule.source_url;
+      link.target = "_blank";
+      link.rel = "noreferrer";
+      link.textContent = "Открыть нормативный источник";
+      ruleSection.append(link);
+    }
+    wrapper.append(ruleSection);
   }
-  wrapper.append(ruleSection);
   return wrapper;
 }
 
@@ -361,7 +364,7 @@ function makeRuleReview(article, violation, detail, eventIndex) {
   save.type = "button"; save.className = "secondary-button";
   save.textContent = "Подтвердить наблюдения и сопоставить"; save.disabled = true;
   const reset = document.createElement("button");
-  reset.type = "button"; reset.className = "text-button"; reset.textContent = "Снять сопоставление";
+  reset.type = "button"; reset.className = "text-button"; reset.textContent = "Отменить ручное сопоставление";
   const message = document.createElement("p");
   message.setAttribute("role", "status");
   let boxes = [];
@@ -393,7 +396,7 @@ function makeRuleReview(article, violation, detail, eventIndex) {
       if (!response.ok) throw new Error(errorMessage(response.status, payload));
       if (currentJobId !== jobId) return;
       article.querySelector(".evidence-chain").replaceWith(makeEvidenceChain(payload, violation));
-      message.textContent = resetReview ? "Сопоставление снято." : "Сохранено: правило сопоставлено проверяющим. Автоматический verdict не изменён.";
+      message.textContent = resetReview ? "Восстановлен исходный результат автоматического анализа." : "Сохранено: правило сопоставлено проверяющим. Автоматический verdict не изменён.";
       if (resetReview) { select.value = ""; facts.replaceChildren(); boxes = []; limitation.textContent = ""; }
     } catch (error) {
       message.textContent = error.message || "Не удалось сохранить сопоставление.";
@@ -456,6 +459,7 @@ function renderViolationResult(job, progress) {
     const description = document.createElement("p");
     description.textContent = violation.description;
     const detail = (progress.analysis_details || []).find((item) => item.event_index === index + 1);
+    description.hidden = Boolean(detail);
     copy.append(timeButton, heading, frameCount, description, makeEvidenceChain(detail, violation));
     if (currentJobId && currentRuleCatalog) copy.append(makeRuleReview(article, violation, detail, index + 1));
     article.append(copy);
