@@ -8,6 +8,17 @@ development-only и не проходит quality gate.
 
 ## Входные версии
 
+### Исправление переносимого GPU-архива — 18.10.2026
+
+Первый архив ошибочно включал только верхний уровень ONNX bundle. Отсутствовали
+`compatibility/model_dynamic.onnx` и `compatibility/inference/model_manifest.json`.
+Пересобраны полный архив и отдельный patch вне Git; прежний локальный архив
+также заменён полной копией. Исходный SHA256SUMS.txt не менялся: проверены все
+9/9 записей и ZIP CRC. Из распакованной новой копии реально загружен ONNX v4
+и обработано синтетическое видео (одно событие). Это не запуск GPU/Qwen.
+Файлы: `artifacts/delivery/qaitu-gpu-worker-complete.zip` и
+`artifacts/delivery/qaitu-v4-compatibility-fix.zip`, оба игнорируются Git.
+
 ### GPU worker и обученный Qwen — 18.10.2026
 
 Код: inference acceptance `7100b8c`; API/bridge/launcher `0575612903404fe631cc7ce3ef3b306c1c5bf4c3`.
