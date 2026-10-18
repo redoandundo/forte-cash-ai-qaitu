@@ -149,6 +149,14 @@ $bundle = "artifacts/ml/bundles/baseline-audited-v4"
 проверяются все отрицательные окна; неразмеченные окна положительных видео
 не получают искусственную отрицательную метку. Типы событий в Excel отсутствуют.
 
+Фактический итог: `reports/ml/semantic_results.md` и `semantic_metrics.json`.
+OOF macro F1 0.510, recall 0.667, temporal MAE 4.474 s; ложных событий
+1.509/min, gates не пройдены. Кандидат не продвигается. Отдельный bundle
+`artifacts/ml/bundles/dino-spatial-mil-fold0` прошёл PyTorch/ONNX parity и
+smoke через adapter `2f53ce1`, но CPU pipeline занимает 30–36 s на двух
+проверенных видео. Частичный stress-аудит выявил чувствительность к смещению
+кадра. Текущий baseline и API этой работой не переключаются.
+
 Дополнительные зависимости из `configs/ml/requirements-semantic.txt` можно
 установить в отдельное ML-окружение поверх `requirements-ml-repair.txt`.
 Для текущего локального эксперимента они изолированы в
