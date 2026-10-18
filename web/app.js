@@ -45,7 +45,7 @@ function renderResult(job) {
           <span class="timecode">${event.timecode_sec.toFixed(1)} сек</span>
           <h3>${event.type}</h3>
           <p>${event.description}</p>
-          <p class="confidence">Оценка baseline: ${(event.confidence * 100).toFixed(1)}%</p>
+          <p class="confidence">Результат требует проверки сотрудником</p>
         </div>
       </article>`;
   }).join("");
