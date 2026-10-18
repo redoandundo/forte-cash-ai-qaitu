@@ -1,0 +1,42 @@
+{
+  "reviewed_commit": "48c1739",
+  "previous_inference_commit": "6933204",
+  "scope": "isolated_upstream_api_and_inference_compatibility_review",
+  "qwen_code_or_manifest_changed": false,
+  "tests": {"api_and_inference_passed": 64, "failed": 0},
+  "real_video_smoke": {
+    "videos": 1,
+    "qwen_enabled": false,
+    "status": "done",
+    "seconds": 0.9071704000016325,
+    "events": 0,
+    "verified_jpegs": 0,
+    "comparison": "Same development video previously produced one retained event through our audited ML bundle and Qwen. Different first-layer models; this is not an accuracy comparison."
+  },
+  "findings": [
+    {
+      "severity": "integration_blocker",
+      "file": "src/fortebank_audit/api_runtime.py",
+      "issue": "Runtime ignores QAITU_MODEL_BUNDLE and builds the bundled mobilenet-temporal-pairsafe-v3 predictor.",
+      "verification": "Instantiated Runtime with QAITU_MODEL_BUNDLE pointing to baseline-audited-v4; active predictor remained mobilenet-temporal-pairsafe-v3.",
+      "recommendation": "Keep canonical job_runtime.InferenceRuntime and semantic_adapter integration; do not replace the current API wholesale."
+    },
+    {
+      "severity": "conditional_runtime_failure",
+      "file": "src/fortebank_audit/api_runtime.py",
+      "issue": "QAITU_SEQUENCE_ADAPTER imports inference.qwen_sequence, absent from commit 48c1739.",
+      "verification": "Runtime construction with the adapter variable set failed with ModuleNotFoundError before adapter loading.",
+      "recommendation": "Publish the required module and versioned adapter contract before activating this mode."
+    },
+    {
+      "severity": "readiness_check_gap",
+      "file": "src/fortebank_audit/api.py",
+      "issue": "Health checks only existence of the ONNX file, not successful runtime/Qwen initialization.",
+      "verification": "Source inspection: health returns MODEL_PATH.exists(); Runtime is constructed lazily on analysis.",
+      "recommendation": "Preserve the integration branch startup validation and model diagnostics."
+    }
+  ],
+  "decision": "reviewed_not_merged_wholesale",
+  "weights_update": "No new Qwen manifest or inference code in this commit; model training completion cannot be inferred from this API update.",
+  "publication": "local_only"
+}
