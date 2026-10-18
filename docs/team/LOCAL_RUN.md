@@ -35,6 +35,15 @@ without the team's deployment configuration.
 
 ## Optional Qwen modes
 
+The intended two-layer architecture is ONNX candidate detection followed by
+Qwen event verification and a dossier. Use `--qwen-semantic` for this workflow.
+Qwen receives chronological context around each ONNX event. The API description
+includes its observations with timestamps, reasoning, risk and limitations;
+the response also contains JPEG evidence. The event peak timestamp still comes
+from ONNX: exact semantic localization is not established by this implementation.
+The newly trained binary adapter does not perform this dossier task and is not
+loaded by semantic mode. Semantic mode currently uses the pinned base Qwen.
+
 ```powershell
 py -3.12 scripts/setup_local.py --qwen
 ```
