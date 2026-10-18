@@ -40,10 +40,17 @@ components:
     contract: docs/contracts/automatic_rules_contract.md
   qwen_api_adapter:
     owner: teamlead
-    status: contract_tested_waiting_for_inference_merge_and_improved_snapshot
-    compatible_interface_ref: 6933204
+    status: semantic_code_integrated_remote_worker_tested_gpu_access_pending
+    compatible_interface_ref: 94fd1d6
     enabled_in_public_demo: false
     runbook: docs/team/QWEN_INTEGRATION_RUNBOOK.md
+  gpu_worker_bridge:
+    owner: teamlead
+    status: compatible_worker_and_keyless_web_verified_with_real_http_and_onnx_cpu
+    enabled_in_public_demo: false
+    trained_adapter: experimental_binary_advisory_quality_gate_failed
+    real_qwen_executed_by_teamlead: false
+    runbook: docs/team/GPU_WORKER_RUNBOOK.md
   public_access:
     owner: teamlead
     status: temporary_https_tunnel_verified_with_synthetic_video
@@ -65,7 +72,7 @@ requirements:
   cloud_ai_allowed: false
 
 next_actions:
-  - accept compatible inference code and improved Qwen snapshot using docs/team/QWEN_INTEGRATION_RUNBOOK.md
+  - obtain actual GPU worker address and private key, then validate real Qwen using docs/team/GPU_WORKER_RUNBOOK.md
   - keep the public tunnel and local API running; read the active URL from tmp/public-demo/session.json
   - give the jury the API key separately from the public URL
   - review teamlead delivery commit 2bf2eaf and its feature-to-develop PR
@@ -74,5 +81,7 @@ next_actions:
   - repeat performance verification on the final presentation laptop if its runtime providers differ
 
 blockers:
+  - actual GPU worker address and key have not been provided; current site host has no CUDA
+  - trained Qwen binary adapter failed quality gate and is not an event explanation model
   - development-only model quality gates are not sufficient for promotion
   - automatic rule matching requires real Qwen visual-fact quality and latency validation before public activation

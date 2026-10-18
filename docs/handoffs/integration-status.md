@@ -8,6 +8,46 @@ development-only и не проходит quality gate.
 
 ## Входные версии
 
+### GPU worker и обученный Qwen — 18.10.2026
+
+Код: inference acceptance `7100b8c`; API/bridge/launcher `0575612903404fe631cc7ce3ef3b306c1c5bf4c3`.
+Источник входящего кода: `origin/feature/video-inference@94fd1d6`.
+Входящий semantic pipeline интегрирован с сохранением ONNX v4, progress,
+визуально различных публичных evidence и runtime_providers. Изменения inference
+выделены отдельным commit; API участника и его старый START_SITE.cmd не копировались.
+
+Обученный LoRA проверен по SHA-256 и размещён вне Git. Его задача — whole-video
+A/B (16 кадров), а не semantic JSON по эпизодам. Adapter SHA:
+`9d519f34dc7a900ede428a81af63f08ee58f030483a417c1309fba8d2ef380c3`.
+Quality gate FAILED: диагностический test TP=3/TN=1/FP=4/FN=1 (9 видео).
+Он подключён только как явно выбранный experimental advisory; ONNX события и
+правила от этого ответа не меняются. Semantic Qwen использует базовый snapshot
+с pinned checksum; два GPU Qwen одновременно не загружаются.
+
+Добавлены серверный bridge с закрытым ключом, версия worker protocol и запуск
+GPU-сборки. Browser sessions, jury auth, досье и ручные правила остаются на
+текущем сайте. Старый worker отклоняется; disconnect/failed/schema/timeout не
+дают no_violation и не вызывают скрытый ONNX fallback.
+
+Фактические проверки:
+- `python -m pytest tests -q`: 200 passed, одно предупреждение Starlette/httpx.
+- После синхронизации legacy meta CLI с новым verifier: focused meta/VLM 16 passed.
+- `compileall src scripts/serve_gpu_worker.py`, PowerShell parser, `git diff --check`: passed.
+- Два настоящих HTTP API + актуальный ONNX v4 CPU: синтетический ролик 9 сек.,
+  одно событие, последний прогон 1.304 сек. Keyless web, cookie isolation, jury
+  auth, досье/JPEG и failed после остановки worker — passed. Датасет не передавался.
+- `serve_gpu_worker.py --sequence` без experimental flag отклонён до загрузки весов.
+- Приватный переносимый архив создан локально вне Git; проверены ZIP CRC и LoRA checksum.
+
+GPU/Qwen на этой машине НЕ запускался: здесь Intel Graphics без CUDA и нет
+базового snapshot. Адреса и ключа GPU-участника фактически не получено; два
+последних ответа содержали инструкцию/повтор вопроса, без адреса. Публичный сайт
+перезапущен с новым кодом в ONNX v4 / semantic off; URL сохранён, Qwen не объявляется включённым.
+Следующий шаг: передать участнику архив или текущую feature-сборку, запустить
+worker, получить его `secrets/tester-access.txt` по общей сети/VPN, выполнить
+реальную приёмку Qwen и затем включить bridge. Команды и ограничения —
+`docs/team/GPU_WORKER_RUNBOOK.md`; протокол — `docs/contracts/gpu_worker_contract.md`.
+
 ### Веб-доступ без ключа — 18.10.2026
 
 База: `e818f28`. Блок доступа удалён из HTML/JS. Сайт автоматически создаёт
