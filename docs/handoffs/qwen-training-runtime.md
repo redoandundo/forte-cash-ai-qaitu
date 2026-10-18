@@ -12,6 +12,15 @@ edits to the older inference handoff were deliberately excluded.
 
 ## Run now
 
+Update: Windows hosts with existing dependencies/models can double-click
+`START_SITE.cmd`; `scripts/serve_site.py` selects a free port and enables semantic
+Qwen, generates a persistent private access key and writes browser access links
+under ignored `secrets/`. Testers need only a browser on the same reachable LAN.
+No model is downloaded by this launcher. Public internet hosting is not configured.
+Launcher/API checks: `pytest tests/api -q -p no:cacheprovider --basetemp tmp/pytest-site`
+completed with 8 passing tests and one Starlette deprecation warning. Dossier text
+is HTML-escaped before display and preserves line breaks.
+
 Follow `docs/team/LOCAL_RUN.md`. For the intended ONNX -> Qwen -> dossier path:
 
 ```powershell

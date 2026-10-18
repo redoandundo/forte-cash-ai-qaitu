@@ -1,5 +1,26 @@
 # Reproducible local API
 
+## Your computer hosts the website
+
+On the already configured Windows server, double-click `START_SITE.cmd`.
+It reuses `.venv-ml` (or `.venv-run`) and the existing local Qwen, enables the
+ONNX -> semantic Qwen -> dossier workflow, and opens the browser when ready.
+There is no download or installation on the tester's computer.
+
+Private access links are written to `secrets/tester-access.txt` (ignored by Git).
+Send a same-network link to the tester. The link fills the access key in the
+browser automatically; it is removed from the address bar after opening.
+Keep these links private. The first link is for the server computer itself.
+The launcher chooses an available port starting at 8000 and leaves existing
+servers running. Close the launcher process to stop its server.
+
+LAN access depends on network routing and the Windows firewall. These links
+are not public internet addresses. Remote internet access requires an HTTPS
+reverse proxy or a private VPN configured for the host; this launcher does not
+configure either or change firewall rules. Keep the host awake during testing.
+
+The instructions below are initial installation steps for a new server only.
+
 Requires Python 3.12, an internet connection for initial package/model installation,
 and enough disk space. Standard mode uses CPU ONNX. Qwen additionally requires a
 compatible NVIDIA GPU/driver; the measured device was RTX 5050 Laptop 8 GB.
