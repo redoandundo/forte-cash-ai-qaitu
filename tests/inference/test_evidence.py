@@ -82,3 +82,25 @@ def test_visually_duplicate_frames_are_returned_once(tmp_path: Path) -> None:
 
     assert len(evidence) == 1
     assert evidence[0].timecode_sec == 8.0
+
+
+def test_temporal_context_is_chronological_and_deduplicated(tmp_path: Path) -> None:
+    class Reader:
+        def metadata(self) -> VideoMetadata:
+            return VideoMetadata(Path("v.mov"), 12.0, 16, 16, 10.0, 120, "mpeg4", False)
+
+        def sample_nearest(self, timestamps_sec) -> list[VideoFrame]:
+            return [
+                VideoFrame(value, np.full((16, 16, 3), index * 30, dtype=np.uint8))
+                for index, value in enumerate(timestamps_sec)
+            ]
+
+    context = EvidenceExtractor(tmp_path).extract_temporal_context(
+        Reader(), DetectedEvent(2.0, 8.0, 5.0, 0.8, 3),
+        event_index=0, run_id="unicode-контекст",
+    )
+    assert [item["role"] for item in context] == ["before", "start", "peak", "end", "after"]
+    assert [item["timestamp_sec"] for item in context] == sorted(
+        item["timestamp_sec"] for item in context
+    )
+    assert all(Path(item["jpeg_path"]).is_file() for item in context)

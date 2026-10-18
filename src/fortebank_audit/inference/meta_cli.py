@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import uuid
 from dataclasses import asdict
 from pathlib import Path
@@ -12,7 +13,8 @@ from .experience_store import ExperienceStore
 from .meta_analysis import MetaAnalyzer, MetaFeatures
 from .pipeline import analyze_video
 from .reporting import build_report, save_report
-from .vlm_verifier import EventVerifier, QwenLocalBackend, load_signal_policy
+from .semantic_pipeline import analyze_video_with_semantic_verification
+from .vlm_verifier import EventVerifier, get_qwen_backend, load_signal_policy
 
 
 DEFAULT_DB = PROJECT_ROOT / "data" / "raw" / "meta" / "experience.sqlite3"
@@ -32,13 +34,19 @@ def build_config(
 
 def validate_qwen_options(enabled: bool, model_path: Path | None) -> None:
     if model_path is not None and not enabled:
-        raise ValueError("Qwen requires the explicit experimental feature flag")
+        raise ValueError("Qwen requires explicit QAITU_VLM_MODE=qwen or --enable-qwen")
     if enabled and model_path is None:
-        raise ValueError("--enable-experimental-qwen requires --vlm-model")
+        raise ValueError("Qwen mode requires --vlm-model or QAITU_VLM_MODEL_PATH")
 
 
 def analyze(args: argparse.Namespace) -> None:
-    validate_qwen_options(args.enable_experimental_qwen, args.vlm_model)
+    env_mode = os.environ.get("QAITU_VLM_MODE", "off").strip().lower()
+    enabled = bool(args.enable_qwen or env_mode == "qwen")
+    model_path = args.vlm_model or (
+        Path(os.environ["QAITU_VLM_MODEL_PATH"])
+        if os.environ.get("QAITU_VLM_MODEL_PATH") else None
+    )
+    validate_qwen_options(enabled, model_path)
     store = ExperienceStore(args.db)
     config, model_sha256 = build_config(
         args.bundle,
@@ -50,13 +58,25 @@ def analyze(args: argparse.Namespace) -> None:
         allow_development_model=args.allow_development_model,
     )
     run_id = args.run_id or uuid.uuid4().hex
-    result = analyze_video(
-        args.video,
-        predictor,
-        config,
-        evidence_root=args.evidence_root,
-        run_id=run_id,
-    )
+    verifier = None
+    policy = None
+    if enabled:
+        policy = load_signal_policy(args.signals)
+        backend = get_qwen_backend(
+            model_path, args.vlm_manifest,
+            max_concurrent_jobs=args.max_concurrent_jobs,
+        )
+        backend.preload()
+        verifier = EventVerifier(backend, policy, max_new_tokens=args.max_new_tokens)
+        result = analyze_video_with_semantic_verification(
+            args.video, predictor, config, verifier,
+            evidence_root=args.evidence_root, run_id=run_id,
+        )
+    else:
+        result = analyze_video(
+            args.video, predictor, config,
+            evidence_root=args.evidence_root, run_id=run_id,
+        )
     features = MetaFeatures.from_result(result)
     decision = MetaAnalyzer(store).evaluate(result, threshold=config.threshold)
     store.record_run(
@@ -74,34 +94,15 @@ def analyze(args: argparse.Namespace) -> None:
         "first_layer": result,
         "second_layer": decision.as_dict(),
     }
-    if args.enable_experimental_qwen:
-        policy = load_signal_policy(args.signals)
-        verifier = EventVerifier(
-            QwenLocalBackend(args.vlm_model, max_image_side=args.max_image_side),
-            policy,
-            max_new_tokens=args.max_new_tokens,
-        )
-        verifications = []
-        for event in result["events"][: args.max_vlm_events]:
-            evidence_paths = [
-                Path(args.evidence_root) / item["jpeg_path"] for item in event["evidence"]
-            ]
-            verifications.append(
-                verifier.verify(
-                    evidence_paths,
-                    score=float(event["score"]),
-                    peak_time_sec=float(event["peak_time_sec"]),
-                )
-            )
+    if enabled:
         report = build_report(
             run_id=run_id,
             first_layer=result,
             second_layer=decision.as_dict(),
-            verifications=verifications,
+            verifications=[],
             signals_version=str(policy["signals_version"]),
         )
         saved = save_report(report, args.report_root)
-        payload["visual_verifications"] = [item.as_dict() for item in verifications]
         payload["report_paths"] = {
             key: path.relative_to(PROJECT_ROOT).as_posix() if path.is_relative_to(PROJECT_ROOT) else str(path)
             for key, path in saved.items()
@@ -155,14 +156,18 @@ def main() -> None:
         help="Allow a bundle whose metrics mark it development-only",
     )
     analyze_parser.add_argument(
-        "--enable-experimental-qwen",
+        "--enable-qwen", "--enable-experimental-qwen", dest="enable_qwen",
         action="store_true",
-        help="Enable the internal A/B-only Qwen evidence description path",
+        help="Enable mandatory local Qwen semantic verification",
     )
     analyze_parser.add_argument(
         "--vlm-model",
         type=Path,
         help="Optional local Qwen3-VL model directory for visual verification",
+    )
+    analyze_parser.add_argument(
+        "--vlm-manifest", type=Path,
+        default=PROJECT_ROOT / "configs" / "inference" / "qwen_verifier_manifest.json",
     )
     analyze_parser.add_argument(
         "--signals",
@@ -174,9 +179,8 @@ def main() -> None:
         type=Path,
         default=PROJECT_ROOT / "data" / "raw" / "reports",
     )
-    analyze_parser.add_argument("--max-vlm-events", type=int, default=5)
-    analyze_parser.add_argument("--max-image-side", type=int, default=448)
-    analyze_parser.add_argument("--max-new-tokens", type=int, default=192)
+    analyze_parser.add_argument("--max-new-tokens", type=int, default=768)
+    analyze_parser.add_argument("--max-concurrent-jobs", type=int, default=1)
     analyze_parser.set_defaults(handler=analyze)
 
     review_parser = subparsers.add_parser("review")

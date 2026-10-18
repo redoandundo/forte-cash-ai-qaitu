@@ -156,6 +156,7 @@ def analyze_video(
     evidence_root: str | Path = "data/raw/evidence",
     run_id: str | None = None,
     progress: ProgressCallback | None = None,
+    include_temporal_context: bool = False,
 ) -> InferenceResult:
     started = time.perf_counter()
     reader = VideoReader(video_path)
@@ -192,23 +193,31 @@ def analyze_video(
             run_id=actual_run_id,
             count=config.evidence_count,
         )
-        event_payload.append(
-            {
-                "score": event.peak_score,
-                "start_sec": event.start_sec,
-                "end_sec": event.end_sec,
-                "peak_time_sec": event.peak_time_sec,
-                "supporting_windows": event.supporting_windows,
-                "supporting_window_indices": list(event.supporting_window_indices),
-                "evidence": [
-                    {
-                        "timecode_sec": item.timecode_sec,
-                        "jpeg_path": item.jpeg_path.relative_to(extractor.output_root.resolve()).as_posix(),
-                    }
-                    for item in evidence
-                ],
-            }
-        )
+        payload = {
+            "score": event.peak_score,
+            "start_sec": event.start_sec,
+            "end_sec": event.end_sec,
+            "peak_time_sec": event.peak_time_sec,
+            "supporting_windows": event.supporting_windows,
+            "supporting_window_indices": list(event.supporting_window_indices),
+            "evidence": [
+                {
+                    "timecode_sec": item.timecode_sec,
+                    "jpeg_path": item.jpeg_path.relative_to(extractor.output_root.resolve()).as_posix(),
+                }
+                for item in evidence
+            ],
+        }
+        if include_temporal_context:
+            context = extractor.extract_temporal_context(
+                reader, event, event_index=index, run_id=actual_run_id,
+            )
+            payload['_temporal_context'] = [
+                {'role': item['role'], 'timestamp_sec': item['timestamp_sec'],
+                 'jpeg_path': item['jpeg_path'].relative_to(extractor.output_root.resolve()).as_posix()}
+                for item in context
+            ]
+        event_payload.append(payload)
 
     processing_sec = time.perf_counter() - started
     peak_score = max((prediction.score for prediction in scored_predictions), default=0.0)
