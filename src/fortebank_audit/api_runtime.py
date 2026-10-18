@@ -12,6 +12,23 @@ _runtime=None
 LOGGER=logging.getLogger(__name__)
 
 
+def format_dossier(verification):
+    """Preserve event-level evidence and uncertainty within the API description."""
+    decision = verification['decision']
+    status = ('Недостаточно доказательств; требуется ручная проверка'
+              if decision == 'insufficient_evidence' else 'Признаки возможного нарушения')
+    lines = [status, verification['thesis'],
+             'Категория наблюдения: ' + verification['category'], 'Наблюдения:']
+    for observation in verification.get('observations', []):
+        lines.append(f"{observation['timestamp_sec']:.2f} с: {observation['visible_fact']}")
+    lines.extend(['Обоснование: ' + verification['reasoning'],
+                  'Риск: ' + verification['risk']])
+    limitations = verification.get('limitations', [])
+    if limitations:
+        lines.append('Ограничения: ' + '; '.join(limitations))
+    return '\n'.join(lines)
+
+
 class Runtime:
     def __init__(self):
         from .inference.benchmark import build_predictor,load_pipeline_config
@@ -49,7 +66,7 @@ class Runtime:
             description=('Обнаружены признаки возможного нарушения. '
                          'Локальный детектор выделил фрагмент для проверки сотрудником.')
             if verification:
-                description=f"{verification['thesis']}. {verification['reasoning']}. {verification['risk']}"
+                description=format_dossier(verification)
             if sequence:
                 description+=(' Дополнительный экспериментальный анализ полного видео: '+
                     ('признаки возможного нарушения.' if sequence['decision']=='possible_violation'
