@@ -87,6 +87,15 @@ def test_semantic_details_preserve_uncertainty(decision):
     assert ("Недостаточно данных" in detail["reasoning"]) == (decision == "insufficient_evidence")
 
 
+def test_public_type_is_stable_category_and_description_keeps_observation():
+    payload = semantic()
+    payload["category"] = "hand_or_object_transfer"
+    title, description, _ = map_semantic_event(payload, 1)
+    assert title == "Передача предмета"
+    assert payload["thesis"] in description
+    assert "Нормативное основание автоматически не установлено" in description
+
+
 @pytest.mark.parametrize("field,value", [
     ("decision", "normal_activity"), ("decision", "violation"), ("thesis", " "),
     ("observations", []), ("observations", [dict(frame_role="peak", timestamp_sec=float("nan"), visible_fact="x")]),
@@ -105,9 +114,11 @@ def test_rule_suggestion_requires_human_confirmation():
     payload = semantic()
     payload["rule_candidate"] = dict(rule_id=rule["id"], document_name=catalog["document_name"],
                                      section=rule["section"], applicability_reason="Тестовая гипотеза", certainty="candidate")
-    _, _, detail = map_semantic_event(payload, 1)
+    _, description, detail = map_semantic_event(payload, 1)
     assert detail["rule"]["status"] == "not_established"
     assert detail["rule"]["source_url"] == catalog["source_url"]
+    assert catalog["source_url"] in description and rule["section"] in description
+    assert "Требуется подтверждение" in description
     payload["rule_candidate"]["section"] = "выдуманный пункт"
     with pytest.raises(SemanticIntegrationError):
         map_semantic_event(payload, 1)

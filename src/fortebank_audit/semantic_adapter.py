@@ -18,6 +18,15 @@ class SemanticIntegrationError(InferenceError):
 Text = Annotated[str, Field(min_length=1, max_length=8000)]
 Timestamp = Annotated[float, Field(ge=0, allow_inf_nan=False)]
 
+EVENT_TYPE_LABELS = {
+    "ordinary_entry_or_presence": "Вход или присутствие в рабочей зоне",
+    "cash_or_document_handling": "Действия с наличными или документами",
+    "hand_or_object_transfer": "Передача предмета",
+    "unattended_workspace": "Рабочее место без наблюдаемого сотрудника",
+    "prolonged_inactivity_or_distraction": "Продолжительная неподвижность или отвлечение",
+    "unclear_activity": "Действие требует уточнения",
+}
+
 
 class Observation(BaseModel):
     model_config = ConfigDict(extra="forbid", strict=True, str_strip_whitespace=True)
@@ -165,4 +174,9 @@ def map_semantic_event(payload: object, event_index: int) -> tuple[str, str, dic
     description = (f"{semantic.thesis} Наблюдения: {'; '.join(observations)} "
                    f"Обоснование: {reasoning} Риск: {semantic.risk} "
                    "Вывод локальной модели требует проверки человеком.")
-    return semantic.thesis, description, detail
+    if semantic.rule_candidate is not None:
+        description += (f" Возможное нормативное основание для проверки: {rule['document_name']}, "
+                        f"{rule['section']}. Источник: {rule['source_url']}. {rule['applicability']}")
+    else:
+        description += " Нормативное основание автоматически не установлено."
+    return EVENT_TYPE_LABELS[semantic.category], description, detail
