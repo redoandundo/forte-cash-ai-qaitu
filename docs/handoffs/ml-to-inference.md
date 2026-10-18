@@ -1,5 +1,25 @@
 # ML → inference: проверенная development-поставка
 
+## Дополнение 2026-10-18: R3D и проверка CPU-переноса
+
+Код `0b0ba91`, ветка `codex/ml-scorecard-improvements`, поверх `57a5e4e`.
+Отчёт и команды: [r3d_scorecard.md](../../reports/ml/r3d_scorecard.md).
+Агрегированные метрики и SHA: [r3d_scorecard_metrics.json](../../reports/ml/r3d_scorecard_metrics.json).
+
+Исправлены BatchNorm и Kinetics-нормировка R3D-18. Пять OOF folds дали recall
+.952, но macro F1 .387 и 18 FP: кандидат отклонён. Активная поставка остаётся v4.
+Дополнительный CPU stress с неизменными CUDA thresholds выявил одно изменение
+вердикта около порога; при переносе backend проверять численную чувствительность.
+
+Локальный `artifacts/ml/bundles/r3d-scorecard-fold0` и одноимённый ZIP — только
+comparison artifact: `[1,3,16,112,112]`, ImageNet input, Kinetics conversion внутри
+графа, окно 6 s / stride 2 s. Threshold=0 делает его непригодным для полезных
+вердиктов; это не автоматическая замена baseline. Schema/checksum и parity
+проверены: max logit error `5.066394805908203e-7` на 12 реальных окнах.
+Adapter `2f53ce1` проверен на positive/negative видео, событиях и JPEG;
+повреждённое видео отклонено. Полный набор после объединения: 74 passed.
+Новые веса, evidence и подробные labels остаются вне Git.
+
 ## Дополнение 2026-10-18: scorecard
 
 Код оценки и экспериментов: commit `20209ec` в `feature/ml-model`.
