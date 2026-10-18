@@ -65,7 +65,7 @@ const stateCopy = {
   no_violation: {
     kicker: "Проверка завершена",
     title: "Дополнительных эпизодов нет",
-    detail: "Локальная модель не отметила интервалы выше заданного порога.",
+    detail: "Анализ завершён без эпизодов, требующих дополнительной проверки.",
   },
   failed: {
     kicker: "Проверка остановлена",
@@ -88,9 +88,12 @@ let selectedFile = null;
 let objectUrl = null;
 let activeController = null;
 let currentViolations = [];
+let activeEventIndex = -1;
+let currentJobId = null;
+let currentRuleCatalog = null;
 let runtimeIdentity = { badge: "Local", caption: "проверяем runtime" };
 
-apiKeyInput.value = sessionStorage.getItem("fortebank-api-key") || "demo-secret";
+apiKeyInput.value = sessionStorage.getItem("fortebank-api-key") || "";
 apiKeyInput.addEventListener("change", () => {
   sessionStorage.setItem("fortebank-api-key", apiKeyInput.value.trim());
 });
@@ -212,8 +215,10 @@ async function refreshRuntimeIdentity() {
         ? health.runtime_providers.join(", ")
         : "runtime provider неизвестен";
       runtimeIdentity = {
-        badge: health.inference_mode === "onnx" ? "ONNX" : "Demo model",
-        caption: `${health.model_version || health.runtime_mode} · ${providers}`,
+        badge: health.inference_mode === "onnx"
+          ? (health.semantic_mode === "qwen" ? "ONNX + Qwen" : "ONNX") : "Demo model",
+        caption: `${health.model_version || health.runtime_mode} · ${providers}`
+          + (health.semantic_mode === "qwen" ? ` · ${health.semantic_model_version || "Qwen"}` : ""),
       };
     }
   } catch {
@@ -229,10 +234,24 @@ function seekVideo(seconds) {
   videoPreview.play().catch(() => {});
 }
 
-function makeEvidenceGallery(frames, eventIndex) {
+function selectEvent(index, seconds, scroll = false) {
+  activeEventIndex = index;
+  [...eventList.children].forEach((card, cardIndex) => {
+    card.classList.toggle("selected", cardIndex === index);
+  });
+  [...eventMarkers.children].forEach((marker, markerIndex) => {
+    marker.setAttribute("aria-pressed", String(markerIndex === index));
+  });
+  if (scroll) eventList.children[index]?.scrollIntoView({ block: "nearest" });
+  seekVideo(seconds);
+}
+
+function makeEvidenceGallery(frames, eventIndex, peakTime) {
   const gallery = document.createElement("div");
   gallery.className = "evidence-gallery";
-  frames.forEach((frame, frameIndex) => {
+  [...frames].sort((a, b) => a.timestamp_sec - b.timestamp_sec).forEach((frame, frameIndex) => {
+    const offset = frame.timestamp_sec - peakTime;
+    const role = Math.abs(offset) <= 0.05 ? "У пика" : offset < 0 ? "До пика" : "После пика";
     const button = document.createElement("button");
     button.type = "button";
     button.className = "evidence-shot";
@@ -242,9 +261,9 @@ function makeEvidenceGallery(frames, eventIndex) {
     image.alt = `JPEG-доказательство ${frameIndex + 1}, таймкод ${formatClock(frame.timestamp_sec, false, 1)}`;
     const label = document.createElement("span");
     label.className = "evidence-label";
-    label.textContent = `JPEG ${String(frameIndex + 1).padStart(2, "0")} · ${formatClock(frame.timestamp_sec, false, 1)}`;
+    label.textContent = `${role} · ${formatClock(frame.timestamp_sec, false, 1)}`;
     button.append(image, label);
-    button.addEventListener("click", () => seekVideo(frame.timestamp_sec));
+    button.addEventListener("click", () => selectEvent(eventIndex, frame.timestamp_sec));
     gallery.append(button);
   });
   return gallery;
@@ -320,6 +339,76 @@ function makeEvidenceChain(detail, violation) {
   return wrapper;
 }
 
+function makeRuleReview(article, violation, detail, eventIndex) {
+  const panel = document.createElement("details");
+  panel.className = "rule-review";
+  const title = document.createElement("summary");
+  title.textContent = "Сопоставить правило после просмотра";
+  const note = document.createElement("p");
+  note.textContent = "Отметьте только наблюдения, которые вы проверили по видео. Это ручная проверка, а не решение модели.";
+  const select = document.createElement("select");
+  select.setAttribute("aria-label", `Правило для эпизода ${eventIndex}`);
+  const empty = document.createElement("option");
+  empty.value = ""; empty.textContent = "Выберите правило"; select.append(empty);
+  for (const rule of currentRuleCatalog.rules) {
+    const option = document.createElement("option");
+    option.value = rule.id; option.textContent = `${rule.label} · ${rule.section}`;
+    select.append(option);
+  }
+  const facts = document.createElement("div");
+  const limitation = document.createElement("p");
+  const save = document.createElement("button");
+  save.type = "button"; save.className = "secondary-button";
+  save.textContent = "Подтвердить наблюдения и сопоставить"; save.disabled = true;
+  const reset = document.createElement("button");
+  reset.type = "button"; reset.className = "text-button"; reset.textContent = "Снять сопоставление";
+  const message = document.createElement("p");
+  message.setAttribute("role", "status");
+  let boxes = [];
+  select.addEventListener("change", () => {
+    facts.replaceChildren(); boxes = []; save.disabled = true;
+    const rule = currentRuleCatalog.rules.find(item => item.id === select.value);
+    limitation.textContent = rule?.limitation || "";
+    message.textContent = "Изменения применятся после подтверждения.";
+    for (const fact of rule?.facts || []) {
+      const label = document.createElement("label");
+      const input = document.createElement("input");
+      input.type = "checkbox"; input.value = fact.id;
+      input.addEventListener("change", () => { save.disabled = !boxes.every(box => box.checked); });
+      const text = document.createElement("span"); text.textContent = fact.label;
+      boxes.push(input); label.append(input, text); facts.append(label);
+    }
+  });
+  const jobId = currentJobId;
+  async function submit(resetReview) {
+    save.disabled = true; reset.disabled = true; select.disabled = true;
+    boxes.forEach(box => { box.disabled = true; });
+    try {
+      const response = await fetch(`/internal/api/v1/jobs/${encodeURIComponent(jobId)}/events/${eventIndex}/rule-review`, {
+        method: "PUT", headers: {"X-API-Key": apiKeyInput.value.trim(), "Content-Type": "application/json"},
+        body: JSON.stringify({rule_id: resetReview ? null : select.value,
+          confirmed_facts: resetReview ? [] : boxes.filter(box => box.checked).map(box => box.value)}),
+      });
+      const payload = await responseJson(response);
+      if (!response.ok) throw new Error(errorMessage(response.status, payload));
+      if (currentJobId !== jobId) return;
+      article.querySelector(".evidence-chain").replaceWith(makeEvidenceChain(payload, violation));
+      message.textContent = resetReview ? "Сопоставление снято." : "Сохранено: правило сопоставлено проверяющим. Автоматический verdict не изменён.";
+      if (resetReview) { select.value = ""; facts.replaceChildren(); boxes = []; limitation.textContent = ""; }
+    } catch (error) {
+      message.textContent = error.message || "Не удалось сохранить сопоставление.";
+    } finally {
+      reset.disabled = false; select.disabled = false;
+      boxes.forEach(box => { box.disabled = false; });
+      save.disabled = !boxes.length || !boxes.every(box => box.checked);
+    }
+  }
+  save.addEventListener("click", () => submit(false));
+  reset.addEventListener("click", () => submit(true));
+  panel.append(title, note, select, facts, limitation, save, reset, message);
+  return panel;
+}
+
 function renderMarkers(violations) {
   eventMarkers.replaceChildren();
   if (!Number.isFinite(videoPreview.duration) || videoPreview.duration <= 0) return;
@@ -330,13 +419,16 @@ function renderMarkers(violations) {
     marker.style.left = `${Math.max(1, Math.min(99, (violation.timecode_sec / videoPreview.duration) * 100))}%`;
     marker.title = `Эпизод ${index + 1}: ${formatClock(violation.timecode_sec, false, 1)}`;
     marker.setAttribute("aria-label", marker.title);
-    marker.addEventListener("click", () => seekVideo(violation.timecode_sec));
+    marker.setAttribute("aria-controls", `event-${index + 1}`);
+    marker.setAttribute("aria-pressed", String(index === activeEventIndex));
+    marker.addEventListener("click", () => selectEvent(index, violation.timecode_sec, true));
     eventMarkers.append(marker);
   });
 }
 
 function renderViolationResult(job, progress) {
   currentViolations = job.violations || [];
+  activeEventIndex = -1;
   const count = currentViolations.length;
   resultCount.textContent = `${count} ${episodeWord(count)}`;
   violationSummary.textContent = progress.summary || "Система автоматически сформировала объяснение для отмеченных эпизодов.";
@@ -345,7 +437,9 @@ function renderViolationResult(job, progress) {
   currentViolations.forEach((violation, index) => {
     const article = document.createElement("article");
     article.className = "event-card";
-    article.append(makeEvidenceGallery(violation.evidence_frames || [], index));
+    article.id = `event-${index + 1}`;
+    article.setAttribute("aria-label", `Эпизод ${index + 1}`);
+    article.append(makeEvidenceGallery(violation.evidence_frames || [], index, violation.timecode_sec));
 
     const copy = document.createElement("div");
     copy.className = "event-copy";
@@ -353,13 +447,17 @@ function renderViolationResult(job, progress) {
     timeButton.type = "button";
     timeButton.className = "timecode-button";
     timeButton.textContent = `▶  ${formatClock(violation.timecode_sec, false, 1)}`;
-    timeButton.addEventListener("click", () => seekVideo(violation.timecode_sec));
+    timeButton.addEventListener("click", () => selectEvent(index, violation.timecode_sec));
     const heading = document.createElement("h3");
-    heading.textContent = violation.type;
+    heading.textContent = `Эпизод ${index + 1} · ${violation.type}`;
+    const frameCount = document.createElement("p");
+    frameCount.className = "evidence-count";
+    frameCount.textContent = `Кадры одного эпизода: ${(violation.evidence_frames || []).length}. Пик — отметка модели.`;
     const description = document.createElement("p");
     description.textContent = violation.description;
     const detail = (progress.analysis_details || []).find((item) => item.event_index === index + 1);
-    copy.append(timeButton, heading, description, makeEvidenceChain(detail, violation));
+    copy.append(timeButton, heading, frameCount, description, makeEvidenceChain(detail, violation));
+    if (currentJobId && currentRuleCatalog) copy.append(makeRuleReview(article, violation, detail, index + 1));
     article.append(copy);
     eventList.append(article);
   });
@@ -369,12 +467,19 @@ function renderViolationResult(job, progress) {
 }
 
 function renderCompleted(job, progress) {
+  if (!Array.isArray(job.violations)
+      || !["violation", "no_violation"].includes(job.verdict)
+      || (job.verdict === "violation") !== (job.violations.length > 0)) {
+    throw new Error("Сервис вернул несогласованный результат. Повторите проверку.");
+  }
   updateProgress({ ...progress, status: "done", stage: "summary", progress_percent: 100 });
   if (job.verdict === "violation" && job.violations?.length) {
     renderViolationResult(job, progress);
     return;
   }
   currentViolations = [];
+  activeEventIndex = -1;
+  eventList.replaceChildren();
   eventMarkers.replaceChildren();
   clearSummary.textContent = progress.summary || "Автоматический анализ не обнаружил в этой записи признаков возможного нарушения.";
   setUiState("no_violation");
@@ -409,6 +514,7 @@ async function pollJob(jobId, apiKey, signal) {
       getJson(`/api/v1/jobs/${encodeURIComponent(jobId)}`, apiKey, signal),
       getJson(`/internal/api/v1/jobs/${encodeURIComponent(jobId)}/progress`, apiKey, signal),
     ]);
+    signal.throwIfAborted();
     updateProgress(progress);
     if (job.status === "done") {
       renderCompleted(job, progress);
@@ -430,9 +536,12 @@ async function startAnalysis() {
   }
 
   cancelActiveRequest();
+  currentJobId = null;
   activeController = new AbortController();
   const { signal } = activeController;
   setUploadError();
+  currentViolations = [];
+  activeEventIndex = -1;
   eventList.replaceChildren();
   eventMarkers.replaceChildren();
   jobCaption.textContent = "создаём задачу";
@@ -442,6 +551,7 @@ async function startAnalysis() {
 
   try {
     sessionStorage.setItem("fortebank-api-key", apiKey);
+    currentRuleCatalog = await getJson("/internal/api/v1/rules", apiKey, signal);
     const formData = new FormData();
     formData.append("file", selectedFile, selectedFile.name);
     const response = await fetch("/api/v1/analyze", {
@@ -452,6 +562,8 @@ async function startAnalysis() {
     });
     const payload = await responseJson(response);
     if (!response.ok) throw new Error(errorMessage(response.status, payload));
+    signal.throwIfAborted();
+    currentJobId = payload.job_id;
     jobCaption.textContent = `job ${payload.job_id.slice(0, 8)}`;
     await pollJob(payload.job_id, apiKey, signal);
   } catch (error) {
@@ -465,6 +577,7 @@ async function startAnalysis() {
 
 function openWorkspace(file) {
   cancelActiveRequest();
+  currentJobId = null;
   revokePreviewUrl();
   selectedFile = file;
   objectUrl = URL.createObjectURL(file);
@@ -501,6 +614,7 @@ function acceptFile(file) {
 
 function resetToUpload() {
   cancelActiveRequest();
+  currentJobId = null;
   videoPreview.pause();
   videoPreview.removeAttribute("src");
   videoPreview.load();

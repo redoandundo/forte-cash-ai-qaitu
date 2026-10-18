@@ -16,6 +16,7 @@ from .inference.bundle import load_bundle_contract
 from .inference.contracts import InferenceError, PipelineConfig
 from .inference.pipeline import ProgressCallback, analyze_video
 from .inference.predictor import MockPredictor, OnnxPredictor, Predictor
+from .semantic_adapter import SemanticAdapter, map_semantic_event
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
@@ -47,6 +48,7 @@ class RuntimeSettings:
     expected_model_sha256: str | None = None
     prefer_cuda: bool = True
     max_concurrent_jobs: int = 1
+    vlm_mode: Literal["off", "qwen"] = "off"
 
     @classmethod
     def from_environment(cls) -> "RuntimeSettings":
@@ -58,6 +60,13 @@ class RuntimeSettings:
         raw_mode = mode_value.strip().lower()
         if raw_mode not in {"mock", "onnx"}:
             raise RuntimeConfigurationError("QAITU_INFERENCE_MODE must be mock or onnx")
+        vlm_mode = os.environ.get("QAITU_VLM_MODE", "off").strip().lower()
+        if vlm_mode in {"", "disabled"}:
+            vlm_mode = "off"
+        if vlm_mode not in {"off", "qwen"}:
+            raise RuntimeConfigurationError("QAITU_VLM_MODE must be off or qwen")
+        if vlm_mode == "qwen" and raw_mode != "onnx":
+            raise RuntimeConfigurationError("Qwen requires an ONNX detector, not mock mode")
         bundle_value = os.environ.get("QAITU_MODEL_BUNDLE", "").strip()
         bundle_root = Path(bundle_value).resolve() if bundle_value else None
         if raw_mode == "onnx" and bundle_root is None:
@@ -100,6 +109,7 @@ class RuntimeSettings:
             expected_model_sha256=expected_model_sha256,
             prefer_cuda=prefer_cuda,
             max_concurrent_jobs=max_concurrent_jobs,
+            vlm_mode=vlm_mode,
         )
 
 
@@ -119,8 +129,11 @@ class InferenceRuntime:
         *,
         predictor: Predictor | None = None,
         config: PipelineConfig | None = None,
+        semantic_adapter: SemanticAdapter | None = None,
     ) -> None:
         self.settings = settings
+        if semantic_adapter is not None and settings.vlm_mode != "qwen":
+            raise RuntimeConfigurationError("Semantic adapter requires qwen mode")
         self._analysis_slots = threading.BoundedSemaphore(settings.max_concurrent_jobs)
         self.model_sha256: str | None = None
         self.release_status = "injected"
@@ -167,6 +180,10 @@ class InferenceRuntime:
                 allow_development_model=settings.allow_development_model,
                 prefer_cuda=settings.prefer_cuda,
             )
+        self.semantic = (
+            semantic_adapter or SemanticAdapter.from_environment()
+            if settings.vlm_mode == "qwen" else None
+        )
         LOGGER.info(
             "inference_runtime_ready mode=%s predictor_class=%s model_version=%s "
             "model_sha256=%s providers=%s release_status=%s",
@@ -182,7 +199,8 @@ class InferenceRuntime:
     def mode_label(self) -> str:
         if self.settings.mode == "mock":
             return "Demo predictor"
-        return f"ONNX · {self.predictor.model_version} · {self.predictor.device}"
+        suffix = f" + Qwen · {self.semantic.model_version}" if self.semantic else ""
+        return f"ONNX · {self.predictor.model_version} · {self.predictor.device}{suffix}"
 
     @property
     def model_diagnostics(self) -> dict[str, object]:
@@ -193,6 +211,9 @@ class InferenceRuntime:
             "model_sha256": self.model_sha256,
             "runtime_providers": list(self.predictor.runtime_providers),
             "release_status": self.release_status,
+            "semantic_mode": self.settings.vlm_mode,
+            "semantic_model_version": self.semantic.model_version if self.semantic else None,
+            "semantic_model_sha256": self.semantic.model_checksum if self.semantic else None,
         }
 
     def analyze(
@@ -205,14 +226,19 @@ class InferenceRuntime:
         try:
             with self._analysis_slots:
                 self.settings.evidence_root.mkdir(parents=True, exist_ok=True)
-                result = analyze_video(
-                    video_path,
-                    self.predictor,
-                    self.config,
-                    evidence_root=self.settings.evidence_root,
-                    run_id=job_id,
-                    progress=progress,
-                )
+                if self.semantic is None:
+                    result = analyze_video(
+                        video_path, self.predictor, self.config,
+                        evidence_root=self.settings.evidence_root, run_id=job_id,
+                        progress=progress,
+                    )
+                else:
+                    if progress is not None:
+                        progress("model_inference")
+                    result = self.semantic.analyze(
+                        video_path, self.predictor, self.config,
+                        evidence_root=self.settings.evidence_root, run_id=job_id,
+                    )
             if progress is not None:
                 progress("summary")
             violations, analysis_details = self._map_violations(result)
@@ -257,7 +283,8 @@ class InferenceRuntime:
                         ),
                     }
                 )
-        return {"window_scores": window_scores, "events": events}
+        return {"window_scores": window_scores, "events": events,
+                "semantic": result.get("diagnostics", {})}
 
     def _map_violations(
         self, result: dict[str, object]
@@ -281,6 +308,14 @@ class InferenceRuntime:
             if not isinstance(evidence_items, list) or not 1 <= len(evidence_items) <= 3:
                 raise InferenceError("Inference event must contain 1-3 evidence frames")
             frames = [self._map_evidence(item) for item in evidence_items]
+            if self.semantic is not None:
+                title, description, detail = map_semantic_event(
+                    event.get("semantic_verification"), event_index
+                )
+                violations.append(dict(type=title, timecode_sec=round(peak_time, 3),
+                                       description=description, evidence_frames=frames))
+                analysis_details.append(detail)
+                continue
             violations.append(
                 {
                     "type": "Визуально нетипичное действие",

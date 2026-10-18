@@ -47,7 +47,7 @@ Inference-инженер:
 
 ## Фаза 3 — ML/inference integration
 
-Статус: code integration verified; real artifact validation blocked
+Статус: exact v4 artifact and API/UI integration verified; model quality remains development-only
 
 - Объединение в `integration/ml-inference`.
 - Проверка checksum и manifest.
@@ -59,7 +59,7 @@ Inference-инженер:
 
 ## Фаза 4 — API и demo
 
-Статус: local mock demo verified; real-model and public deployment pending
+Статус: ONNX v4 public HTTPS demo verified; manual rule review available; Qwen integration and release pending
 
 - `/api/v1/analyze`.
 - Job status и артефакты.

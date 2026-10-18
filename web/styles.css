@@ -996,6 +996,29 @@ body[data-demo-state="failed"] .status-icon span {
   background: var(--forte-plum);
 }
 
+.event-card.selected {
+  border-color: var(--forte-coral);
+  box-shadow: 0 0 0 2px var(--forte-coral);
+}
+
+.event-marker[aria-pressed="true"] {
+  outline: 3px solid var(--forte-coral);
+  outline-offset: 3px;
+}
+
+.evidence-count {
+  font-size: 12px;
+}
+
+.rule-review { margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--line); }
+.rule-review summary { cursor: pointer; font-weight: 600; }
+.rule-review select { width: 100%; padding: 10px; border: 1px solid var(--line); border-radius: 8px; font: inherit; }
+.rule-review label { display: flex; align-items: flex-start; gap: 9px; margin: 12px 0; font-size: 13px; }
+.rule-review input { flex: 0 0 auto; margin-top: 3px; }
+.rule-review button { margin: 8px 0; }
+.rule-review p { font-size: 12px; }
+.api-access { max-width: 520px; margin: 0 auto 24px; }
+
 .evidence-shot {
   position: relative;
   min-width: 0;

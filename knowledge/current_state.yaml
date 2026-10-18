@@ -31,7 +31,22 @@ components:
     status: verified_onnx_fail_closed_runtime
   frontend:
     owner: teamlead
-    status: live_onnx_identity_and_unique_evidence_connected
+    status: synchronized_episodes_and_manual_rule_review_verified
+  rule_matching:
+    owner: teamlead
+    status: three_verified_rules_with_explicit_human_observations
+    automatic_semantic_matching: false
+  qwen_api_adapter:
+    owner: teamlead
+    status: contract_tested_waiting_for_inference_merge_and_improved_snapshot
+    compatible_interface_ref: 6933204
+    enabled_in_public_demo: false
+    runbook: docs/team/QWEN_INTEGRATION_RUNBOOK.md
+  public_access:
+    owner: teamlead
+    status: temporary_https_tunnel_verified_with_synthetic_video
+    authentication: X-API-Key
+    session_record: tmp/public-demo/session.json
   end_to_end_integration:
     owner: teamlead
     status: exact_v4_api_ui_verified_development_only
@@ -47,10 +62,14 @@ requirements:
   cloud_ai_allowed: false
 
 next_actions:
-  - keep final demo on http://127.0.0.1:8123 and verify health shows OnnxPredictor before presentation
+  - accept compatible inference code and improved Qwen snapshot using docs/team/QWEN_INTEGRATION_RUNBOOK.md
+  - keep the public tunnel and local API running; read the active URL from tmp/public-demo/session.json
+  - give the jury the API key separately from the public URL
+  - resolve Git author identity and commit the staged teamlead changes
   - review and merge the verified integration commits through the team process
   - present recognition errors as development-model limitations rather than integration failures
   - repeat performance verification on the final presentation laptop if its runtime providers differ
 
 blockers:
   - development-only model quality gates are not sufficient for promotion
+  - automatic rule matching awaits verified semantic observations; current rule review is explicitly manual

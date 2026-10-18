@@ -91,6 +91,9 @@ def test_health_exposes_active_predictor_without_sensitive_paths(client: TestCli
         "model_sha256": None,
         "runtime_providers": ["MockExecutionProvider"],
         "release_status": "test_only",
+        "semantic_mode": "off",
+        "semantic_model_version": None,
+        "semantic_model_sha256": None,
     }
     assert str(api.UPLOAD_ROOT) not in response.text
 
@@ -208,3 +211,56 @@ def test_unsupported_codec_is_failed_not_no_violation(
     assert job["verdict"] is None
     assert job["violations"] == []
     assert "кодек" in job["error"].lower()
+
+
+def _review_job(client: TestClient, tmp_path: Path) -> tuple[str, dict]:
+    video = _video(tmp_path / "review.mov")
+    accepted = client.post("/api/v1/analyze", headers=_headers(),
+                           files={"file": (video.name, video.read_bytes(), "video/quicktime")})
+    job_id = accepted.json()["job_id"]
+    job = client.get(f"/api/v1/jobs/{job_id}", headers=_headers()).json()
+    return job_id, job
+
+
+def test_rule_catalog_requires_key_and_has_verified_sources(client: TestClient) -> None:
+    assert client.get("/internal/api/v1/rules").status_code == 401
+    catalog = client.get("/internal/api/v1/rules", headers=_headers()).json()
+    assert catalog["source_url"] == "https://adilet.zan.kz/rus/docs/V1900019680"
+    assert catalog["verified_at"] == "2026-10-18"
+    assert {rule["id"] for rule in catalog["rules"]} == {"CASH-02", "CASH-03", "CASH-04"}
+
+
+@pytest.mark.parametrize("rule_id", ["CASH-02", "CASH-03", "CASH-04"])
+def test_rule_review_requires_facts_and_can_be_reset(client: TestClient, tmp_path: Path, rule_id: str) -> None:
+    job_id, before = _review_job(client, tmp_path)
+    catalog = client.get("/internal/api/v1/rules", headers=_headers()).json()
+    rule = next(rule for rule in catalog["rules"] if rule["id"] == rule_id)
+    facts = [item["id"] for item in rule["facts"]]
+    url = f"/internal/api/v1/jobs/{job_id}/events/1/rule-review"
+    assert client.put(url, json={"rule_id": rule_id, "confirmed_facts": facts}).status_code == 401
+    for invalid in ([], facts[:-1], facts + ["guessed"], facts + [facts[0]]):
+        assert client.put(url, headers=_headers(), json={"rule_id": rule_id, "confirmed_facts": invalid}).status_code == 422
+    response = client.put(url, headers=_headers(), json={"rule_id": rule_id, "confirmed_facts": facts})
+    assert response.status_code == 200
+    reference = response.json()["rule"]
+    assert reference["status"] == "matched"
+    assert "вручную" in reference["applicability"]
+    after = client.get(f"/api/v1/jobs/{job_id}", headers=_headers()).json()
+    assert after["verdict"] == before["verdict"]
+    assert after["violations"][0]["evidence_frames"] == before["violations"][0]["evidence_frames"]
+    assert "Ручная проверка" in after["violations"][0]["description"]
+    assert set(after["violations"][0]) == set(before["violations"][0])
+    assert client.put(url, headers=_headers(), json={"rule_id": "made-up", "confirmed_facts": facts}).status_code == 422
+    assert client.put(url, headers=_headers(), json={"rule_id": None, "confirmed_facts": facts}).status_code == 422
+    reset = client.put(url, headers=_headers(), json={"rule_id": None, "confirmed_facts": []})
+    assert reset.json()["rule"]["status"] == "not_established"
+    assert client.get(f"/api/v1/jobs/{job_id}", headers=_headers()).json() == before
+
+
+def test_rule_review_rejects_missing_events_and_unfinished_jobs(client: TestClient) -> None:
+    payload = {"rule_id": None, "confirmed_facts": []}
+    assert client.put("/internal/api/v1/jobs/missing/events/1/rule-review", headers=_headers(), json=payload).status_code == 404
+    api._set_job("pending", status="processing")
+    assert client.put("/internal/api/v1/jobs/pending/events/1/rule-review", headers=_headers(), json=payload).status_code == 409
+    api._set_job("negative", status="done", violations=[], analysis_details=[])
+    assert client.put("/internal/api/v1/jobs/negative/events/1/rule-review", headers=_headers(), json=payload).status_code == 404

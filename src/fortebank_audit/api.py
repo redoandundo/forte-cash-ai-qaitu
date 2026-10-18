@@ -21,6 +21,8 @@ from .inference.contracts import (
     VideoOpenError,
 )
 from .job_runtime import RuntimeConfigurationError, get_runtime
+from .rules import match_reviewed_rule, rule_catalog, unmatched_rule
+from .semantic_adapter import SemanticIntegrationError
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
@@ -83,6 +85,12 @@ class AnalysisDetail(BaseModel):
     rule: RuleReference
 
 
+class RuleReviewRequest(BaseModel):
+    model_config = {"extra": "forbid"}
+    rule_id: str | None = Field(default=None, min_length=1, max_length=32)
+    confirmed_facts: list[str] = Field(default_factory=list, max_length=8)
+
+
 class ProgressResponse(BaseModel):
     job_id: str
     status: Literal["processing", "done", "failed"]
@@ -116,6 +124,43 @@ def require_api_key(x_api_key: Annotated[str | None, Header()] = None) -> None:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid API key")
 
 
+@app.get("/internal/api/v1/rules", dependencies=[Depends(require_api_key)])
+def get_rules() -> dict[str, object]:
+    return rule_catalog()
+
+
+@app.put("/internal/api/v1/jobs/{job_id}/events/{event_index}/rule-review",
+         response_model=AnalysisDetail, dependencies=[Depends(require_api_key)])
+def review_event_rule(job_id: str, event_index: int, review: RuleReviewRequest) -> AnalysisDetail:
+    if review.rule_id is None and review.confirmed_facts:
+        raise HTTPException(status_code=422, detail="Reset cannot contain confirmed observations")
+    try:
+        rule = match_reviewed_rule(review.rule_id, review.confirmed_facts) if review.rule_id else unmatched_rule()
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    with _jobs_lock:
+        job = _jobs.get(job_id)
+        if job is None:
+            raise HTTPException(status_code=404, detail="Job not found")
+        if job["status"] != "done":
+            raise HTTPException(status_code=409, detail="Review requires completed analysis")
+        details = job.get("analysis_details", [])
+        detail = next((item for item in details if item["event_index"] == event_index), None)
+        if detail is None or not 1 <= event_index <= len(job["violations"]):
+            raise HTTPException(status_code=404, detail="Event not found")
+        originals = job.setdefault("rule_review_original_descriptions", {})
+        violation = job["violations"][event_index - 1]
+        original = originals.setdefault(event_index, violation["description"])
+        updated_detail = {**detail, "rule": rule}
+        response = AnalysisDetail.model_validate(updated_detail)
+        detail["rule"] = rule
+        violation["description"] = original if review.rule_id is None else (
+            f"{original} Ручная проверка: {rule['label']}; {rule['document_name']}, "
+            f"{rule['section']}. {rule['applicability']} Источник: {rule['source_url']}"
+        )
+    return response
+
+
 def _set_job(job_key: str, **values: object) -> None:
     with _jobs_lock:
         _jobs.setdefault(job_key, {}).update(values)
@@ -128,6 +173,8 @@ def _set_stage(job_id: str, stage: str) -> None:
 
 
 def _public_error(exc: Exception) -> str:
+    if isinstance(exc, SemanticIntegrationError):
+        return "Локальная проверка Qwen не завершена: проверьте модель и совместимость inference"
     if isinstance(exc, RuntimeConfigurationError):
         return "Локальный ONNX runtime не настроен"
     if isinstance(exc, UnsupportedVideoError):
