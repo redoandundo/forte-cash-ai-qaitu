@@ -1,0 +1,72 @@
+{
+  "tested_commit": "a25d2fc",
+  "date": "2026-10-18",
+  "scope": "five-minute deadline validation; development data, not independent accuracy",
+  "python_tests_passed": 263,
+  "browser_tests_passed": 15,
+  "cpu_api": {
+    "scope": "full_40_development_video_api_smoke_not_independent_accuracy",
+    "model": "baseline-audited-v4-development",
+    "model_sha256": "00ae541eac23249dd4751093ce276bfa9c14afca2d5f15f4fec9719c009ae52d",
+    "qwen_enabled": false,
+    "completed": 40,
+    "failed": 0,
+    "max_sec": 16.76365800000349,
+    "total_sec": 189.86893710000732,
+    "valid_jpegs": 72,
+    "apparent_development_confusion": {
+      "tp": 13,
+      "tn": 11,
+      "fp": 8,
+      "fn": 8
+    },
+    "corrupt_video_status": "failed",
+    "corrupt_video_verdict": null,
+    "evidence_cleaned": true,
+    "uploads_cleaned": true
+  },
+  "qwen_api": {
+    "scope": "single_development_video_not_accuracy",
+    "automatic_rule_layer": true,
+    "optional_rule_candidate_prompt": false,
+    "baseline": {
+      "seconds": 2.0513124000062817,
+      "events": 1,
+      "verdict": "violation"
+    },
+    "startup_sec": 45.327211499999976,
+    "health": {
+      "status": "ok",
+      "model_ready": true,
+      "runtime_mode": "ONNX · baseline-audited-v4-development · CPU + Qwen · Qwen/Qwen3-VL-2B-Instruct-nf4-experimental",
+      "inference_mode": "onnx",
+      "predictor_class": "OnnxPredictor",
+      "model_version": "baseline-audited-v4-development",
+      "model_sha256": "00ae541eac23249dd4751093ce276bfa9c14afca2d5f15f4fec9719c009ae52d",
+      "runtime_providers": [
+        "CPUExecutionProvider"
+      ],
+      "release_status": "development_only_not_promoted",
+      "semantic_mode": "qwen",
+      "semantic_model_version": "Qwen/Qwen3-VL-2B-Instruct-nf4-experimental",
+      "semantic_model_sha256": "7de1838c87a5349b016c26a1c3f7d2bc400a3d485f95ef39a7059ffd734977a0"
+    },
+    "invalid_key_status": 401,
+    "analysis_sec": 95.62676210000063,
+    "accepted_status": 202,
+    "status": "failed",
+    "verdict": null,
+    "events": 0,
+    "within_300_sec": true,
+    "verified_jpegs": 0
+  },
+  "caveats": [
+    "CPU and Qwen probes ran concurrently, so timings include resource contention.",
+    "The Qwen probe returned failed/null; the public error does not establish the underlying cause.",
+    "Earlier same-video Qwen success does not override this observed failure.",
+    "The final bundle is development-only; these 40 reused videos are not independent or OOF evaluation.",
+    "The new teamlead GPU-worker branch 15533b9 was not merged into this frozen validation."
+  ],
+  "decision": "CPU ML/API runtime smoke passed; full Qwen pipeline NOT approved for final readiness",
+  "deployment_changed": false
+}
