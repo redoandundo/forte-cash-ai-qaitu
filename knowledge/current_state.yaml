@@ -34,8 +34,10 @@ components:
     status: synchronized_episodes_and_manual_rule_review_verified
   rule_matching:
     owner: teamlead
-    status: three_verified_rules_with_explicit_human_observations
-    automatic_semantic_matching: false
+    status: three_rules_automatic_condition_matching_contract_tested
+    automatic_semantic_matching: implemented_pending_real_qwen_validation
+    enabled_in_public_demo: false
+    contract: docs/contracts/automatic_rules_contract.md
   qwen_api_adapter:
     owner: teamlead
     status: contract_tested_waiting_for_inference_merge_and_improved_snapshot
@@ -72,4 +74,4 @@ next_actions:
 
 blockers:
   - development-only model quality gates are not sufficient for promotion
-  - automatic rule matching awaits verified semantic observations; current rule review is explicitly manual
+  - automatic rule matching requires real Qwen visual-fact quality and latency validation before public activation

@@ -59,7 +59,7 @@ Inference-инженер:
 
 ## Фаза 4 — API и demo
 
-Статус: ONNX v4 public HTTPS demo verified; manual rule review available; Qwen integration and release pending
+Статус: ONNX v4 public HTTPS demo verified; automatic rule adapter tested synthetically; real Qwen validation and release pending
 
 - `/api/v1/analyze`.
 - Job status и артефакты.

@@ -1017,7 +1017,10 @@ body[data-demo-state="failed"] .status-icon span {
 .rule-review input { flex: 0 0 auto; margin-top: 3px; }
 .rule-review button { margin: 8px 0; }
 .rule-review p { font-size: 12px; }
-.api-access { max-width: 520px; margin: 0 auto 24px; }
+.api-access { max-width: 660px; margin: 0 auto 24px; padding: 10px 18px; border: 1px solid var(--line); border-radius: 16px; background: white; scroll-margin-top: 20px; }
+.api-access summary { color: var(--ink); font-size: 14px; }
+.api-access .access-error { color: #ad1848; font-weight: 650; }
+.api-access input[aria-invalid="true"] { border-color: #ad1848; }
 
 .evidence-shot {
   position: relative;

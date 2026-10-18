@@ -11,6 +11,8 @@ const dropzone = document.querySelector("#dropzone");
 const uploadError = document.querySelector("#upload-error");
 const chooseFileButton = document.querySelector("#choose-file");
 const apiKeyInput = document.querySelector("#api-key");
+const apiAccess = document.querySelector("#api-access");
+const apiKeyError = document.querySelector("#api-key-error");
 const videoPreview = document.querySelector("#video-preview");
 const videoEmpty = document.querySelector("#video-empty");
 const previewWarning = document.querySelector("#preview-warning");
@@ -94,6 +96,12 @@ let currentRuleCatalog = null;
 let runtimeIdentity = { badge: "Local", caption: "проверяем runtime" };
 
 apiKeyInput.value = sessionStorage.getItem("fortebank-api-key") || "";
+apiAccess.open = !apiKeyInput.value;
+apiKeyInput.addEventListener("input", () => {
+  sessionStorage.setItem("fortebank-api-key", apiKeyInput.value.trim());
+  apiKeyError.hidden = true;
+  apiKeyInput.setAttribute("aria-invalid", "false");
+});
 apiKeyInput.addEventListener("change", () => {
   sessionStorage.setItem("fortebank-api-key", apiKeyInput.value.trim());
 });
@@ -319,23 +327,26 @@ function makeEvidenceChain(detail, violation) {
     makeChainSection("4 · Почему это важно", chain.risk, { className: "chain-risk" }),
   );
 
-  const rule = chain.rule || fallback.rule;
-  const ruleSection = makeChainSection(
-    "5 · Предполагаемое правило",
-    rule.status === "matched"
-      ? `${rule.label}. ${rule.document_name || ""} ${rule.section || ""}. ${rule.applicability || ""}`.trim()
-      : `${rule.label}. ${rule.applicability || ""}`.trim(),
-    { className: rule.status === "matched" ? "chain-rule matched" : "chain-rule unmatched" },
-  );
-  if (rule.status === "matched" && /^https?:\/\//.test(rule.source_url || "")) {
-    const link = document.createElement("a");
-    link.href = rule.source_url;
-    link.target = "_blank";
-    link.rel = "noreferrer";
-    link.textContent = "Открыть нормативный источник";
-    ruleSection.append(link);
+  const rules = Array.isArray(chain.rules) && chain.rules.length
+    ? chain.rules : [chain.rule || fallback.rule];
+  for (const [index, rule] of rules.entries()) {
+    const ruleSection = makeChainSection(
+      rules.length > 1 ? `5.${index + 1} · Предполагаемое правило` : "5 · Предполагаемое правило",
+      rule.status === "matched"
+        ? `${rule.label}. ${rule.document_name || ""} ${rule.section || ""}. ${rule.applicability || ""}`.trim()
+        : `${rule.label}. ${rule.applicability || ""}`.trim(),
+      { className: rule.status === "matched" ? "chain-rule matched" : "chain-rule unmatched" },
+    );
+    if (rule.status === "matched" && /^https?:\/\//.test(rule.source_url || "")) {
+      const link = document.createElement("a");
+      link.href = rule.source_url;
+      link.target = "_blank";
+      link.rel = "noreferrer";
+      link.textContent = "Открыть нормативный источник";
+      ruleSection.append(link);
+    }
+    wrapper.append(ruleSection);
   }
-  wrapper.append(ruleSection);
   return wrapper;
 }
 
@@ -361,7 +372,7 @@ function makeRuleReview(article, violation, detail, eventIndex) {
   save.type = "button"; save.className = "secondary-button";
   save.textContent = "Подтвердить наблюдения и сопоставить"; save.disabled = true;
   const reset = document.createElement("button");
-  reset.type = "button"; reset.className = "text-button"; reset.textContent = "Снять сопоставление";
+  reset.type = "button"; reset.className = "text-button"; reset.textContent = "Отменить ручное сопоставление";
   const message = document.createElement("p");
   message.setAttribute("role", "status");
   let boxes = [];
@@ -393,7 +404,7 @@ function makeRuleReview(article, violation, detail, eventIndex) {
       if (!response.ok) throw new Error(errorMessage(response.status, payload));
       if (currentJobId !== jobId) return;
       article.querySelector(".evidence-chain").replaceWith(makeEvidenceChain(payload, violation));
-      message.textContent = resetReview ? "Сопоставление снято." : "Сохранено: правило сопоставлено проверяющим. Автоматический verdict не изменён.";
+      message.textContent = resetReview ? "Восстановлен исходный результат автоматического анализа." : "Сохранено: правило сопоставлено проверяющим. Автоматический verdict не изменён.";
       if (resetReview) { select.value = ""; facts.replaceChildren(); boxes = []; limitation.textContent = ""; }
     } catch (error) {
       message.textContent = error.message || "Не удалось сохранить сопоставление.";
@@ -456,6 +467,7 @@ function renderViolationResult(job, progress) {
     const description = document.createElement("p");
     description.textContent = violation.description;
     const detail = (progress.analysis_details || []).find((item) => item.event_index === index + 1);
+    description.hidden = Boolean(detail);
     copy.append(timeButton, heading, frameCount, description, makeEvidenceChain(detail, violation));
     if (currentJobId && currentRuleCatalog) copy.append(makeRuleReview(article, violation, detail, index + 1));
     article.append(copy);
@@ -494,7 +506,7 @@ async function responseJson(response) {
 }
 
 function errorMessage(status, payload) {
-  if (status === 401) return "API-ключ не принят. Проверьте ключ в технических настройках.";
+  if (status === 401) return "Ключ не принят. Вставьте актуальный ключ команды Qaitu в поле доступа выше.";
   if (status === 413) return "Файл превышает лимит 100 МБ.";
   if (status === 415) return "Сервис принимает только видео в формате MOV.";
   return typeof payload.detail === "string" ? payload.detail : "Локальный сервис не вернул результат.";
@@ -503,7 +515,11 @@ function errorMessage(status, payload) {
 async function getJson(url, apiKey, signal) {
   const response = await fetch(url, { headers: { "X-API-Key": apiKey }, signal });
   const payload = await responseJson(response);
-  if (!response.ok) throw new Error(errorMessage(response.status, payload));
+  if (!response.ok) {
+    const error = new Error(errorMessage(response.status, payload));
+    error.status = response.status;
+    throw error;
+  }
   return payload;
 }
 
@@ -526,12 +542,21 @@ async function pollJob(jobId, apiKey, signal) {
   throw new Error("Превышен лимит обработки 5 минут. Результат не сформирован.");
 }
 
+function showAccessError(message) {
+  apiAccess.open = true;
+  apiKeyError.textContent = message;
+  apiKeyError.hidden = false;
+  apiKeyInput.setAttribute("aria-invalid", "true");
+  setUiState("ready");
+  apiAccess.scrollIntoView({ behavior: "smooth", block: "center" });
+  apiKeyInput.focus({ preventScroll: true });
+}
+
 async function startAnalysis() {
   if (!selectedFile) return;
   const apiKey = apiKeyInput.value.trim();
   if (!apiKey) {
-    errorDetail.textContent = "Укажите API-ключ в технических настройках.";
-    setUiState("failed");
+    showAccessError("Вставьте ключ доступа команды Qaitu. После этого можно запустить проверку — видео уже выбрано.");
     return;
   }
 
@@ -552,6 +577,8 @@ async function startAnalysis() {
   try {
     sessionStorage.setItem("fortebank-api-key", apiKey);
     currentRuleCatalog = await getJson("/internal/api/v1/rules", apiKey, signal);
+    apiKeyError.hidden = true;
+    apiKeyInput.setAttribute("aria-invalid", "false");
     const formData = new FormData();
     formData.append("file", selectedFile, selectedFile.name);
     const response = await fetch("/api/v1/analyze", {
@@ -568,6 +595,10 @@ async function startAnalysis() {
     await pollJob(payload.job_id, apiKey, signal);
   } catch (error) {
     if (error.name === "AbortError") return;
+    if (error.status === 401) {
+      showAccessError(error.message);
+      return;
+    }
     errorDetail.textContent = error instanceof Error ? error.message : "Не удалось обработать файл.";
     setUiState("failed");
   } finally {
@@ -595,7 +626,7 @@ function openWorkspace(file) {
   uploadView.hidden = true;
   workspace.hidden = false;
   setUiState("ready");
-  workspace.scrollIntoView({ behavior: "smooth", block: "start" });
+  (apiKeyInput.value.trim() ? workspace : apiAccess).scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
 function acceptFile(file) {
