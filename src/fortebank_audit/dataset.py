@@ -111,4 +111,3 @@ def build_index(data_root: str | Path) -> list[VideoRecord]:
 
 def rows(records: Iterable[VideoRecord]) -> list[dict[str, object]]:
     return [record.as_row() for record in records]
-

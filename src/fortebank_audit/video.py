@@ -55,4 +55,3 @@ def extract_frame(
         if not cv2.imwrite(str(target), frame):
             raise OSError(f"Could not write frame to {target}")
     return frame_rgb
-

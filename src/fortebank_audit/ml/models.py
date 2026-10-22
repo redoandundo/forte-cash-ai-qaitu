@@ -17,14 +17,54 @@ class TemporalMobileNet(nn.Module):
         self.pool = backbone.avgpool
         feature_count = backbone.classifier[0].in_features
         self.classifier = nn.Sequential(nn.Linear(feature_count, 128), nn.Hardswish(), nn.Dropout(0.2), nn.Linear(128, 1))
+        self.set_trainable_blocks(2 if train_backbone else 0)
+
+    def set_trainable_blocks(self, count: int) -> None:
+        if not 0 <= count <= len(self.features):
+            raise ValueError("Invalid number of trainable backbone blocks")
         for parameter in self.features.parameters():
-            parameter.requires_grad = train_backbone
+            parameter.requires_grad_(False)
+        if count:
+            for block in self.features[-count:]:
+                for parameter in block.parameters():
+                    parameter.requires_grad_(True)
+        self.train(self.training)
+
+    def train(self, mode: bool = True):
+        super().train(mode)
+        # Small batches must not change pretrained BatchNorm running statistics.
+        for module in self.features.modules():
+            if isinstance(module, nn.modules.batchnorm._BatchNorm):
+                module.eval()
+        return self
 
     def forward(self, video: torch.Tensor) -> torch.Tensor:
         batch, channels, time, height, width = video.shape
         frames = video.permute(0, 2, 1, 3, 4).reshape(batch * time, channels, height, width)
         encoded = self.pool(self.features(frames)).flatten(1).reshape(batch, time, -1).mean(dim=1)
         return self.classifier(encoded).squeeze(1)
+
+
+class TemporalConvMobileNet(TemporalMobileNet):
+    """A small temporal convolution preserves local frame order."""
+
+    def __init__(self, pretrained: bool = True, train_backbone: bool = False):
+        super().__init__(pretrained, train_backbone)
+        feature_count = self.classifier[0].in_features
+        self.temporal = nn.Sequential(
+            nn.Conv1d(feature_count, 128, kernel_size=1),
+            nn.Hardswish(),
+            nn.Conv1d(128, 128, kernel_size=3, padding=1),
+            nn.Hardswish(),
+            nn.AdaptiveAvgPool1d(1),
+        )
+        self.classifier = nn.Sequential(nn.Dropout(0.2), nn.Linear(128, 1))
+
+    def forward(self, video: torch.Tensor) -> torch.Tensor:
+        batch, channels, time, height, width = video.shape
+        frames = video.permute(0, 2, 1, 3, 4).reshape(batch * time, channels, height, width)
+        encoded = self.pool(self.features(frames)).flatten(1).reshape(batch, time, -1)
+        return self.classifier(self.temporal(encoded.transpose(1, 2)).squeeze(-1)).squeeze(1)
 
 
 def build_x3d(pretrained: bool = True, train_backbone: bool = False) -> nn.Module:
@@ -75,6 +115,8 @@ class X3DBinary(nn.Module):
 def build_model(name: str, pretrained: bool = True, train_backbone: bool = False) -> nn.Module:
     if name == "mobilenet_v3_small_temporal":
         return TemporalMobileNet(pretrained, train_backbone)
+    if name == "mobilenet_v3_small_temporal_conv1d":
+        return TemporalConvMobileNet(pretrained, train_backbone)
     if name == "x3d_xs":
         return build_x3d(pretrained, train_backbone)
     if name == "r3d_18":

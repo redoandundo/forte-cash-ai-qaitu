@@ -1,0 +1,86 @@
+schema_version: 1
+updated_at: 2026-10-18
+event: Datathon26
+team: Qaitu
+repository: https://github.com/redoandundo/forte-cash-ai-qaitu
+phase: end_to_end_demo_validation
+
+branches:
+  stable: main
+  development: develop
+  integration: integration/ml-inference
+  teamlead: feature/teamlead-core
+  ml: feature/ml-model
+  inference: feature/video-inference
+
+components:
+  repository_foundation:
+    owner: teamlead
+    status: ready_for_review
+  ml_model:
+    owner: ml_engineer
+    status: audited_development_bundle_handoff_available
+    artifact_ready: true
+  video_inference:
+    owner: inference_engineer
+    status: integrated_pipeline_available
+    mock_predictor_ready: true
+    real_model_connected: true
+  api_jobs:
+    owner: teamlead
+    status: verified_onnx_fail_closed_runtime
+  frontend:
+    owner: teamlead
+    status: keyless_web_flow_and_isolated_browser_results_verified
+  rule_matching:
+    owner: teamlead
+    status: three_rules_automatic_condition_matching_contract_tested
+    automatic_semantic_matching: enabled_in_semantic_runtime_quality_validation_pending
+    enabled_in_public_demo: true
+    contract: docs/contracts/automatic_rules_contract.md
+  qwen_api_adapter:
+    owner: teamlead
+    status: semantic_qwen_remote_gpu_connected_and_actual_inference_verified
+    compatible_interface_ref: 94fd1d6
+    enabled_in_public_demo: true
+    runbook: docs/team/QWEN_INTEGRATION_RUNBOOK.md
+  gpu_worker_bridge:
+    owner: teamlead
+    status: remote_gpu_connected_actual_qwen_preflight_passed
+    enabled_in_public_demo: true
+    trained_adapter: experimental_binary_advisory_quality_gate_failed
+    real_qwen_executed_by_teamlead: true
+    runbook: docs/team/GPU_WORKER_RUNBOOK.md
+  public_access:
+    owner: teamlead
+    status: temporary_https_tunnel_verified_with_synthetic_video
+    jury_authentication: X-API-Key
+    web_authentication: automatic_httponly_cookie_no_user_login
+    session_record: tmp/public-demo/session.json
+  end_to_end_integration:
+    owner: teamlead
+    status: exact_v4_api_ui_verified_development_only
+
+requirements:
+  frontend_required: true
+  public_url_required: true
+  api_key_header: X-API-Key
+  processing_limit_sec: 300
+  public_statuses: [processing, done, failed]
+  public_verdicts: [violation, no_violation]
+  face_identification_allowed: false
+  cloud_ai_allowed: false
+
+next_actions:
+  - keep the team GPU worker online and evaluate positive, negative and multiple-event videos locally
+  - keep the public tunnel and local API running; read the active URL from tmp/public-demo/session.json
+  - give the jury the API key separately from the public URL
+  - review teamlead delivery commit 2bf2eaf and its feature-to-develop PR
+  - review and merge the verified integration commits through the team process
+  - present recognition errors as development-model limitations rather than integration failures
+  - repeat performance verification on the final presentation laptop if its runtime providers differ
+
+blockers:
+  - trained Qwen binary adapter failed quality gate and is not an event explanation model
+  - development-only model quality gates are not sufficient for promotion
+  - automatic rule matching requires real Qwen visual-fact quality and latency validation before public activation

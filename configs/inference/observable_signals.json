@@ -1,0 +1,26 @@
+{
+  "signals_version": "observable-cash-actions-v1",
+  "scope": "Visible review signals only. They do not establish intent, guilt, fraud, or a legal violation.",
+  "signals": [
+    {
+      "id": "cash_or_documents_visible",
+      "description": "Cash, receipts, documents, or similar transaction objects are visibly present."
+    },
+    {
+      "id": "hand_or_object_transfer",
+      "description": "A visible hand or object transfer occurs between people or across the cashier workspace."
+    },
+    {
+      "id": "second_person_near_workspace",
+      "description": "A second person is visibly inside or immediately adjacent to the cashier workspace."
+    },
+    {
+      "id": "unattended_visible_items",
+      "description": "Visible cash or transaction items appear unattended between the before and after frames."
+    },
+    {
+      "id": "view_quality_limitation",
+      "description": "Blur, occlusion, crop, lighting, or camera angle prevents reliable visual verification."
+    }
+  ]
+}

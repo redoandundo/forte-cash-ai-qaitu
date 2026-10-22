@@ -3,56 +3,209 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>ForteBank Video Audit</title>
+    <meta name="theme-color" content="#b51f5d" />
+    <title>Qaitu — проверка кассового видео</title>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='9' fill='%2334101f'/%3E%3Cpath d='M7 10c7-4 12-3 18-4-1 5-8 7-18 7zm0 8c6-3 10-2 15-3-1 5-6 7-15 7z' fill='%23d63778'/%3E%3C/svg%3E" />
     <link rel="stylesheet" href="/styles.css" />
   </head>
-  <body>
-    <main class="shell">
-      <header class="hero">
-        <p class="eyebrow">Локальный видеоконтроль</p>
-        <h1>Проверка кассовой операции</h1>
-        <p class="lead">Загрузите запись в формате MOV. Сервис покажет найденные события, таймкоды и кадры для проверки сотрудником.</p>
-      </header>
+  <body data-state="empty">
+    <header class="topbar">
+      <a class="brand" href="/" aria-label="Qaitu — на главную">
+        <span class="brand-mark" aria-hidden="true"><span></span><span></span></span>
+        <span class="brand-copy">
+          <strong>Qaitu</strong>
+          <small>Forte video control</small>
+        </span>
+      </a>
 
-      <section class="panel" aria-labelledby="upload-title">
-        <div class="section-heading">
-          <div>
-            <p class="step">Шаг 1</p>
-            <h2 id="upload-title">Загрузите видео</h2>
-          </div>
-          <span class="local-badge">Обработка локально</span>
+      <div class="system-status" title="Модель работает на сервере команды Qaitu">
+        <span class="status-dot" aria-hidden="true"></span>
+        Локальная обработка
+      </div>
+    </header>
+
+    <main class="app-shell">
+      <section class="upload-view" id="upload-view" aria-labelledby="page-title">
+        <div class="intro">
+          <p class="overline">Проверка кассовой зоны</p>
+          <h1 id="page-title">Загрузите видео<br />для проверки</h1>
+          <p class="intro-copy">
+            Выберите запись кассовой операции. Интерфейс подготовит локальное превью и откроет рабочее пространство проверки.
+          </p>
         </div>
 
-        <form id="analysis-form">
-          <label class="field">
-            <span>API-ключ</span>
-            <input id="api-key" type="password" autocomplete="off" required placeholder="Введите ключ команды" />
-          </label>
+        <form class="upload-card" id="upload-form">
+          <div class="dropzone" id="dropzone">
+            <input id="video-file" type="file" accept=".mov,video/quicktime" tabindex="-1" aria-hidden="true" />
+            <span class="frame-corner top-left" aria-hidden="true"></span>
+            <span class="frame-corner top-right" aria-hidden="true"></span>
+            <span class="frame-corner bottom-left" aria-hidden="true"></span>
+            <span class="frame-corner bottom-right" aria-hidden="true"></span>
 
-          <label class="dropzone" id="dropzone">
-            <input id="video-file" type="file" accept=".mov,video/quicktime" required />
-            <span class="drop-icon">MOV</span>
-            <strong id="file-label">Выберите файл или перетащите его сюда</strong>
-            <small>До 100 МБ</small>
-          </label>
+            <span class="dropzone-index" aria-hidden="true">INPUT / 01</span>
+            <span class="upload-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" role="img">
+                <path d="M12 16V4m0 0L7.5 8.5M12 4l4.5 4.5M5 14v4.25A1.75 1.75 0 0 0 6.75 20h10.5A1.75 1.75 0 0 0 19 18.25V14" />
+              </svg>
+            </span>
+            <span class="drop-copy">
+              <strong>Перетащите видео сюда</strong>
+              <span>или выберите файл с этого компьютера</span>
+            </span>
+            <button class="choose-button" id="choose-file" type="button">Выбрать файл</button>
+            <span class="file-rules">
+              <span>MOV</span>
+              <span>до 100 МБ</span>
+              <span>без облака</span>
+            </span>
+          </div>
 
-          <button id="submit-button" type="submit">Начать анализ</button>
+          <p class="upload-error" id="upload-error" role="alert" hidden></p>
+
         </form>
-      </section>
 
-      <section class="panel status-panel" id="status-panel" hidden aria-live="polite">
-        <div class="status-line">
-          <span class="spinner" id="spinner"></span>
-          <div>
-            <p class="step">Статус</p>
-            <h2 id="status-title">Видео обрабатывается</h2>
-          </div>
+        <div class="privacy-note">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M12 3 5.5 6v5.2c0 4.2 2.7 7.7 6.5 9.1 3.8-1.4 6.5-4.9 6.5-9.1V6L12 3Z" />
+            <path d="m9.5 11.8 1.7 1.7 3.6-3.8" />
+          </svg>
+          <span><strong>Анализ выполняется на сервере команды Qaitu.</strong> Видео не передаётся внешним AI-сервисам. Загруженный файл удаляется после анализа. При доступе по публичной ссылке трафик проходит через HTTPS-прокси.</span>
         </div>
-        <p id="status-detail">Извлекаем кадры и анализируем временные изменения.</p>
       </section>
 
-      <section id="result" hidden></section>
+      <section class="workspace" id="workspace" hidden aria-labelledby="workspace-title">
+        <div class="workspace-heading">
+          <div>
+            <p class="overline">Рабочее пространство</p>
+            <h1 id="workspace-title">Проверка записи</h1>
+          </div>
+          <button class="text-button" id="remove-file" type="button">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 6-6 6 6 6" /></svg>
+            Выбрать другое видео
+          </button>
+        </div>
+
+        <div class="workspace-grid">
+          <section class="video-column" aria-labelledby="video-title">
+            <h2 class="visually-hidden" id="video-title">Предпросмотр видео</h2>
+            <div class="video-frame">
+              <div class="video-rail">
+                <span>CAM / LOCAL</span>
+                <span id="video-time-display">00:00:00</span>
+              </div>
+              <video id="video-preview" controls preload="metadata" playsinline></video>
+              <div class="video-empty" id="video-empty">
+                <span>Предпросмотр появится здесь</span>
+              </div>
+              <div class="scan-line" aria-hidden="true"></div>
+              <div class="event-markers" id="event-markers" aria-label="Отмеченные эпизоды"></div>
+            </div>
+
+            <div class="preview-warning" id="preview-warning" role="status" hidden>
+              Браузер не поддерживает воспроизведение этой записи. Анализ доступен; найденные эпизоды можно проверить по кадрам и таймкодам.
+            </div>
+
+            <div class="file-summary">
+              <div class="file-type" aria-hidden="true">MOV</div>
+              <div class="file-details">
+                <strong id="selected-file-name">video.mov</strong>
+                <span id="selected-file-meta">Размер файла</span>
+              </div>
+              <span class="local-chip"><span></span> локально</span>
+            </div>
+
+            <button class="primary-button" id="start-analysis" type="button">
+              <span>Начать проверку</span>
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 6 6 6-6 6" /></svg>
+            </button>
+          </section>
+
+          <aside class="inspector" aria-label="Состояние проверки">
+            <section class="demo-controls" aria-labelledby="runtime-title">
+              <div class="control-heading">
+                <div>
+                  <span class="demo-badge" id="runtime-badge">Local</span>
+                  <h2 id="runtime-title">Контур анализа</h2>
+                </div>
+                <span class="control-caption" id="job-caption">ожидает запуска</span>
+              </div>
+              <div class="pipeline-strip" aria-label="Путь обработки">
+                <span>video</span><i></i><span>windows</span><i></i><span>model</span><i></i><span>evidence</span>
+              </div>
+            </section>
+
+            <section class="status-card" id="status-card" aria-live="polite">
+              <div class="status-icon" id="status-icon" aria-hidden="true">
+                <span></span>
+              </div>
+              <div class="status-copy">
+                <p class="status-kicker" id="status-kicker">Файл готов</p>
+                <h2 id="status-title">Можно начинать проверку</h2>
+                <p id="status-detail">Видео выбрано и доступно для локального предпросмотра.</p>
+              </div>
+            </section>
+
+            <section class="processing-panel state-panel" id="processing-panel" hidden>
+              <div class="progress-head">
+                <span>Ход проверки</span>
+                <strong id="progress-value">5%</strong>
+              </div>
+              <div class="progress-track"><span id="progress-bar"></span></div>
+              <ol class="stage-list" id="stage-list">
+                <li data-stage="upload_received"><span></span>Файл принят</li>
+                <li data-stage="video_decode"><span></span>Декодируем запись</li>
+                <li data-stage="temporal_windows"><span></span>Нарезаем временные окна</li>
+                <li data-stage="model_inference"><span></span>Запускаем локальную модель</li>
+                <li data-stage="aggregation"><span></span>Объединяем события</li>
+                <li data-stage="evidence"><span></span>Готовим JPEG-доказательства</li>
+                <li data-stage="summary"><span></span>Собираем резюме</li>
+              </ol>
+            </section>
+
+            <section class="result-panel violation-panel state-panel" id="violation-panel" hidden>
+              <div class="result-heading">
+                <div>
+                  <p class="status-kicker">Результат проверки</p>
+                  <h2>Найдены эпизоды</h2>
+                </div>
+                <span class="result-count" id="result-count">0 эпизодов</span>
+              </div>
+              <p class="result-summary" id="violation-summary"></p>
+              <div class="event-list" id="event-list"></div>
+              <details class="technical-settings rule-reference">
+                <summary>Правила для проверки эпизодов</summary>
+                <div class="technical-content">
+                  <p>Справочник для проверяющего. Эти правила не сопоставлены с найденными эпизодами автоматически.</p>
+                  <p><strong>Приём и пересчёт наличных — пункт 20.</strong> Клиент должен присутствовать. Для проверки нужно различать участников операции и видеть сам пересчёт.</p>
+                  <p><strong>Хранение ранее принятых денег — пункт 20.</strong> Предусмотрено устройство, закрывающееся на ключ. По кадру с деньгами на столе нельзя установить, относятся ли они к текущему клиенту.</p>
+                  <p><strong>Уход кассира — пункт 22.</strong> Уход до завершения обслуживания не допускается. Нужно установить, что обслуживание ещё продолжается; одного пустого рабочего места недостаточно.</p>
+                  <a href="https://adilet.zan.kz/rus/docs/V1900019680" target="_blank" rel="noreferrer">НБРК № 231 от 29.11.2019 · пункты 20 и 22 · Әділет</a>
+                  <p>Источник проверен 18.10.2026. Применимость к конкретной записи оценивает проверяющий.</p>
+                </div>
+              </details>
+            </section>
+
+            <section class="result-panel clear-panel state-panel" id="clear-panel" hidden>
+              <div class="clear-mark" aria-hidden="true">
+                <svg viewBox="0 0 24 24"><path d="m7 12.5 3.2 3.2L17.5 8" /></svg>
+              </div>
+              <p class="status-kicker">Результат проверки</p>
+              <h2>Эпизоды автоматически не выделены</h2>
+              <p id="clear-summary">Автоматический анализ не обнаружил в этой записи признаков возможного нарушения.</p>
+            </section>
+
+            <section class="result-panel error-panel state-panel" id="error-panel" hidden>
+              <div class="error-code">ERR / VIDEO</div>
+              <p class="status-kicker">Техническая ошибка</p>
+              <h2>Не удалось обработать файл</h2>
+              <p id="error-detail">Проверьте формат записи или конфигурацию модели. Ошибка не считается отсутствием нарушения.</p>
+              <button class="secondary-button" id="retry-analysis" type="button">Попробовать снова</button>
+            </section>
+          </aside>
+        </div>
+      </section>
     </main>
+
     <script src="/app.js" defer></script>
   </body>
 </html>

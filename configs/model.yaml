@@ -1,49 +1,18 @@
-seed: 42
-task: binary_violation_detection
+# ML recipe registry. Actual preprocessing and threshold always come from one bundle.
+task: binary_possible_violation_screening
 labels:
   0: no_violation
-  1: violation
-data:
-  raw_root: data/raw/open
-  clip_manifest: analysis/clip_manifest.json
-  clip_seconds: 8.0
-  frames: 4
-  image_size: 160
-  validation_fraction: 0.2
-  negative_position: 0.5
-training:
-  epochs: 8
-  batch_size: 4
-  learning_rate: 0.0003
-  weight_decay: 0.0001
-  num_workers: 0
-  early_stopping_patience: 3
-  decision_metric: f2
-  amp: true
-augmentation:
-  angle:
-    degrees: 7
-    translate: 0.06
-    scale: [0.92, 1.08]
-    perspective: 0.12
-  lighting:
-    brightness: 0.25
-    contrast: 0.25
-    gamma: [0.8, 1.2]
-  compression:
-    jpeg_quality: [35, 90]
-models:
-  simple:
-    name: mobilenet_v3_small_temporal
-    pretrained: true
-    train_backbone: false
-  x3d:
-    name: x3d_xs
-    pretrained: true
-    train_backbone: false
-export:
-  format: onnx
-  opset: 17
-  input_name: video
-  output_name: logits
-  dynamic_batch: true
+  1: possible_violation
+baseline_config: configs/ml/baseline.yaml
+candidate_config: configs/ml/temporal_conv1d.yaml
+experiment_command: scripts/ml/run_repair_experiment.py
+final_train_command: scripts/ml/train_video.py
+calibration_fold: 4
+release:
+  status: development_only
+  automatic_promotion: false
+  fallback_version: mobilenet-temporal-pairsafe-v3
+  fallback_sha256: e44cddb9a9cb259ca7fb68b024c5be7be591fcc623116c3f1fc918583a6bac91
+  fallback_distribution: external_only
+  fallback_available_in_checkout: false
+  report: reports/training_report.md

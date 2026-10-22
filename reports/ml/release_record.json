@@ -1,0 +1,12 @@
+{
+  "model_version": "baseline-repair-v2-development",
+  "code_commit": "5c9f0958f6d1c4d56353665c4da221dd1c59a0be",
+  "branch": "feature/ml-model",
+  "archive": "artifacts/ml/bundles/baseline-repair-v2.zip",
+  "archive_sha256": "b9a8b2c809f7a6dc72e0bf655707fb9d2e430c906e573aa2f10ed4750d0ae90b",
+  "archive_files_verified": 9,
+  "model_sha256": "00ae541eac23249dd4751093ce276bfa9c14afca2d5f15f4fec9719c009ae52d",
+  "threshold": 0.45335930958390236,
+  "release_status": "development_only_not_promoted",
+  "fallback_v3_sha256": "e44cddb9a9cb259ca7fb68b024c5be7be591fcc623116c3f1fc918583a6bac91"
+}
